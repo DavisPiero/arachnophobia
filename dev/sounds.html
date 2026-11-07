@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARACHNOPHOBIA sound board</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root { color-scheme: dark; --bg: #0c0d0f; --panel: #16181c; --line: #2a2d33; --text: #d8d6d0; --dim: #8a8780; --accent: #b3402e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.4 system-ui, sans-serif; transition: background 0.05s; }
+  body.flash { background: #4a5266; }
+  header { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; position: sticky; top: 0; background: var(--bg); z-index: 2; }
+  h1 { font-size: 16px; margin: 0 8px 0 0; letter-spacing: 0.08em; }
+  main { padding: 12px 16px 40px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--dim); margin: 0 0 8px; }
+  button { background: #22252b; color: var(--text); border: 1px solid #343840; border-radius: 6px; padding: 7px 10px; margin: 3px; font: inherit; cursor: pointer; }
+  button:hover { border-color: #565b66; }
+  button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button:disabled { opacity: 0.4; cursor: default; }
+  #start { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  label { display: flex; align-items: center; gap: 8px; margin: 4px 0; color: var(--dim); }
+  label span { min-width: 82px; }
+  input[type=range] { flex: 1; }
+  .row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+  #status { color: var(--dim); }
+  #log { height: 180px; overflow: auto; font: 12px/1.5 ui-monospace, monospace; color: var(--dim); background: #0f1013; border-radius: 6px; padding: 6px 8px; }
+  .where button { min-width: 64px; }
+  @media (max-width: 400px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>ARACHNOPHOBIA · SOUND BOARD</h1>
+  <button id="start" disabled>Start audio</button>
+  <button id="mute">Mute</button>
+  <span id="status">Building sounds…</span>
+</header>
+<main>
+  <section>
+    <h2>Volume</h2>
+    <label><span>Master</span><input type="range" min="0" max="1" step="0.01" data-bus="master"></label>
+    <label><span>Effects</span><input type="range" min="0" max="1" step="0.01" data-bus="sfx"></label>
+    <label><span>Ambience</span><input type="range" min="0" max="1" step="0.01" data-bus="ambience"></label>
+    <label><span>Windows open</span><input type="range" min="0" max="1" step="0.01" value="0" id="openness"></label>
+    <h2 style="margin-top:10px">Play from</h2>
+    <div class="row where" id="where"></div>
+    <label><input type="checkbox" id="exterior"> outside the walls (exterior, muffled)</label>
+  </section>
+  <section>
+    <h2>Director demo</h2>
+    <div class="row"><button id="director">Run director</button>
+      <button data-ev="waveStart">waveStart</button><button data-ev="waveEnd">waveEnd</button>
+      <button data-ev="windowBreached">windowBreached</button><button id="silence">Silence</button></div>
+    <label><span>Danger</span><input type="range" min="0" max="1" step="0.01" value="0.2" id="danger"><b id="dangerV">0.20</b></label>
+    <label><input type="checkbox" id="waveActive"> wave active</label>
+    <div class="row"><button id="thunderNow">Lightning + thunder now</button><button id="behindNow">Behind-you cue</button><button id="approachNow">Approach cue</button></div>
+    <h2 style="margin-top:10px">Spider demo (walks in from 35 m to the east window)</h2>
+    <div class="row" id="spiders"></div>
+    <div id="log"></div>
+  </section>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import { AudioEngine } from '../js/audio/AudioEngine.js';
+import { Director } from '../js/audio/Director.js';
+import { SpiderVoice } from '../js/audio/SpiderVoice.js';
+import { CATEGORIES } from '../js/audio/SoundBank.js';
+import { Events } from '../js/core/Events.js';
+import { WINDOWS } from '../js/world/Layout.js';
+
+const $ = (s) => document.querySelector(s);
+const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 500);
+camera.position.set(0, 1.6, 0); // centre of the cabin, looking north (-z)
+const audio = new AudioEngine(camera);
+const events = new Events();
+const director = new Director(audio, events);
+window.audio = audio; window.director = director; window.events = events;
+
+const log = (s) => { const el = $('#log'); el.textContent += `${(performance.now() / 1000).toFixed(1).padStart(6)}  ${s}\n`; el.scrollTop = el.scrollHeight; };
+director.debug = log;
+events.on('lightning', ({ strength }) => {
+  document.body.classList.add('flash'); setTimeout(() => document.body.classList.remove('flash'), 60 + strength * 120);
+});
+
+// --- init
+const initStart = performance.now();
+const initDone = audio.init((p) => { $('#status').textContent = `Building sounds… ${Math.round(p * 100)}%`; }).then((ms) => {
+  $('#status').textContent = `${audio.names().length} sounds ready, built in ${ms} ms. Press Start audio.`;
+  $('#start').disabled = false;
+  console.log(`[audio] bank built in ${ms} ms`);
+  window.initMs = ms;
+}).catch((e) => { $('#status').textContent = 'Failed: ' + e.message; console.error(e); });
+window.initDone = initDone;
+
+async function start() {
+  await audio.unlock();
+  $('#start').textContent = 'Audio on'; $('#start').disabled = true;
+  $('#status').textContent = `Context ${audio.ctx.state}, ${audio.ctx.sampleRate} Hz. Bank built in ${audio.initMs} ms.`;
+}
+$('#start').addEventListener('click', start);
+window.startAudio = start;
+
+// --- volume / mute
+for (const el of document.querySelectorAll('[data-bus]')) {
+  el.value = audio.getVolume(el.dataset.bus);
+  el.addEventListener('input', () => audio.setVolume(el.dataset.bus, +el.value));
+}
+const syncMute = () => { $('#mute').textContent = audio.muted ? 'Unmute' : 'Mute'; $('#mute').classList.toggle('on', audio.muted); };
+$('#mute').addEventListener('click', () => { audio.setMuted(!audio.muted); syncMute(); });
+syncMute();
+$('#openness').addEventListener('input', (e) => audio.setExteriorOpenness(+e.target.value));
+
+// --- where
+const WHERE = {
+  'here': null,
+  'left 3 m': new THREE.Vector3(-3, 1.6, 0), 'right 3 m': new THREE.Vector3(3, 1.6, 0),
+  'behind 3 m': new THREE.Vector3(0, 1.6, 3), 'ahead 3 m': new THREE.Vector3(0, 1.6, -3),
+  'above (roof)': new THREE.Vector3(0.5, 3.6, 0.5), 'far 25 m': new THREE.Vector3(18, 1, -17),
+};
+let where = 'here';
+for (const k of Object.keys(WHERE)) {
+  const b = document.createElement('button'); b.textContent = k; if (k === where) b.classList.add('on');
+  b.addEventListener('click', () => { where = k; document.querySelectorAll('#where button').forEach((x) => x.classList.toggle('on', x === b)); });
+  $('#where').appendChild(b);
+}
+
+// --- sound buttons
+const loops = {};
+for (const [cat, names] of Object.entries(CATEGORIES)) {
+  const sec = document.createElement('section'); sec.innerHTML = `<h2>${cat}</h2>`;
+  const row = document.createElement('div'); row.className = 'row';
+  for (const name of names) {
+    const b = document.createElement('button'); b.textContent = name; b.dataset.sound = name;
+    b.addEventListener('click', async () => {
+      if (!audio.ready) await start();
+      const opts = { exterior: $('#exterior').checked };
+      if (WHERE[where]) opts.position = WHERE[where];
+      if (cat === 'Ambience loops') {
+        if (loops[name]) { loops[name].stop(0.5); delete loops[name]; b.classList.remove('on'); }
+        else { loops[name] = audio.loop(name, { ...opts, fadeIn: 0.3 }); b.classList.add('on'); }
+      } else audio.play(name, opts);
+      log(`play ${name}${opts.position ? ' @ ' + where : ''}${opts.exterior ? ' (exterior)' : ''}`);
+    });
+    row.appendChild(b);
+  }
+  sec.appendChild(row); $('main').appendChild(sec);
+}
+
+// --- director demo
+let directorOn = false;
+$('#director').addEventListener('click', async () => {
+  if (!audio.ready) await start();
+  directorOn = !directorOn; $('#director').classList.toggle('on', directorOn);
+  $('#director').textContent = directorOn ? 'Stop director' : 'Run director';
+  if (directorOn) director.start(); else director.stop();
+});
+$('#danger').addEventListener('input', (e) => { $('#dangerV').textContent = (+e.target.value).toFixed(2); });
+for (const b of document.querySelectorAll('[data-ev]')) b.addEventListener('click', () => {
+  const ev = b.dataset.ev; events.emit(ev, ev === 'windowBreached' ? { id: 'east' } : { wave: 1 });
+  if (ev === 'windowBreached') { audio.setExteriorOpenness(1); $('#openness').value = 1; }
+  log(`event ${ev}`);
+});
+$('#silence').addEventListener('click', () => director.silence(15));
+$('#thunderNow').addEventListener('click', () => { director.thunderTimer = 0; director.pendingThunder = null; });
+$('#behindNow').addEventListener('click', () => director._behind(camera.position, new THREE.Vector3(0, 0, -1), []));
+$('#approachNow').addEventListener('click', () => director._startApproach());
+
+// --- spider demo: walks from 35 m out to the east window, scratches at it, then dies
+const demoSpiders = [];
+for (const type of ['runner', 'brute', 'climber', 'stalker']) {
+  const b = document.createElement('button'); b.textContent = type;
+  b.addEventListener('click', async () => {
+    if (!audio.ready) await start();
+    const obj = new THREE.Object3D(); obj.position.set(35, 0, -1.2);
+    const v = new SpiderVoice(audio, type, obj);
+    const speed = { runner: 6, brute: 2.2, climber: 3.5, stalker: 2.5 }[type];
+    demoSpiders.push({ type, obj, v, speed, t: 0, state: 'approach', stepT: 0 });
+    log(`spider ${type} spawned 35 m east`);
+  });
+  $('#spiders').appendChild(b);
+}
+const east = WINDOWS.find((w) => w.id === 'east');
+function tickSpiders(dt) {
+  for (let i = demoSpiders.length - 1; i >= 0; i--) {
+    const s = demoSpiders[i]; s.t += dt;
+    const target = east.center.clone().addScaledVector(east.normal, 0.4);
+    const d = s.obj.position.distanceTo(target);
+    if (s.state === 'approach') {
+      if (d < 0.3) { s.state = 'attackWindow'; s.attackT = 0; log(`${s.type} at the window`); }
+      else s.obj.position.addScaledVector(target.clone().sub(s.obj.position).normalize(), Math.min(d, s.speed * dt));
+    } else if (s.state === 'attackWindow') {
+      s.attackT += dt;
+      if (s.attackT > 1.5 && !s.attacked) { s.v.attack(); s.attacked = true; }
+      if (s.attackT > 3 && !s.hit) { s.v.hit(); s.hit = true; }
+      if (s.attackT > 6) { s.v.die(); s.state = 'dead'; log(`${s.type} died`); }
+    }
+    // legs: about 8 foot-falls per metre of travel for small ones, fewer for the brute
+    const moving = s.state === 'approach';
+    s.stepT -= dt * (moving ? s.speed * (s.type === 'brute' ? 1.6 : 8) : 0.5);
+    if (s.stepT <= 0) { s.stepT = 1; s.v.step(s.state === 'attackWindow' ? 'glass' : 'ground'); }
+    const dist = s.obj.position.distanceTo(camera.position);
+    s.v.update(dt, { state: s.state, speed: moving ? s.speed : 0, surface: s.state === 'attackWindow' ? 'glass' : 'ground', distanceToPlayer: dist });
+    if (s.state === 'dead' && s.t > 0) { s.v.dispose(); demoSpiders.splice(i, 1); }
+  }
+}
+
+// --- frame loop
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  camera.updateMatrixWorld(true);
+  tickSpiders(dt);
+  if (directorOn) {
+    director.update(dt, {
+      danger: +$('#danger').value, playerPos: camera.position, playerForward: new THREE.Vector3(0, 0, -1),
+      waveActive: $('#waveActive').checked, betweenWaves: !$('#waveActive').checked,
+      spiders: demoSpiders.map((s) => ({ type: s.type, position: s.obj.position, state: s.state })),
+    });
+  }
+  audio.update(dt);
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

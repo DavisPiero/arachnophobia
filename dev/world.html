@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+  canvas { display: block; }
+  #info { position: fixed; left: 8px; bottom: 6px; color: #8a8; font: 11px monospace; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="info"></div>
+<script type="module">
+// World viewer. URL switches:
+//   view=interior|north|east|west|outside|table|roof   quality=low|high   flash=1 (hold lightning) | flash=2 (periodic)
+//   orbit=1 (OrbitControls)   composer=0 (render directly instead of RenderPass -> OutputPass)   hud=0
+import * as THREE from 'three';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { Quality } from '../js/core/Quality.js';
+import { Events } from '../js/core/Events.js';
+import { buildWorld } from '../js/world/World.js';
+import { terrainHeight, AMMO_TABLE } from '../js/world/Layout.js';
+
+const params = new URLSearchParams(location.search);
+const view = params.get('view') || 'interior';
+const flashMode = params.get('flash');
+const useComposer = params.get('composer') !== '0';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Quality.pixelRatio);
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.shadowMap.enabled = Quality.shadows;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.info.autoReset = false;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 400);
+const events = new Events();
+const t0 = performance.now();
+const world = buildWorld(scene, renderer, Quality, events);
+const buildMs = Math.round(performance.now() - t0);
+window.__scene = scene; window.__world = world;
+
+const EYE = 1.65;
+const views = {
+  interior: [[0.4, EYE, 3.0], [-0.1, 1.45, -4]],
+  north: [[0, EYE, -3.45], [0, 1.2, -14]],
+  east: [[2.45, EYE, -1.2], [14, 0.9, -1.2]],
+  west: [[-2.45, EYE, 1.4], [-14, -0.6, 2.4]],
+  table: [[AMMO_TABLE.position.x + 0.1, EYE, AMMO_TABLE.position.z - 1.15], [AMMO_TABLE.position.x, 0.85, AMMO_TABLE.position.z]],
+  outside: [[12, terrainHeight(12, -10) + EYE, -10], [0, 1.6, 0]],
+  roof: [[9, 6.5, 7], [0, 2.5, 0]],
+  corner: [[2.4, EYE, -3.2], [-1.5, 1.2, 2.5]],
+  gun: [[0, EYE, 1], [0, 1.6, -4]],
+  lanternclose: [[0.6, EYE, 1.0], [0.2, 2.05, 0.4]],
+  creek: [[-11, terrainHeight(-11, 1) + EYE, 1], [-22, -3, 4]],
+};
+const v = views[view] || views.interior;
+camera.position.set(...v[0]);
+camera.lookAt(new THREE.Vector3(...v[1]));
+
+let controls = null;
+if (params.get('orbit') === '1') {
+  const { OrbitControls } = await import('three/addons/controls/OrbitControls.js');
+  controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(...v[1]);
+  controls.update();
+}
+
+let composer = null;
+if (useComposer) {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  composer.addPass(new OutputPass());
+}
+
+addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  if (composer) composer.setSize(innerWidth, innerHeight);
+});
+
+const clock = new THREE.Clock();
+let time = 0, frames = 0, nextFlash = 2;
+const info = document.getElementById('info');
+if (params.get('hud') === '0') info.style.display = 'none';
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.1);
+  time += dt;
+  if (flashMode === '1') world.lighting.flash(0.9);
+  if (flashMode === '2' && time > nextFlash) { events.emit('lightning', { strength: 0.6 + Math.random() * 0.4 }); nextFlash = time + 3 + Math.random() * 5; }
+  world.update(dt, time);
+  if (controls) controls.update();
+  renderer.info.reset();
+  if (composer) composer.render(dt); else renderer.render(scene, camera);
+  frames++;
+  if (frames === 3 || frames % 30 === 0) {
+    const i = renderer.info;
+    window.__info = { tier: Quality.tier, view, calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures, programs: i.programs.length, buildMs };
+    info.textContent = JSON.stringify(window.__info);
+    if (frames === 3) console.log('renderer.info', JSON.stringify(window.__info));
+  }
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>

@@ -2,9 +2,87 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>ARACHNOPHOBIA</title>
-<style>html,body{margin:0;height:100%;background:#050505;color:#8a8070;font-family:Georgia,serif;display:grid;place-items:center;letter-spacing:.3em}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/style.css">
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
 </head>
-<body><div>ARACHNOPHOBIA — coming soon</div></body>
+<body>
+<canvas id="game"></canvas>
+
+<div id="hud" class="hidden">
+  <div id="crosshair"></div>
+  <div id="prompt"></div>
+  <svg id="reload-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="track"/><circle cx="20" cy="20" r="16" class="bar"/></svg>
+  <div id="ammo"><span id="ammo-mag">8</span><span class="sep">|</span><span id="ammo-stock">40</span><div class="label">loaded · on table</div></div>
+  <div id="health"><div id="health-fill"></div></div>
+  <div id="message"></div>
+  <div id="corner-buttons">
+    <button id="btn-mute" aria-label="Mute">🔊</button>
+    <button id="btn-pause" aria-label="Pause">❚❚</button>
+  </div>
+</div>
+
+<div id="touch-ui">
+  <div id="zone-move"></div>
+  <div id="zone-look"></div>
+  <div id="stick"><div id="stick-knob"></div></div>
+  <button id="btn-interact">USE</button>
+  <button id="btn-fire">FIRE</button>
+</div>
+
+<div id="screen-start" class="screen">
+  <div class="panel">
+    <h1>ARACHNOPHOBIA</h1>
+    <p class="sub">You are not alone in the woods.</p>
+    <p id="loading-text">Loading…</p>
+    <button id="btn-start" class="big" disabled>Begin</button>
+    <div class="controls desktop-only">
+      <div><b>WASD</b> move · <b>Mouse</b> look · <b>Click</b> fire</div>
+      <div><b>E</b> reload at the ammo table · <b>M</b> mute · <b>Esc</b> pause</div>
+    </div>
+    <div class="controls touch-only">
+      <div>Left thumb: move · Right thumb: look · <b>FIRE</b> (drag it to aim)</div>
+      <div>Reload only at the ammo table: <b>USE</b></div>
+    </div>
+    <p class="hint">Headphones recommended. The windows are dark until you get close.</p>
+  </div>
+</div>
+
+<div id="screen-pause" class="screen hidden">
+  <div class="panel">
+    <h2>Paused</h2>
+    <label>Master <input type="range" id="vol-master" min="0" max="1" step="0.01"></label>
+    <label>Effects <input type="range" id="vol-sfx" min="0" max="1" step="0.01"></label>
+    <label>Ambience <input type="range" id="vol-ambience" min="0" max="1" step="0.01"></label>
+    <label class="check"><input type="checkbox" id="chk-mute"> Mute all sound</label>
+    <button id="btn-resume" class="big">Resume</button>
+    <button id="btn-restart">Restart</button>
+  </div>
+</div>
+
+<div id="screen-over" class="screen hidden">
+  <div class="panel">
+    <h2>They got in.</h2>
+    <p id="over-stats"></p>
+    <button id="btn-again" class="big">Try again</button>
+  </div>
+</div>
+
+<div id="rotate"><div>↻<br>Turn your phone sideways</div></div>
+
+<script type="module" src="./js/main.js"></script>
+</body>
 </html>

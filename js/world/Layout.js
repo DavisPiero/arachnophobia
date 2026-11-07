@@ -26,7 +26,8 @@ export const CABIN = {
 };
 
 // Window openings. `normal` points OUTWARD (from the cabin into the forest).
-// center is the middle of the opening, on the wall's centre plane.
+// center is the middle of the opening, on the INNER face of the wall; the wall (CABIN.wallThickness)
+// runs outward from there, so the outer face is at center + normal * wallThickness.
 export const WINDOWS = [
   { id: 'north', label: 'North', center: new THREE.Vector3(0, 1.45, -CABIN.halfZ), normal: new THREE.Vector3(0, 0, -1), width: 1.1, height: 1.0 },
   { id: 'east',  label: 'East',  center: new THREE.Vector3(CABIN.halfX, 1.45, -1.2), normal: new THREE.Vector3(1, 0, 0), width: 1.1, height: 1.0 },

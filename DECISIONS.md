@@ -13,3 +13,9 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Climbers use the outside walls and roof only in milestone 1. Inside ceiling is for later.
 - 2026-11-07 — Reference images git-ignored; rights unknown for some of them.
 - 2026-11-07 — Repo public (needed for free GitHub Pages). Pages serves main; work happens on branches and is merged on sign-off.
+- 2026-11-07 — Bullets pass through window glass without breaking it; window boards stop bullets. Guess: shooting out your own glass felt punishing.
+- 2026-11-07 — Window centres in Layout.js are on the inner wall face (wall runs outward). Glass sits mid-wall, boards 0.11 m inside.
+- 2026-11-07 — A stalker that is seen or lit vanishes and reappears at another window; after two vanishes it attacks like the others.
+- 2026-11-07 — Before each wave the ambience goes deliberately quiet for ~14 s.
+- 2026-11-07 — Closed windows muffle outside sounds, but a little leaks through unfiltered so spiders stay audible over wind and rain.
+- 2026-11-07 — Up to 3 spiders attack a window at once (a brute takes the main spot); extras wait at the wall.
