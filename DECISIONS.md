@@ -55,3 +55,4 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Splats stay until the next wave starts; splats on glass go when the glass shatters. Guess.
 - 2026-11-07 — The boot is drawn in the world (on the real floor), with a matte material: glossy trousers seen from above read as white cloth.
 - 2026-11-07 — Hit direction pushes the view away from the attacker (yaw, roll) on top of the random shake.
+- 2026-11-07 — Milestone 3 signed off by the user and merged to main. Notes on the gloves, gun and axe to come next session.

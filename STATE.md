@@ -1,11 +1,11 @@
 # State
 
-**Where we are:** milestone 3 (hands, lever-action rifle, axe, stomp, combat feedback) built on branch
-`m3-hands-and-combat`, pushed, **not signed off yet**. It also has the session's fixes: sharper rocks, a lighter
-night, no window darkening, flashlight on Q. Main is still milestone 2, live at https://davispiero.github.io/arachnophobia/.
+**Where we are:** milestone 3 (gloved hands, lever-action rifle, axe, stomp, combat feedback), plus the session's fixes
+(sharper rocks, a lighter night, no window darkening, flashlight on Q), is signed off, merged into main and pushed.
+GitHub Pages serves main, so it should be live at https://davispiero.github.io/arachnophobia/.
 
-**Next:** your play-test of milestone 3, then sign-off. After that, milestone 4: nine spider species (`SPECIES.md`),
-the Blender spider generator, locomotion, and spiders climbing in through the window frame.
+**Next:** your notes on the gloves, the gun and the axe (you said they come next session), then milestone 4: nine spider
+species (`SPECIES.md`), the Blender spider generator, locomotion, and spiders climbing in through the window frame.
 
 **Open with you:**
 - Guesses to confirm:
