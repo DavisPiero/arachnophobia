@@ -1,5 +1,5 @@
 // The ammunition table: the only place to reload.
-// Walk up to it, press interact, stand still for ~3 seconds while the magazine is refilled.
+// Walk up to it, press interact, stand still for ~3 seconds while rounds are pushed into the rifle's tube one by one.
 // Supplies on the table visibly run down as the stock is used.
 import { Config } from '../core/Config.js';
 import { AMMO_TABLE } from '../world/Layout.js';
@@ -56,16 +56,14 @@ export class AmmoTable {
     this.player.locked = true;
     this.weapon.reloading = true;
     this.weapon.reloadT = 0;
-    // sound cues across the reload (fractions of reloadTime)
+    // sound cues across the reload (fractions of reloadTime), matched to the hand animation in ViewModel.js:
+    // each round is pushed into the loading gate on the rifle's side, then one lever cycle chambers a round
     const rounds = Math.min(MAG - this.weapon.mag, this.stock);
-    this.cues = [
-      { at: 0.02, name: 'ammoPickup', volume: 0.7 },
-      { at: 0.1, name: 'magOut', volume: 0.9 },
-    ];
-    const n = Math.min(rounds, 6); // a few audible rounds, not all eight
-    for (let i = 0; i < n; i++) this.cues.push({ at: 0.22 + (i / Math.max(1, n)) * 0.48, name: 'roundLoad', volume: 0.65 });
-    this.cues.push({ at: 0.76, name: 'magIn', volume: 1 });
-    this.cues.push({ at: 0.9, name: 'boltRack', volume: 1 });
+    this.weapon.reloadRounds = rounds;
+    this.cues = [{ at: 0.02, name: 'ammoPickup', volume: 0.7 }];
+    const t0 = 0.12, slot = (0.84 - t0) / Math.max(1, rounds);
+    for (let i = 0; i < rounds; i++) this.cues.push({ at: t0 + (i + 0.6) * slot, name: 'roundInsert', volume: 0.75 });
+    this.cues.push({ at: 0.885, name: 'leverCycle', volume: 1 });
     this.events.emit('reloadStart');
     return true;
   }

@@ -289,6 +289,29 @@ export const rock = () => cached('rock', () => {
   return t;
 });
 
+// Small tiling stone grain laid over the Blender rocks so they stay sharp up close.
+// One non-colour texture: R,G = detail normal (x, y), B = grain brightness (0.5 = no change).
+export const rockDetail = () => cached('rockDetail', () => {
+  const W = 256, H = 256;
+  const c = canvas(W, H), img = c.getContext('2d').createImageData(W, H);
+  const h = new Float32Array(W * H);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const u = x / W, v = y / H;
+    const pit = sstep(0.62, 0.8, fbm(u, v, 24, 24, 2, 233));          // tiny pits
+    h[y * W + x] = fbm(u, v, 8, 8, 5, 227, 0.6) - pit * 0.35;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x, p = i * 4;
+    const nx = -(h[y * W + (x + 1) % W] - h[y * W + (x - 1 + W) % W]) * 6;
+    const ny = (h[((y + 1) % H) * W + x] - h[((y - 1 + H) % H) * W + x]) * 6;
+    const inv = 1 / Math.sqrt(nx * nx + ny * ny + 1);
+    img.data[p] = (nx * inv * 0.5 + 0.5) * 255; img.data[p + 1] = (ny * inv * 0.5 + 0.5) * 255;
+    img.data[p + 2] = clamp01(0.5 + (h[i] - 0.5) * 0.9) * 255; img.data[p + 3] = 255;
+  }
+  c.getContext('2d').putImageData(img, 0, 0);
+  return tex(c, false);
+});
+
 // ---------------------------------------------------------------- forest floor
 // Mud + needles + leaves + twigs, wet puddles. Drawn as a noise base, then strokes on top.
 export const forestFloor = () => cached('forestFloor', () => {

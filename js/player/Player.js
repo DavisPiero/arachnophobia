@@ -15,6 +15,9 @@ export class Player {
     this.yaw = 0;            // 0 = looking toward -z (north)
     this.pitch = 0;
     this.recoil = 0;         // extra pitch from weapon kick
+    this.recoilYaw = 0;      // sideways kick
+    this.push = new THREE.Vector3(); // view knocked away from a hit: (yaw, pitch, roll) radians, decays
+    this.dip = 0;            // extra downward look (the stomp), radians
     this.health = C.maxHealth;
     this.locked = false;     // true while reloading (cannot move)
     this.colliders = [];
@@ -32,7 +35,7 @@ export class Player {
   reset() {
     this.position.set(0, 0, 2.2);
     this.velocity.set(0, 0, 0);
-    this.yaw = 0; this.pitch = 0; this.recoil = 0;
+    this.yaw = 0; this.pitch = 0; this.recoil = 0; this.recoilYaw = 0; this.push.set(0, 0, 0); this.dip = 0;
     this.health = C.maxHealth; this.dead = false; this.locked = false; this.sprinting = false; this.aiming = false;
     this.shake = 0; this.hurtFlash = 0;
   }
@@ -49,6 +52,8 @@ export class Player {
     this.yaw += input.lookDX * this.lookScale;
     this.pitch = THREE.MathUtils.clamp(this.pitch + input.lookDY * this.lookScale, -C.pitchLimit, C.pitchLimit);
     this.recoil *= Math.exp(-Config.weapon.recoilRecover * dt);
+    this.recoilYaw *= Math.exp(-Config.weapon.recoilRecover * 1.4 * dt);
+    this.push.multiplyScalar(Math.exp(-7 * dt));
 
     // --- move ---
     const mv = this.locked || this.dead ? { x: 0, y: 0 } : input.getMove();
@@ -93,7 +98,11 @@ export class Player {
       this.position.y + C.eyeHeight + bob - deadDrop + (Math.random() - 0.5) * sh * 0.04,
       this.position.z + right.z * sway,
     );
-    this.camera.rotation.set(this.pitch + this.recoil + (Math.random() - 0.5) * sh * 0.02, this.yaw, this.dead ? 0.5 : 0);
+    this.camera.rotation.set(
+      THREE.MathUtils.clamp(this.pitch + this.recoil - this.dip + this.push.y, -1.5, 1.5) + (Math.random() - 0.5) * sh * 0.02,
+      this.yaw + this.recoilYaw + this.push.x,
+      (this.dead ? 0.5 : 0) + this.push.z,
+    );
   }
 
   collide() {
@@ -123,10 +132,21 @@ export class Player {
     }
   }
 
-  damage(amount) {
+  /** from: world position of what hit us (optional). The view is knocked away from it. */
+  damage(amount, from) {
     if (this.dead) return;
     this.health = Math.max(0, this.health - amount);
     this.shake = Math.min(1.5, this.shake + amount / 20);
+    if (from) {
+      // direction of the hit relative to where we look: from the right pushes the view left and rolls it
+      const dx = from.x - this.position.x, dz = from.z - this.position.z;
+      const ang = Math.atan2(dx, dz) - Math.atan2(-Math.sin(this.yaw), -Math.cos(this.yaw)); // 0 = straight ahead
+      const side = Math.sin(ang), front = Math.cos(ang);
+      const k = Math.min(1.4, amount / 14);
+      this.push.x += -side * 0.07 * k;       // yaw away (side < 0 = hit from the right)
+      this.push.y += front * 0.05 * k;       // hit from the front snaps the head up
+      this.push.z += -side * 0.09 * k;       // roll away
+    }
     this.hurtFlash = Math.min(1, this.hurtFlash + amount / 30);
     this.audio.play('playerHurt', { volume: 0.9 });
     this.events.emit('playerHurt', { amount, health: this.health });

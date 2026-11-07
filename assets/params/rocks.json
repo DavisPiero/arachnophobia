@@ -23,6 +23,7 @@
     "mossAmount": 0.55,
     "wetness": 0.5
   },
-  "budget": { "high": 650, "low": 180, "texture": 2048, "gameTexture": 1024 },
-  "game": { "tintJitter": 0.12 }
+  "uv": { "angleLimit": 80, "margin": 0.004 },
+  "budget": { "high": 650, "low": 180, "texture": 2048, "gameTexture": 2048, "webpQuality": 90, "normalQuality": 96 },
+  "game": { "tintJitter": 0.12, "detailRepeat": 48, "detailStrength": 0.6, "detailGrain": 0.35 }
 }

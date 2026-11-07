@@ -1,9 +1,7 @@
 // The three windows: how visible the outside is, and how they get damaged and broken.
 //
-// Visibility: a black "veil" sits on the inside of each window opening. Its opacity depends on how far
-// the player is from the window and the viewing angle, with a short lag like eyes adjusting to the dark.
-// From across the room the windows read as black; walking up to one reveals the forest smoothly.
-// Lightning briefly lifts the veil. Red eyes are drawn after the veil, so they show through it.
+// Visibility: the windows are always clear (the darkening veil was removed, user's call). `closeness`
+// (1 = standing at the window looking out) still drives the watcher, which slips away when you come close.
 //
 // Damage stages: 0 intact, 1 cracked, 2 shattered (glass gone), 3 boards splintering, 4 breached.
 import * as THREE from 'three';
@@ -14,7 +12,6 @@ import { interiorMaterial } from '../world/Lighting.js';
 const WC = Config.windows;
 // WINDOWS[i].center sits on the INNER face of the wall; the wall runs outward from there.
 const GLASS_Z = CABIN.wallThickness / 2;   // glass in the middle of the wall
-const VEIL_Z = -0.012;                     // veil just inside the inner face
 const BOARD_Z = -0.11;                     // boards nailed on the inside, clear of the window stool
 
 export class WindowSystem {
@@ -40,16 +37,6 @@ export class WindowSystem {
     group.rotation.y = yaw;
     this.scene.add(group);
     const w = def.width, h = def.height;
-
-    // veil (eye adaptation darkness): just outside the boards, on the inner side of the opening
-    const veil = new THREE.Mesh(
-      new THREE.PlaneGeometry(w + 0.04, h + 0.04),
-      new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: WC.farOpacity, depthWrite: false, fog: false }),
-    );
-    veil.position.z = VEIL_Z;
-    veil.rotation.y = Math.PI; // face the room
-    veil.renderOrder = 10;
-    group.add(veil);
 
     // glass: faint, glossy so the lantern glints on it
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a2426, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
@@ -91,8 +78,8 @@ export class WindowSystem {
     }
 
     const win = {
-      id: def.id, label: def.label, def, group, veil, glass, crack, crackCanvas, crackTex, boards,
-      health: WC.maxHealth, stage: 0, opacity: WC.farOpacity, closeness: 0, cracks: [],
+      id: def.id, label: def.label, def, group, glass, crack, crackCanvas, crackTex, boards,
+      health: WC.maxHealth, stage: 0, closeness: 0, cracks: [],
       center: def.center.clone(), normal: n, width: def.width, height: def.height,
       // world-space point on the outside face of the glass, used by spiders
       outside: def.center.clone().addScaledVector(n, CABIN.wallThickness + 0.02),
@@ -284,12 +271,6 @@ export class WindowSystem {
       const cos = Math.max(0, toWin.normalize().dot(w.normal)); // 1 = looking straight out through it
       const dEff = d / (0.45 + 0.55 * cos);
       const t = smoothstep(WC.clearDistance, WC.darkDistance, dEff);
-      let target = WC.farOpacity * Math.pow(t, 0.8);
-      target *= 1 - this.flash * 0.85;
-      const rate = target < w.opacity ? 2.4 : 1.4; // eyes adjust to dark slower than to light
-      w.opacity += (target - w.opacity) * (1 - Math.exp(-rate * dt * 2));
-      if (this.flash > 0.5) w.opacity = Math.min(w.opacity, target + 0.05);
-      w.veil.material.opacity = w.opacity;
       w.closeness = 1 - t;
       maxClose = Math.max(maxClose, w.closeness);
 

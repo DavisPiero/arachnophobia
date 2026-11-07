@@ -1,38 +1,49 @@
 # Hand-off
 
-*Session of 2026-11-07 (second). Replaces any earlier note.*
+*Session of 2026-11-07 (third). Replaces any earlier note.*
 
 ## Repo state
-- `main` is the only branch, clean, pushed. Milestone 2 is signed off and live at https://davispiero.github.io/arachnophobia/.
-- `npm test` passed locally and against the live site after the last code change.
+- Work is on `m3-hands-and-combat` (pushed to origin, not merged). `main` is still milestone 2 and is what Pages serves.
+- `npm test` passes (desktop + phone), including new checks for the lever, axe, stomp, kill splats and the AXE/STOMP buttons.
+- Sign-off = merge the branch into main, push, delete the branch (see the global working agreement).
+
+## What was built
+1. **Fixes:**
+   - **Rocks:** one packed 2048 atlas, a better normal map, plus a tiling stone grain in the game.
+   - **Night:** brighter (numbers in `Config.night`).
+   - **Windows:** the darkening is removed.
+   - **Flashlight:** now on Q.
+2. **Blender generators** (`blender/generators/rifle.py`, `hands.py`, `axe.py`) with shared helpers in `blender/lib/common.py`:
+   lofts, metaball hands, procedural walnut, blued steel, leather and canvas, one baked atlas per family with metalness.
+   Every pivot and grip lives in `assets/params/*.json`, which the game reads too.
+3. **First-person view** (`js/player/ViewModel.js`):
+   - Poses: hip, aimed and sprint.
+   - The lever cycle: the hand rides the lever, the hammer cocks, a spent case flies out.
+   - The reload: the rifle turns gate-up and the left hand feeds the rounds in one by one.
+   - The axe swing: keyframes, with the arm turned towards the shoulder.
+   - Fallback models in code.
+4. **Weapon** (`Weapon.js`):
+   - 0.5 s lever, damage 40.
+   - Sideways recoil, a fire press buffered near the end of the cycle, a stronger room flash.
+5. **Melee** (`js/player/Melee.js`): the axe on F and the stomp on V, with window and glass rules, and touch buttons.
+6. **Feedback** (`js/fx/Gore.js`, `SpiderAI.js`, `SpiderRig.js`):
+   - Body or leg hit zones.
+   - Knockback, a body jolt and a leg kick.
+   - Brutes stagger.
+   - Spray and splats, including on the glass.
+   - A death thrash before the curl, and a kill crunch.
+   - Hits push the view away from the attacker.
+7. **Sounds:** leverCycle, caseTink, roundInsert, axeSwing, axeChop, stomp, stompSquish, spiderKill, and a heavier gunshot.
 
 ## Read first
-1. `CLAUDE.md` (hard rules changed: assets come from Blender generators or hand-made files, with code fallbacks)
-2. `STATE.md`, `SPEC.md` (roadmap for milestones 2–6), `DECISIONS.md`
-3. `blender/README.md` (how the pipeline works, budgets, hand-editing)
+`CLAUDE.md`, `STATE.md`, `SPEC.md`, `DECISIONS.md` (14 new lines), `blender/README.md` (new families and budgets).
 
-## What was built last session
-- Blender pipeline: `npm run assets` → background Blender → bake high→low → WebP/meshopt → `assets/models/*.glb`.
-  First family: rocks (8 variants, 650/180 tris, one shared atlas). `js/core/Assets.js` loads them; Forest swaps them in.
-- Second lamp (west wall, north end), brighter lantern, near-black night fog, windows much less dark from afar.
-- Flashlight (T / LIGHT), sprint (Shift / joystick past the edge), aim down sights (right mouse / AIM), runners 1.4x bigger,
-  phone zoom guard (`js/input/NoZoom.js`). Model viewer at `dev/assets.html`.
-
-## What comes next
-1. **Rock textures are blurry (user's note).** Likely causes: 8 variants share one atlas that is shrunk to 1024 px in the game
-   (about 300 px per rock), Smart UV Project cuts each rock into many small islands, and WebP compression softens the normal map.
-   Likely fix: a larger atlas (2048) with fewer, bigger UV islands, higher-quality normal maps, and a tiling detail texture
-   blended on top for close-up sharpness. Check close up in `dev/assets.html?model=rocks` and in the game.
-2. **Milestone 3:** hands and arms plus a lever-action rifle and an axe as Blender generators with armature animations.
-   Axe on F (F currently also means "interact": move interact to E only), stomp on V, recoil, sway, directional shake,
-   muzzle flash with light, blood by hit location, new combat sounds. Give the weapon a higher texture budget than rocks:
-   it is always on screen.
+## Known weak spots
+- **Stomp:** from the eye you mostly see the trouser leg; the boot's toe hides behind the shin.
+- **Reload:** the pose is dark at the table and the feeding hand is hard to read.
+- **Aimed:** the right sleeve still takes a fair share of the lower right.
+- **Hands:** made of metaballs, so they read as gloves rather than detailed hands. Good enough with gloves, but the user may
+  want to sculpt them: export to `blender/source/hands.glb`, keeping the mesh names.
 
 ## Open questions for the user
-1. Is the night too dark now, especially the east clearing where spiders should be visible from far away?
-2. Is the second lamp in the right place (west wall, north end)?
-3. Flashlight on T and unlimited sprint: OK?
-4. Does double-tap still zoom on a real phone?
-
-## Testing rules (from the user)
-Keep tests cheap: `npm test` in the background, do not poll, read at most one or two screenshots per change.
+See STATE.md "Open with you".

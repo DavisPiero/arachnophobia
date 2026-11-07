@@ -52,7 +52,8 @@ const events = new Events();
 const t0 = performance.now();
 const world = buildWorld(scene, renderer, Quality, events);
 const buildMs = Math.round(performance.now() - t0);
-window.__scene = scene; window.__world = world;
+window.__scene = scene; window.__world = world; window.__camera = camera;
+world.loadAssets().then((u) => { window.__assets = u; });
 
 const EYE = 1.65;
 const views = {

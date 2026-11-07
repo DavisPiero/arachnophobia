@@ -10,6 +10,9 @@ import { Director } from '../audio/Director.js';
 import { Input } from '../input/Input.js';
 import { Player } from '../player/Player.js';
 import { Weapon } from '../player/Weapon.js';
+import { Melee } from '../player/Melee.js';
+import { Gore } from '../fx/Gore.js';
+import { interiorMaterial } from '../world/Lighting.js';
 import { AmmoTable } from '../player/AmmoTable.js';
 import { Flashlight } from '../player/Flashlight.js';
 import { WindowSystem } from '../systems/WindowSystem.js';
@@ -57,6 +60,10 @@ export class Game {
     this.eyes = new EyesSystem({ scene: this.scene, audio: this.audio });
     this.spiders = new SpiderManager({ scene: this.scene, audio: this.audio, events, quality: Quality, windows: this.windows, colliders: this.world.cabin.colliders });
     this.spiders.flashlight = this.flashlight;
+    this.gore = new Gore({ scene: this.scene, events, windows: this.windows });
+    this.spiders.gore = this.gore;
+    this.melee = new Melee({ player: this.player, weapon: this.weapon, camera: this.camera, audio: this.audio, events, windows: this.windows, spiders: this.spiders });
+    this.scene.add(this.weapon.view.boot);
     this.waves = new WaveSystem({ spiders: this.spiders, events, quality: Quality, player: this.player });
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
@@ -108,7 +115,9 @@ export class Game {
     this.menu.setLoading('Building sounds…');
     try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
     this.menu.setLoading('Carving rocks…');
-    await this.world.loadAssets();
+    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality)]);
+    // the boot stands in the room: keep the moon off it like every other interior surface
+    this.weapon.view.boot.traverse((o) => { if (o.isMesh && o.material) interiorMaterial(o.material); });
     this.state = 'title';
     this.menu.ready();
     this.loop();
@@ -161,6 +170,8 @@ export class Game {
     this.table.reset();
     this.eyes.reset();
     this.flashlight.reset();
+    this.melee.reset();
+    this.gore.clear();
     this.waves.reset();
     this.kills = 0;
     this.overTimer = 0;
@@ -204,12 +215,15 @@ export class Game {
     if (playing) {
       if (input.consume('interact')) this.table.tryStart();
       if (input.consume('fire')) this.weapon.tryFire();
+      if (input.consume('axe')) this.melee.tryAxe();
+      if (input.consume('stomp')) this.melee.tryStomp();
       if (input.consume('torch')) this.flashlight.toggle();
     }
     this.time += simulate ? dt : 0;
     this.player.update(simulate ? dt : 0, input);
     if (simulate) {
       this.table.update(dt);
+      this.melee.update(dt);
       const calmBefore = this.waves.phase === 'calm' ? this.waves.timer : null;
       this.waves.update(dt);
       // deliberate silence in the seconds before a wave arrives
@@ -247,8 +261,8 @@ export class Game {
     this.input.touch.setTorchOn(this.flashlight.on);
     // the gun picks up the lantern's warmth depending on how close you are to it
     const dl = this.camera.position.distanceTo(LANTERN.position);
-    this.weapon.viewKey.intensity = 1.2 + 6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
-      + this.flashlight.level * 1.6;
+    this.weapon.viewKey.intensity = 0.5 + 2.6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
+      + this.flashlight.level * 1.2;
     this.audio.update(dt);
 
     // HUD
@@ -272,6 +286,10 @@ export class Game {
       const types = { Digit1: 'runner', Digit2: 'brute', Digit3: 'climber', Digit4: 'stalker' };
       if (types[e.code]) this.spiders.spawn(types[e.code], WINDOWS[Math.floor(Math.random() * 3)].id);
       if (e.code === 'KeyK') for (const s of this.spiders.spiders) if (s.alive) s.die();
+      if (e.code === 'KeyI') { // a runner right in front of you, inside (to try the stomp and the axe)
+        const s = this.spiders.spawn('runner', 'north');
+        if (s) { const f = this.player.forward(new THREE.Vector3()); s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(this.player.position.x + f.x * 1.1, 0, this.player.position.z + f.z * 1.1); }
+      }
       if (e.code === 'KeyB') for (const w of this.windows.windows) this.windows.damage(w.id, 30);
       if (e.code === 'KeyJ') events.emit('lightning', { strength: 1 });
     });
@@ -280,7 +298,7 @@ export class Game {
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const i = this.renderer.info;
-    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  K kill  B damage windows  J lightning`;
+    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  I runner inside  K kill  B damage windows  J lightning`;
   }
 }
 

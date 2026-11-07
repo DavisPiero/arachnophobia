@@ -41,3 +41,17 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Smallest spiders (runner) scaled 1.4x through Config.spiders.runner.scale, which is now actually used.
 - 2026-11-07 — Mobile zoom: CSS touch-action on every layer plus a script that cancels double-tap, pinch and Safari gesture events, and snaps back if the page zoomed anyway.
 - 2026-11-07 — Milestone 2 signed off by the user, merged and live. Note from play: rock textures look low quality and blurry; fix with milestone 3.
+- 2026-11-07 — Rocks: one packed 2048 atlas (fewer, bigger UV islands, same texel density), normal map at WebP 96, plus a tiling grain texture in the game. Fixes the blurry rocks.
+- 2026-11-07 — Night brighter: moon 0.5→0.7, sky fill 0.6→0.85, fog 0.046→0.034 and a touch less black. Numbers now in Config.night.
+- 2026-11-07 — Window darkening removed (user's call). Windows are always clear; `closeness` still tells a watcher it was seen. Spec pillar 1 rewritten.
+- 2026-11-07 — Flashlight on Q (user's call), F is the axe, V the stomp, E is interact only.
+- 2026-11-07 — Lever cycle 0.5 s between shots (user's call); damage 34→40 so a runner still dies in one shot and a brute in five.
+- 2026-11-07 — Gloved hands (user's call): leather work gloves, dark waxed-canvas sleeves.
+- 2026-11-07 — Hands are rigid posed meshes (fist, forend support, cartridge pinch, axe fist) animated in code, not armature animations. Gloves hide fingers, and code poses are easier to tune. Guess.
+- 2026-11-07 — Axe reaches a spider through a cracked or broken window; swinging at intact glass only cracks your own glass (recommendation accepted).
+- 2026-11-07 — Stomp kills runners (the small ones) on the floor; anything bigger is shoved back 0.5 m (recommendation accepted).
+- 2026-11-07 — No hit marker: hit feedback is on the spider (jolt, leg kick, spray, splats, kill crunch, death thrash) (recommendation accepted).
+- 2026-11-07 — Ichor is a pale sickly yellow-green so it reads at night. Guess: the spec says "blood".
+- 2026-11-07 — Splats stay until the next wave starts; splats on glass go when the glass shatters. Guess.
+- 2026-11-07 — The boot is drawn in the world (on the real floor), with a matte material: glossy trousers seen from above read as white cloth.
+- 2026-11-07 — Hit direction pushes the view away from the attacker (yaw, roll) on top of the random shake.

@@ -96,6 +96,13 @@ body.touch.playing #touch-ui { display: block; }
 }
 #btn-aim { right: calc(40px + var(--safe-r)); bottom: calc(200px + var(--safe-b)); width: 64px; height: 64px; font-size: 11px; }
 #btn-torch { right: calc(122px + var(--safe-r)); bottom: calc(150px + var(--safe-b)); width: 54px; height: 54px; font-size: 10px; }
+#btn-axe, #btn-stomp {
+  position: absolute; border-radius: 50%; border: 1px solid rgba(216, 203, 180, 0.3);
+  background: rgba(0, 0, 0, 0.3); letter-spacing: 0.08em; touch-action: none; opacity: 0.7;
+}
+#btn-axe { right: calc(218px + var(--safe-r)); bottom: calc(96px + var(--safe-b)); width: 60px; height: 60px; font-size: 11px; }
+#btn-stomp { right: calc(214px + var(--safe-r)); bottom: calc(22px + var(--safe-b)); width: 54px; height: 54px; font-size: 9px; }
+#btn-axe.down, #btn-stomp.down { opacity: 1; background: rgba(140, 26, 16, 0.45); }
 #btn-aim.on, #btn-torch.on { opacity: 1; border-color: var(--ink); background: rgba(216, 203, 180, 0.2); }
 #stick.sprint { border-color: rgba(216, 203, 180, 0.6); }
 body.touch #ammo { right: calc(130px + var(--safe-r)); bottom: auto; top: calc(14px + var(--safe-t)); font-size: 24px; }

@@ -3,7 +3,8 @@
 // Life of a spider:
 //   approach (walk a forest route) -> [stalker: watch from the dark] -> climb to a window slot
 //   -> attackWindow (claw at the glass / boards) -> window breached -> enter -> inside (hunt the player)
-//   Any time: shot dead -> dying (falls off walls) -> fades away.
+//   Any time: killed -> dying (thrashes, falls off walls, curls up) -> fades away.
+// Hits: where the shot lands (body or leg) sets the spray and the jolt; brutes stagger every quarter of their health.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight, WINDOWS } from '../world/Layout.js';
@@ -12,6 +13,7 @@ import { SpiderVoice } from '../audio/SpiderVoice.js';
 import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
+const GORE = Config.gore;
 const SLOTS = [ { u: 0, y: 1.42 }, { u: -0.32, y: 1.2 }, { u: 0.34, y: 1.62 } ]; // attack spots on a window
 
 let nextId = 1;
@@ -41,6 +43,7 @@ export class Spider {
     this.pause = 0;           // seconds standing still
     this.burst = 0;           // runner burst timer
     this.flinch = 0;
+    this.stagger = 0;         // seconds a heavy hit stops the spider (brutes)
     this.attackT = 1 + Math.random();
     this.attackAnim = 0;
     this.window = null; this.slot = -1;
@@ -59,25 +62,68 @@ export class Spider {
     if (nodes.length) { this.root.position.copy(nodes[0].p); this.up.copy(nodes[0].n); }
   }
 
-  takeHit(dmg, point, dir) {
-    if (!this.alive) return;
-    this.health -= dmg;
-    this.flinch = 0.3;
-    this.mgr.audio?.play('bulletImpactFlesh', { position: point, volume: 0.9, exterior: this.state !== 'inside' });
-    this.mgr.spawnIchor(point, dir);
-    this.voice?.hit();
-    if (this.state === 'watch') this.startVanish(); // a shot sends a stalker away
-    if (this.health <= 0) this.die();
+  /** Which part was hit: 'body' (the hitbox's real ellipsoid) or 'leg' (the forgiving margin around it). */
+  hitZone(point) {
+    const hb = this.visual.hitbox;
+    const p = this.root.worldToLocal(_h.copy(point)).sub(hb.position);
+    p.x /= hb.scale.x / _hitScale.x; p.y /= hb.scale.y / _hitScale.y; p.z /= hb.scale.z / _hitScale.z;
+    return p.length() <= 1.15 ? 'body' : 'leg';
   }
 
-  die() {
+  /** by: 'bullet' | 'axe' | 'stomp' */
+  takeHit(dmg, point, dir, { by = 'bullet' } = {}) {
+    if (!this.alive) return;
+    const before = this.health;
+    this.health -= dmg;
+    const zone = by === 'bullet' ? this.hitZone(point) : 'body';
+    const body = zone === 'body';
+    const rig = this.visual.rig;
+    this.flinch = body ? 0.45 : 0.25;
+    rig.jolt?.(body ? 1 : 0.45);
+    if (!body) rig.hitLeg?.(point);
+    // knockback along the shot, on the ground or floor only (on a wall it would leave the surface)
+    if ((this.surface === 'ground' || this.surface === 'floor') && this.type !== 'brute') {
+      const push = GORE.knockback * (body ? 1 : 0.4) * (by === 'axe' ? 1.6 : 1) / Math.max(0.6, this.cfg.scale);
+      this.root.position.x += dir.x * push; this.root.position.z += dir.z * push;
+      if (this.state === 'inside') this.collide();
+    }
+    // brutes stagger each time they lose another quarter of their health
+    const q = this.cfg.health * GORE.staggerEvery;
+    if (this.type === 'brute' && Math.floor(before / q) > Math.floor(Math.max(0, this.health) / q) && this.health > 0) {
+      this.stagger = GORE.staggerTime;
+      rig.jolt?.(1.4);
+      this.voice?.hit();
+    }
+    const sound = by === 'axe' ? 'axeChop' : by === 'stomp' ? 'stompSquish' : 'bulletImpactFlesh';
+    this.mgr.audio?.play(sound, { position: point, volume: body ? 0.95 : 0.7, exterior: this.state !== 'inside' });
+    this.mgr.gore?.spray(point, dir, body ? 1 : 0.35);
+    if (body && Math.random() < 0.5) this.splatHere(point, 0.28);
+    this.voice?.hit();
+    if (this.state === 'watch') this.startVanish(); // a shot sends a watcher away
+    if (this.health <= 0) this.die(point, dir, by);
+  }
+
+  /** A splat where the spider stands (ground, wall, floor) and, at a window, on the glass. */
+  splatHere(point, size) {
+    const gore = this.mgr.gore;
+    if (!gore) return;
+    gore.splat(this.root.position, this.up, size);
+    if (this.window && (this.state === 'attackWindow' || this.surface === 'glass') && point) gore.splatGlass(this.window, point, size * 1.1);
+  }
+
+  die(point, dir, by = 'bullet') {
+    if (!this.alive) return;
     this.alive = false;
     this.state = 'dying';
     this.deadT = 0;
     this.releaseSlot();
     this.voice?.die();
+    const at = point || this.root.position;
+    this.mgr.audio?.play('spiderKill', { position: at, volume: 1, exterior: !(Math.abs(at.x) < CABIN.halfX && Math.abs(at.z) < CABIN.halfZ) });
+    if (dir) this.mgr.gore?.spray(at, dir, 2.2);
+    this.splatHere(at, 0.55 * Math.max(0.7, this.cfg.scale) * (this.type === 'brute' ? 1.8 : 1));
     this.fallV = this.surface === 'ground' || this.surface === 'floor' ? null : this.up.clone().multiplyScalar(1.2);
-    this.mgr.events.emit('spiderKilled', { spider: this });
+    this.mgr.events.emit('spiderKilled', { spider: this, point: at, by });
   }
 
   releaseSlot() {
@@ -97,6 +143,13 @@ export class Spider {
     this.distToPlayer = this.root.position.distanceTo(player.position);
     this.flinch = Math.max(0, this.flinch - dt);
     this.attackAnim = Math.max(0, this.attackAnim - dt * 2.5);
+    if (this.stagger > 0) {
+      // reeling from a heavy hit: no moving, no attacking
+      this.stagger -= dt;
+      this.pause = Math.max(this.pause, this.stagger);
+      this.attackT = Math.max(this.attackT, this.stagger + 0.2);
+    }
+    let thrash = 0;
     let mode = 'walk';
     let moveSpeed = 0;
 
@@ -130,7 +183,9 @@ export class Spider {
         break;
       case 'dying':
         this.updateDying(dt);
-        mode = 'dead';
+        // thrash first (legs flailing), then curl up
+        thrash = Math.max(0, 1 - this.deadT / GORE.thrashTime);
+        mode = thrash > 0 ? 'idle' : 'dead';
         break;
     }
     if (this.state === 'approach' || this.state === 'enter' || this.state === 'scuttle') mode = moveSpeed > 0.05 ? 'walk' : 'idle';
@@ -138,7 +193,7 @@ export class Spider {
     // smooth speed for the rig
     this.speed += (moveSpeed - this.speed) * (1 - Math.exp(-10 * dt));
     this.orient(dt);
-    this.visual.rig.update(dt, { speed: this.speed, mode, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
+    this.visual.rig.update(dt, { speed: this.speed, mode, thrash, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
         : this.state === 'attackWindow' ? 'attackWindow'
@@ -323,7 +378,7 @@ export class Spider {
         this.attackT = this.cfg.attackInterval * (0.8 + Math.random() * 0.4);
         this.attackAnim = 1;
         this.voice?.attack();
-        player.damage(this.cfg.playerDamage);
+        player.damage(this.cfg.playerDamage, this.root.position);
       }
     }
     p.y = 0;
@@ -437,7 +492,7 @@ export class SpiderManager {
     this.slots = Object.fromEntries(WINDOWS.map((w) => [w.id, [null, null, null]]));
     this.timers = [];
     this.targets = [];
-    this.ichor = [];
+    this.gore = null;         // set by the game (js/fx/Gore.js)
     // stalkers flee from light near them
     events.on('lightning', () => { for (const s of this.spiders) if (s.state === 'watch' && Math.random() < 0.8) s.startVanish(); });
     events.on('muzzleFlash', ({ position }) => {
@@ -454,8 +509,7 @@ export class SpiderManager {
     this.spiders = [];
     this.timers = [];
     for (const id in this.slots) this.slots[id] = [null, null, null];
-    for (const d of this.ichor) this.scene.remove(d.mesh);
-    this.ichor = [];
+    this.gore?.clear();
   }
 
   /** Spawn a spider of a type heading for a window. */
@@ -490,21 +544,6 @@ export class SpiderManager {
     });
   }
 
-  spawnIchor(point, dir) {
-    // a few dark droplets
-    if (!this.ichorMat) {
-      this.ichorMat = new THREE.MeshBasicMaterial({ color: 0x1c2410, transparent: true, opacity: 0.9 });
-      this.ichorGeo = new THREE.SphereGeometry(0.015, 5, 4);
-    }
-    for (let i = 0; i < 6; i++) {
-      const m = new THREE.Mesh(this.ichorGeo, this.ichorMat);
-      m.position.copy(point);
-      const v = dir.clone().multiplyScalar(-0.8 - Math.random()).add(new THREE.Vector3((Math.random() - 0.5) * 1.5, Math.random() * 1.5, (Math.random() - 0.5) * 1.5));
-      this.scene.add(m);
-      this.ichor.push({ mesh: m, v, life: 0.8 + Math.random() * 0.4 });
-    }
-  }
-
   update(dt, player) {
     for (let i = this.timers.length - 1; i >= 0; i--) {
       const t = this.timers[i];
@@ -518,11 +557,7 @@ export class SpiderManager {
       if (s.alive && s.state !== 'vanish') this.targets.push(s.visual.hitbox);
     }
     this.spiders = this.spiders.filter((s) => !s.removed);
-    for (let i = this.ichor.length - 1; i >= 0; i--) {
-      const d = this.ichor[i];
-      d.v.y -= 9.8 * dt; d.mesh.position.addScaledVector(d.v, dt); d.life -= dt;
-      if (d.life <= 0) { this.scene.remove(d.mesh); this.ichor.splice(i, 1); }
-    }
+    this.gore?.update(dt);
   }
 
   /** 0..1: how bad things are right now (drives ambience and eyes). */
@@ -551,3 +586,4 @@ export class SpiderManager {
 const _d = new THREE.Vector3(), _f = new THREE.Vector3(), _x = new THREE.Vector3(), _t = new THREE.Vector3();
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
 const _hitScale = new THREE.Vector3(1.7, 2.4, 1.4);
+const _h = new THREE.Vector3();

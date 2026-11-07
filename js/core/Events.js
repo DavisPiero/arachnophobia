@@ -7,7 +7,9 @@
 //   'windowDamaged'  { id, stage, health }      stage: 0 intact, 1 cracked, 2 shattered, 3 boards splintering, 4 breached
 //   'windowBreached' { id }
 //   'spiderSpawned'  { spider }
-//   'spiderKilled'   { spider }
+//   'spiderKilled'   { spider, point, by }      by: 'bullet' | 'axe' | 'stomp'
+//   'axeHit'         { spider } | { window }    Melee: the axe connected
+//   'stompHit'       { spider }
 //   'playerHurt'     { amount, health }
 //   'waveStart'      { wave }
 //   'waveEnd'        { wave }

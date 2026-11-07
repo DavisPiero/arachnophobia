@@ -31,6 +31,8 @@ The game keeps its old code-made model as a fallback: a missing or broken file n
 ## Seeing the result
 
 `dev/assets.html?model=rocks` shows every mesh in a file. Add `&lod=1` for the phone versions, `&night=1` for moonlight.
+Each generator also writes a quick preview render to `blender/build/<name>_preview.png` (rifle, hands, axe).
+`node tools/poses.mjs` screenshots every first-person pose in the running game (hip, aim, lever, reload, axe, stomp, kill).
 
 ## Editing by hand
 
@@ -45,8 +47,14 @@ Delete the file in `blender/source/` to go back to the generated version.
 
 | | Desktop mesh | Phone mesh | Texture in game | File |
 |---|---|---|---|---|
-| Rock | 650 tris | 180 tris | 1024 atlas, shared by all variants | < 2 MB |
+| Rock | 650 tris | 180 tris | 2048 atlas shared by all variants, plus a tiling grain texture in the game | < 2 MB |
+| Rifle (always on screen) | ~1500 tris all parts | ~55 % | 2048 atlas | < 2 MB |
+| Hands, sleeves, boot | ~1900 tris per arm | ~50 % | 2048 atlas | < 2 MB |
+| Axe | ~500 tris | ~55 % | 1024 | < 2 MB |
 | Whole game | | | | < 25 MB |
+
+Texture compression per family: `budget.webpQuality` for colour and roughness, `budget.normalQuality` for the normal map
+(normal maps soften badly under lossy WebP, so they get a higher quality).
 
 Rule of thumb: put detail in the baked normal map, not in triangles. Families share one texture atlas so the game draws
 all variants of a family with very few draw calls.
@@ -55,6 +63,12 @@ all variants of a family with very few draw calls.
 
 | Family | Variation controls (`assets/params/…json`) |
 |---|---|
-| rocks | `variants`, `seed`; shape: irregularity, lumpScale, flatness, elongation, fractures, fractureDepth; surface: detail, cracks; look: stone colours, moss amount, wetness |
+| rocks | `variants`, `seed`; shape: irregularity, lumpScale, flatness, elongation, fractures, fractureDepth; surface: detail, cracks; uv: angleLimit (higher = fewer, bigger islands); look: stone colours, moss amount, wetness; game: detail grain repeat/strength |
+| rifle | barrel, tube, receiver, forend, stock shapes; lever and hammer pivots and angles; sights line; muzzle, eject port, loading gate; grips (where the hands go); look: walnut, bluing, bare-steel wear |
+| hands | finger and thumb sizes, grip radius (rifle wrist, axe handle), forearm direction per pose, sleeve size and folds; look: glove, sleeve, boot, trousers colours |
+| axe | handle length, shape and curve; head size, poll, edge; look: hickory colours, rust |
 
-Coming next: weapons and hands (milestone 3), nine spider species (milestone 4), trees, foliage and cabin pieces (milestone 6).
+The rifle, hands and axe files share one coordinate space (GAME space: x right, y up, z towards the player, metres), so the
+game can put the hands exactly where the parameter files say. Moving a grip or pivot in the JSON moves it in both.
+
+Coming next: nine spider species (milestone 4), trees, foliage and cabin pieces (milestone 6).

@@ -1,15 +1,28 @@
 # State
 
-**Where we are:** milestone 2 (Blender pipeline, lighting and darkness fixes, flashlight, sprint, aim down sights,
-phone zoom fix) signed off, merged to main and live at https://davispiero.github.io/arachnophobia/.
+**Where we are:** milestone 3 (hands, lever-action rifle, axe, stomp, combat feedback) built on branch
+`m3-hands-and-combat`, pushed, **not signed off yet**. It also has the session's fixes: sharper rocks, a lighter
+night, no window darkening, flashlight on Q. Main is still milestone 2, live at https://davispiero.github.io/arachnophobia/.
 
-**Next:** fix the blurry rock textures (your note after playing), then milestone 3: hands and arms, a lever-action rifle and an axe from
-Blender, the axe on F, the stomp on V, recoil, sway, shake, muzzle flash, blood, combat sounds. Full roadmap in SPEC.md.
+**Next:** your play-test of milestone 3, then sign-off. After that, milestone 4: nine spider species (`SPECIES.md`),
+the Blender spider generator, locomotion, and spiders climbing in through the window frame.
 
 **Open with you:**
-- Guesses to confirm: wall lamp on the west wall at the north end; flashlight on T; unlimited sprint; how dark the night is now.
-- Does double-tap still zoom on your phone? Fixed in a headless phone test, not yet on a real device.
-- Rocks: shape and style accepted; textures read as low quality and blurry. To fix first next session.
+- Guesses to confirm:
+  - The ichor is pale yellow-green so it shows at night.
+  - Splats stay until the next wave.
+  - The hands are posed meshes, not animated skeletons.
+  - The boot's toe mostly hides behind the shin.
+- Look and feel:
+  - Are the hands, sleeves and rifle the right darkness under the lantern?
+  - Is the aimed rifle too big in the view?
+  - Does the reload read?
+- Is the night bright enough now (the east clearing especially)?
+- Does double-tap still zoom on your real phone? (Since milestone 2, only checked headless.)
 
-**Tools:** `npm run assets` (Blender → game), `dev/assets.html` (model viewer), `dev/spiders.html`, `dev/world.html`,
-`dev/sounds.html`, `?debug=1` and `?assets=0` in the game. `npm test` is the quick check (~2 min).
+**Tools:**
+- `npm run assets` rebuilds the Blender models: rocks, rifle, hands, axe.
+- `node tools/poses.mjs` screenshots every first-person pose.
+- Viewers: `dev/assets.html?model=rifle|hands|axe|rocks`, `dev/sounds.html` (new "Melee" group), `dev/world.html`.
+- `?debug=1`: I spawns a runner inside, in front of you (try the stomp and the axe), K kills all, 1–4 spawn.
+- `npm test` is the quick check (~2 min).

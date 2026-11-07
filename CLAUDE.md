@@ -23,8 +23,9 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - `npm run assets` — rebuild every `.glb` from the Blender generators (Blender runs in the background, no window)
 - `npm test` — headless smoke test (desktop + phone viewport), fails on console errors
 - `node tools/shot.mjs "index.html?mute=1&autostart=1" shots/x.png [--mobile] [--wait=ms] [--eval=js]`
+- `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,...]` — every first-person pose in one headless session
 
-URL switches: `mute=1`, `autostart=1` (skip the start screen), `quality=low|high`, `debug=1` (stats + free keys).
+URL switches: `mute=1`, `autostart=1` (skip the start screen), `quality=low|high`, `debug=1` (stats + free keys), `assets=0` (code-made models).
 
 ## Layout of the code
 
