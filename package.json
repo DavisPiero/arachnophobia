@@ -1,0 +1,15 @@
+{
+  "name": "arachnophobia",
+  "version": "0.1.0",
+  "private": true,
+  "description": "First-person horror: a cabin at night, three windows, mutant spiders outside.",
+  "type": "module",
+  "scripts": {
+    "start": "node tools/serve.mjs",
+    "test": "node tests/smoke.mjs",
+    "shot": "node tools/shot.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.1"
+  }
+}
