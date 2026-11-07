@@ -1,5 +1,5 @@
 // Desktop controls: WASD / arrows move, mouse looks (pointer lock), click fires,
-// E interacts, T flashlight, Shift sprint, right mouse aims, M mutes, Esc pauses (the browser releases pointer lock, which we treat as pause).
+// E interacts, Q flashlight, Shift sprint, right mouse aims, M mutes, Esc pauses (the browser releases pointer lock, which we treat as pause).
 import { Config } from '../core/Config.js';
 
 export class KeyboardMouse {
@@ -17,7 +17,7 @@ export class KeyboardMouse {
       this.keys.add(e.code);
       if (e.code === 'KeyE' || e.code === 'KeyF') input.press('interact');
       if (e.code === 'KeyM') input.press('mute');
-      if (e.code === 'KeyT') input.press('torch');
+      if (e.code === 'KeyQ') input.press('torch');
       if (e.code === 'KeyP') input.press('pause');
       if (e.code === 'Enter' || e.code === 'Space') input.press('start');
       this.update();

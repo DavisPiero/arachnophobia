@@ -33,12 +33,19 @@ let failed = false;
 for (const n of wanted) {
   const src = fs.existsSync(`blender/source/${n}.glb`) ? `blender/source/${n}.glb` : `blender/build/${n}.glb`;
   if (!fs.existsSync(src)) { console.log(`[assets] ${n}: no ${src}, skipped`); continue; }
-  let size = 1024;
-  try { size = JSON.parse(fs.readFileSync(`assets/params/${n}.json`, 'utf8')).budget?.gameTexture || size; } catch (_) {}
+  let budget = {};
+  try { budget = JSON.parse(fs.readFileSync(`assets/params/${n}.json`, 'utf8')).budget || {}; } catch (_) {}
+  const size = budget.gameTexture || 1024;
   const out = `assets/models/${n}.glb`;
-  const r = run(path.join('node_modules', '.bin', 'gltf-transform'), ['optimize', src, out,
-    '--compress', 'meshopt', '--texture-compress', 'webp', '--texture-size', String(size),
+  const cli = path.join('node_modules', '.bin', 'gltf-transform');
+  // geometry + resize first (textures stay PNG), then WebP with a quality we choose:
+  // normal maps soften badly under lossy WebP, so they get their own (higher) quality: budget.normalQuality.
+  let r = run(cli, ['optimize', src, out,
+    '--compress', 'meshopt', '--texture-compress', 'false', '--texture-size', String(size),
     '--simplify', 'false', '--join', 'false', '--instance', 'false', '--flatten', 'false', '--palette', 'false']);
+  if (r.ok && budget.normalQuality) r = run(cli, ['webp', out, out, '--slots', 'normalTexture', '--quality', String(budget.normalQuality)]);
+  const rest = budget.normalQuality ? ['--slots', '{baseColorTexture,metallicRoughnessTexture,occlusionTexture,emissiveTexture}'] : [];
+  if (r.ok) r = run(cli, ['webp', out, out, '--quality', String(budget.webpQuality || 80), ...rest]);
   if (!r.ok) { console.log(r.out); failed = true; continue; }
   const kb = (fs.statSync(out).size / 1024).toFixed(0);
   console.log(`[assets] ${n}: ${src} -> ${out} (${kb} KB)${kb > 2048 ? '  OVER the 2 MB budget' : ''}`);

@@ -7,6 +7,7 @@
 //  - flash(strength): lightning. muzzleFlash(position): 60 ms warm burst.
 import * as THREE from 'three';
 import { LANTERN, WALL_LAMP, CABIN } from './Layout.js';
+import { Config } from '../core/Config.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glow } from './Textures.js';
 
@@ -55,13 +56,14 @@ const CANDLE_COLOR = new THREE.Color().setRGB(1.0, 0.56, 0.24, THREE.LinearSRGBC
 const MOON_COLOR = new THREE.Color().setRGB(0.62, 0.72, 0.95, THREE.SRGBColorSpace);
 // Night fog is close to black: things get DARKER with distance, not hazier. (It was a blue-grey haze,
 // which made the far forest brighter than the near one.)
-const FOG_COLOR = new THREE.Color().setRGB(0.006, 0.008, 0.011, THREE.LinearSRGBColorSpace);
+const N = Config.night;
+const FOG_COLOR = new THREE.Color().setRGB(...N.fogColor, THREE.LinearSRGBColorSpace);
 const FLASH_FOG = new THREE.Color().setRGB(0.16, 0.18, 0.22, THREE.LinearSRGBColorSpace);
 
 const LANTERN_INTENSITY = 11.5;
 const WALL_LAMP_INTENSITY = 6.5;
-const MOON_INTENSITY = 0.5;
-const HEMI_INTENSITY = 0.6;
+const MOON_INTENSITY = N.moon;
+const HEMI_INTENSITY = N.hemi;
 
 // smooth pseudo-random 0..1 signal
 function wobble(t, seed) {
@@ -74,7 +76,7 @@ export function buildLighting(scene, renderer, quality) {
   scene.add(group);
 
   scene.background = new THREE.Color().setRGB(0.012, 0.015, 0.02, THREE.LinearSRGBColorSpace);
-  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), 0.046);
+  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), N.fogDensity);
   renderer.toneMappingExposure = 1.15;
 
   // ---------------------------------------------------------- sky dome

@@ -654,6 +654,7 @@ export function buildForest(scene, quality, lighting) {
     const mat = new THREE.MeshStandardMaterial({ map: src.map, normalMap: src.normalMap, roughnessMap: src.roughnessMap,
       roughness: 1, metalness: 0, envMap: env, envMapIntensity: 0.7 });
     mat.normalScale.copy(src.normalScale); // the loader knows the file's normal-map convention
+    addRockDetail(mat, params.game || {});
     if (rockData.im) { group.remove(rockData.im); rockData.im.geometry.dispose(); rockData.im.material.dispose(); }
     const jitter = params.game?.tintJitter ?? 0.12;
     const buckets = variants.map(() => []);
@@ -676,6 +677,24 @@ export function buildForest(scene, quality, lighting) {
   }
 
   return { group, update, rain: rain.mesh, useRocks };
+}
+
+// Close-up sharpness for the baked rocks: a small tiling grain (normal + brightness) on top of the atlas.
+// The atlas packs every rock's islands at the same scale, so one repeat count gives one grain size everywhere.
+function addRockDetail(mat, g) {
+  const detail = T.rockDetail();
+  const repeat = g.detailRepeat ?? 48, strength = g.detailStrength ?? 0.6, grain = g.detailGrain ?? 0.35;
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uDetail = { value: detail };
+    sh.uniforms.uDetailK = { value: new THREE.Vector3(repeat, strength, grain) };
+    sh.fragmentShader = 'uniform sampler2D uDetail;\nuniform vec3 uDetailK;\n' + sh.fragmentShader
+      .replace('#include <map_fragment>', `#include <map_fragment>
+        vec3 rockDet = texture2D(uDetail, vMapUv * uDetailK.x).xyz;
+        diffuseColor.rgb *= 1.0 + (rockDet.z - 0.5) * 2.0 * uDetailK.z;`)
+      .replace('#include <normal_fragment_maps>', THREE.ShaderChunk.normal_fragment_maps
+        .replace('mapN.xy *= normalScale;', 'mapN.xy *= normalScale;\n  mapN.xy += (rockDet.xy * 2.0 - 1.0) * uDetailK.y;'));
+  };
+  mat.customProgramCacheKey = () => 'rockDetail';
 }
 
 // ------------------------------------------------------------------ shed

@@ -104,11 +104,23 @@ def triangle_count(ob):
     return len(ob.data.loop_triangles)
 
 
-def smart_unwrap(ob, island_margin=0.02):
+def smart_unwrap(ob, island_margin=0.02, angle=66):
+    """Higher angle = fewer, bigger UV islands (fewer seams, sharper texture), a little more stretch."""
     select_only(ob)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
-    bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=island_margin)
+    bpy.ops.uv.smart_project(angle_limit=math.radians(angle), island_margin=island_margin)
+    bpy.ops.object.mode_set(mode='OBJECT')
+
+
+def pack_atlas(objs, margin=0.004):
+    """Pack the UV islands of several objects into one shared 0..1 atlas, all at the same texel density."""
+    select_only(*objs)
+    bpy.ops.object.mode_set(mode='EDIT')
+    bpy.ops.mesh.select_all(action='SELECT')
+    bpy.ops.uv.select_all(action='SELECT')
+    bpy.ops.uv.average_islands_scale()
+    bpy.ops.uv.pack_islands(rotate=True, margin=margin)
     bpy.ops.object.mode_set(mode='OBJECT')
 
 

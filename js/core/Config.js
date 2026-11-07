@@ -47,10 +47,17 @@ export const Config = {
     maxHealth: 100,
     // health thresholds for each stage (fraction of max). Below the last -> breached.
     stages: [0.75, 0.5, 0.25],  // >=0.75 intact, >=0.5 cracked, >=0.25 shattered, >0 boards splintering, 0 breached
-    // window visibility (distance from the player's eye to the window centre)
-    clearDistance: 0.9,      // fully see-through at or closer than this
-    darkDistance: 5.0,       // almost black at or beyond this
-    farOpacity: 0.58,        // darkness of the glass from across the room (was 0.965; the night itself now gives the depth)
+    // how close the player is to a window (distance from the eye to the window centre, adjusted for angle).
+    // Only used to tell a watcher it has been seen; windows no longer darken from afar.
+    clearDistance: 0.9,      // closeness 1 at or nearer than this
+    darkDistance: 5.0,       // closeness 0 at or beyond this
+  },
+  // Outside at night. Was moon 0.5, hemi 0.6, fog 0.046 near-black: too dark (user, after milestone 2).
+  night: {
+    moon: 0.7,               // cold moonlight
+    hemi: 0.85,              // sky fill from above
+    fogDensity: 0.034,       // lower = see further (east clearing readable to ~25 m)
+    fogColor: [0.011, 0.014, 0.019],  // linear RGB; near-black so the forest still darkens with distance
   },
   spiders: {
     runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4 },  // 1.4: smallest spiders were too small to read

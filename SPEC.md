@@ -49,7 +49,7 @@ Reload only at the table: ~3 s, cannot move or shoot, cannot be cancelled. Suppl
 
 ## Controls
 
-- Desktop: WASD move, Shift sprint, mouse look, click fire, right mouse aim down sights, E interact, T flashlight, M mute, Esc pause.
+- Desktop: WASD move, Shift sprint, mouse look, click fire, right mouse aim down sights, E interact, Q flashlight, M mute, Esc pause.
 - Touch (landscape): left joystick (push past the edge to sprint), drag on the right half to look, Fire, Aim, Light and Use buttons.
   Browser zoom gestures are blocked. Portrait shows "rotate your phone".
 

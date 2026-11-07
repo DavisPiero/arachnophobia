@@ -131,7 +131,6 @@ def build(P):
     r = C.rng(P['seed'])
     B = P['budget']
     n = P['variants']
-    grid = math.ceil(math.sqrt(n))
     size = B['texture']
     img = {
         'color': C.new_image('rocks_color', size),
@@ -139,25 +138,27 @@ def build(P):
         'rough': C.new_image('rocks_rough', size, non_color=True, color=(0.9, 0.9, 0.9, 1.0)),
         'ao': C.new_image('rocks_ao', size, non_color=True, color=(1, 1, 1, 1)),
     }
-    lows, report = [], []
+    lows, highs, report = [], [], []
     for i in range(n):
         base, seed = shape_fn(P, r)
         detail = detail_fn(P, seed)
         bottom = P['shape']['bottom']
-        offset = Vector((i * 5.0, 0, 0))   # keep rocks apart so they never shadow each other while baking
-        high = build_mesh(f'rock_{i}_high', 6, lambda v: detail(base(v)), bottom)
+        offset = Vector((i * 25.0, 0, 0))  # far apart: all rocks exist while baking, AO rays must not reach a neighbour
+        high = build_mesh(f'rock_{i}_high', 6, lambda v, d=detail, b=base: d(b(v)), bottom)
         low = build_mesh(f'rock_{i}', 4, base, bottom)
         high.location = low.location = offset
         C.decimate_to(low, B['high'])
-        C.smart_unwrap(low)
-        C.fit_uvs_to_cell(low, i, grid)
+        C.smart_unwrap(low, angle=P.get('uv', {}).get('angleLimit', 80))
         rock_shader(high, P)
+        lows.append(low); highs.append(high)
+    # One shared atlas: every rock's islands packed together at the same texel density (no wasted grid cells).
+    C.pack_atlas(lows, margin=P.get('uv', {}).get('margin', 0.004))
+    for low, high in zip(lows, highs):
         C.bake_target_material(low, img['color'])
         # the low mesh must not block rays while baking ambient occlusion from the high one
         low.visible_shadow = False; low.visible_diffuse = False; low.visible_glossy = False
         for kind, key, samples in (('COLOR', 'color', 1), ('NORMAL', 'normal', 1), ('ROUGHNESS', 'rough', 1), ('AO', 'ao', 24)):
             C.bake(high, low, kind, img[key], extrusion=0.08, samples=samples)
-        lows.append(low)
         bpy.data.objects.remove(high, do_unlink=True)
     C.multiply_ao(img['color'], img['ao'], 0.85)
     mat = C.game_material('rock', img['color'], img['normal'], img['rough'])
