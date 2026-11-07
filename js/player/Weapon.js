@@ -1,8 +1,9 @@
-// The rifle: first-person model, firing (hitscan), recoil, muzzle flash, bullet holes,
-// and the reload animation that the ammo table drives.
-// The gun is drawn in its own small scene on top of the world so it never clips into walls.
+// The lever-action rifle: firing (hitscan), the lever cycle, recoil, muzzle flash, bullet holes.
+// What you see (hands, rifle, axe, how they move) lives in ViewModel.js; reloading is driven by the ammo table.
+// The view is drawn in its own small scene on top of the world so it never clips into walls.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
+import { ViewModel } from './ViewModel.js';
 
 const W = Config.weapon;
 
@@ -15,8 +16,13 @@ export class Weapon {
     this.player = player;
     this.mag = W.magSize;
     this.cooldown = 0;
+    this.sinceShot = 9;        // seconds since the last shot (drives the lever animation)
+    this.leverDone = true;     // lever sound and case ejection for the last shot already happened
+    this.queued = false;       // a fire press that arrived just before the lever finished
     this.reloading = false;
     this.reloadT = 0;          // 0..1 progress, set by the ammo table
+    this.reloadRounds = 0;     // rounds being loaded (the hand animation repeats this many times)
+    this.busy = false;         // the axe or stomp is in use (set by Melee)
     this.kick = 0;
     this.flashT = 0;
     this.swayX = 0; this.swayY = 0;
@@ -30,24 +36,23 @@ export class Weapon {
     // Viewmodel scene, rendered after the world with a cleared depth buffer.
     this.viewScene = new THREE.Scene();
     this.viewCamera = camera; // same projection
-    this.viewRoot = new THREE.Group();
+    this.view = new ViewModel();
+    this.viewRoot = this.view.root;
     this.viewScene.add(this.viewRoot);
-    this.gun = buildRifle();
-    this.viewRoot.add(this.gun.group);
-    // lighting for the gun: follows the interior mood (warm, dim), plus the muzzle flash
-    this.viewAmbient = new THREE.HemisphereLight(0x6a5a48, 0x0a0806, 0.5);
-    this.viewKey = new THREE.PointLight(0xffb36b, 2.0, 3, 2);
+    // lighting for the hands and gun: follows the interior mood (warm, dim), plus the muzzle flash
+    this.viewAmbient = new THREE.HemisphereLight(0x5a5048, 0x0a0806, 0.32);
+    this.viewKey = new THREE.PointLight(0xffc48a, 2.0, 3, 2);
     this.viewKey.position.set(0.5, 0.45, 0.1);
     this.viewFlash = new THREE.PointLight(0xffc27a, 0, 2.5, 2);
     this.viewFlash.position.set(0.05, 0.0, -0.9);
     this.viewScene.add(this.viewAmbient);
-    this.viewRoot.add(this.viewKey, this.viewFlash); // lights travel with the gun
+    this.viewRoot.add(this.viewKey, this.viewFlash); // lights travel with the view
 
     // muzzle flash sprite
     const flashTex = makeFlashTexture();
     this.flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: flashTex, color: 0xffd9a0, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
     this.flashSprite.scale.set(0.22, 0.22, 1);
-    this.gun.muzzle.add(this.flashSprite);
+    this.view.muzzle.add(this.flashSprite);
 
     // bullet holes in the world
     this.holes = [];
@@ -63,11 +68,22 @@ export class Weapon {
     }
   }
 
-  reset() { this.mag = W.magSize; this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.aimK = 0; this.sprintK = 0; for (const h of this.holes) h.visible = false; }
+  loadAssets(quality) { return this.view.loadAssets(quality); }
+
+  reset() {
+    this.mag = W.magSize; this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.aimK = 0; this.sprintK = 0;
+    this.sinceShot = 9; this.leverDone = true; this.queued = false; this.busy = false;
+    for (const h of this.holes) h.visible = false;
+  }
 
   /** Try to fire. Returns true if a round was fired. */
   tryFire() {
-    if (this.reloading || this.cooldown > 0 || this.player.dead || this.sprintK > 0.5) return false;
+    if (this.reloading || this.busy || this.player.dead || this.sprintK > 0.5) return false;
+    if (this.cooldown > 0) {
+      // pressed while the lever is still moving: fire as soon as it is done (touch players tap early)
+      if (this.cooldown <= W.fireBuffer) this.queued = true;
+      return false;
+    }
     if (this.mag <= 0) {
       this.audio.play('dryFire', { volume: 0.8 });
       this.cooldown = 0.35;
@@ -76,10 +92,13 @@ export class Weapon {
     }
     this.mag--;
     this.cooldown = W.fireInterval;
+    this.sinceShot = 0;
+    this.leverDone = this.mag <= 0;   // an empty tube: nothing to chamber, the lever stays shut until the reload
     this.kick = 1;
     this.flashT = 1;
-    this.player.recoil += W.recoilPitch;
-    this.player.shake = Math.max(this.player.shake, 0.25);
+    this.player.recoil += W.recoilPitch * (0.9 + Math.random() * 0.2);
+    this.player.recoilYaw += (Math.random() - 0.5) * 2 * W.recoilYaw;
+    this.player.shake = Math.max(this.player.shake, 0.3);
 
     const origin = this.camera.getWorldPosition(_o);
     const dir = this.camera.getWorldDirection(_d);
@@ -96,7 +115,7 @@ export class Weapon {
     if (sh && (!wh || sh.distance < wh.distance)) {
       hitSpider = sh.object.userData.spider;
       hitPoint = sh.point.clone();
-      if (hitSpider) hitSpider.takeHit(W.damage, sh.point, dir);
+      if (hitSpider) hitSpider.takeHit(W.damage, sh.point, dir, { by: 'bullet' });
     } else if (wh) {
       hitPoint = wh.point.clone();
       this.placeHole(wh);
@@ -106,7 +125,7 @@ export class Weapon {
     }
 
     const muzzleWorld = this.camera.localToWorld(_m.set(0.12, -0.1, -0.7));
-    this.audio.play('gunshot', { volume: 1, reverb: 0.6 });
+    this.audio.play('gunshot', { volume: 1, reverb: 0.75 });
     this.events.emit('muzzleFlash', { position: muzzleWorld.clone() }); // World lights the room from this event
     this.events.emit('shot', { origin: origin.clone(), direction: dir.clone(), hitPoint, hitSpider });
     return true;
@@ -125,7 +144,17 @@ export class Weapon {
 
   update(dt, input, moving) {
     this.cooldown = Math.max(0, this.cooldown - dt);
-    this.kick *= Math.exp(-14 * dt);
+    this.sinceShot += dt;
+    // the lever: thrown after each shot (sound + spent case), unless the tube is empty
+    if (!this.leverDone && this.sinceShot >= W.leverAt) {
+      this.leverDone = true;
+      this.audio.play('leverCycle', { volume: 0.85 });
+      setTimeout(() => this.view.ejectCase(), 60);
+      const p = this.player.position;
+      this.audio.play('caseTink', { position: _t.set(p.x + 0.35, 0.02, p.z), volume: 0.6, delay: 0.55, exterior: false });
+    }
+    if (this.queued && this.cooldown <= 0) { this.queued = false; this.tryFire(); }
+    this.kick *= Math.exp(-12 * dt);
     this.flashT = Math.max(0, this.flashT - dt * 18);
 
     // sway from looking and bob from walking
@@ -133,117 +162,27 @@ export class Weapon {
     this.swayY = THREE.MathUtils.lerp(this.swayY, THREE.MathUtils.clamp(-input.lookDY * 4, -0.05, 0.05), 1 - Math.exp(-10 * dt));
     const t = performance.now() / 1000;
     // aim and sprint poses ease in and out
-    const wantAim = input.aim && !this.reloading && !this.player.dead && !this.player.sprinting;
+    const wantAim = input.aim && !this.reloading && !this.busy && !this.player.dead && !this.player.sprinting;
     this.aimK += ((wantAim ? 1 : 0) - this.aimK) * (1 - Math.exp(-W.aimSpeed * dt));
     this.sprintK += ((this.player.sprinting ? 1 : 0) - this.sprintK) * (1 - Math.exp(-9 * dt));
     this.player.aiming = this.aimK > 0.5;
-    const a = smooth(this.aimK), sp = smooth(this.sprintK);
-    const steady = 1 - 0.75 * a;
-    const bob = (moving ? Math.sin(t * (this.player.sprinting ? 11 : 8.5)) * 0.008 * (1 + sp) : Math.sin(t * 1.3) * 0.002) * steady;
+    const steady = 1 - 0.75 * this.aimK * this.aimK * (3 - 2 * this.aimK);
+    const bob = (moving ? Math.sin(t * (this.player.sprinting ? 11 : 8.5)) * 0.008 * (1 + this.sprintK) : Math.sin(t * 1.3) * 0.002) * steady;
 
-    // the gun follows the camera exactly
-    this.viewRoot.position.copy(this.camera.position);
-    this.viewRoot.quaternion.copy(this.camera.quaternion);
-
-    const g = this.gun.group;
-    // reload pose: lower the rifle, roll it, magazine drops out and comes back
-    const r = this.reloading ? reloadCurve(this.reloadT) : 0;
-    const sx = this.swayX * steady, sy = this.swayY * steady;
-    // hip pose -> aimed pose: the rear and front sights line up on the centre of the screen
-    const hx = THREE.MathUtils.lerp(0.2, 0, a), hy = THREE.MathUtils.lerp(-0.2, -0.051, a), hz = THREE.MathUtils.lerp(-0.3, -0.36, a);
-    g.position.set(hx + sx - r * 0.06 + sp * 0.03, hy + bob + sy - r * 0.1 - this.kick * 0.012 * (1 - a * 0.5) - sp * 0.07, hz + this.kick * 0.05 + r * 0.06 + sp * 0.04);
-    // slight inward yaw at the hip so the barrel points toward the crosshair; none when aimed; turned across the body when running
-    g.rotation.set(THREE.MathUtils.lerp(0.03, 0.01, a) + this.kick * 0.09 * (1 - a * 0.4) + r * 0.5 - sp * 0.35,
-      THREE.MathUtils.lerp(0.06, 0, a) + r * 0.35 + sp * 0.6, r * 0.6 + sp * 0.25);
-    // magazine animation during reload
-    const mt = this.reloadT;
-    const magDrop = this.reloading ? (mt < 0.1 ? mt / 0.1 : mt < 0.75 ? 1 : Math.max(0, 1 - (mt - 0.75) / 0.12)) : 0;
-    this.gun.mag.position.y = this.gun.magRestY - magDrop * 0.25;
-    this.gun.mag.visible = magDrop < 0.98;
-    // bolt rack at the end
-    const boltT = this.reloading && mt > 0.88 ? Math.sin((mt - 0.88) / 0.12 * Math.PI) : 0;
-    this.gun.bolt.position.z = this.gun.boltRestZ + boltT * 0.06;
+    this.view.update(dt, this.camera, {
+      aimK: this.aimK, sprintK: this.sprintK, kick: this.kick, swayX: this.swayX, swayY: this.swayY, bob,
+      reloading: this.reloading, reloadT: this.reloadT, rounds: this.reloadRounds,
+      leverT: this.mag <= 0 && this.sinceShot > 0.05 ? 9 : this.sinceShot,
+      axeT: this.axeT ?? -1, stompT: this.stompT ?? -1,
+    });
 
     this.flashSprite.material.opacity = this.flashT > 0.5 ? 1 : this.flashT * 2;
     this.flashSprite.material.rotation = Math.random() * 6.28;
-    this.flashSprite.scale.setScalar(0.16 + Math.random() * 0.12);
-    this.viewFlash.intensity = this.flashT * 6;
+    this.flashSprite.scale.setScalar(0.16 + Math.random() * 0.14);
+    this.viewFlash.intensity = this.flashT * 8;
   }
 }
 
-function reloadCurve(t) {
-  // ease into the reload pose, hold, ease out at the end
-  if (t < 0.12) return smooth(t / 0.12);
-  if (t > 0.9) return smooth(1 - (t - 0.9) / 0.1);
-  return 1;
-}
-function smooth(x) { x = Math.min(1, Math.max(0, x)); return x * x * (3 - 2 * x); }
-
-// --- procedural rifle model (wood + blued steel), about 0.9 m long ---
-function buildRifle() {
-  const group = new THREE.Group();
-  const wood = new THREE.MeshStandardMaterial({ color: 0x4a2c18, roughness: 0.55, metalness: 0.0, map: makeGunWoodTexture() });
-  const steel = new THREE.MeshStandardMaterial({ color: 0x2a2c30, roughness: 0.42, metalness: 0.35 });
-  const darkSteel = new THREE.MeshStandardMaterial({ color: 0x18191b, roughness: 0.5, metalness: 0.3 });
-  const add = (geo, mat, x, y, z, rx = 0, ry = 0, rz = 0) => {
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
-    group.add(m);
-    return m;
-  };
-  // stock (tapered) — a lathe-like box made from a shaped extrusion
-  const stockShape = new THREE.Shape();
-  stockShape.moveTo(0, 0); stockShape.lineTo(0.3, 0.015); stockShape.lineTo(0.3, -0.05); stockShape.lineTo(0.05, -0.075); stockShape.lineTo(0, -0.12); stockShape.lineTo(-0.01, -0.03); stockShape.lineTo(0, 0);
-  const stockGeo = new THREE.ExtrudeGeometry(stockShape, { depth: 0.036, bevelEnabled: true, bevelThickness: 0.006, bevelSize: 0.006, bevelSegments: 2 });
-  stockGeo.translate(0, 0, -0.018);
-  add(stockGeo, wood, 0, 0.0, 0.32, 0, Math.PI / 2, 0);
-  // receiver
-  add(new THREE.BoxGeometry(0.048, 0.06, 0.22), steel, 0, 0.012, 0.0);
-  // bolt + handle
-  const bolt = add(new THREE.CylinderGeometry(0.009, 0.009, 0.1, 10), darkSteel, 0.02, 0.035, 0.02, Math.PI / 2, 0, 0);
-  const handle = new THREE.Mesh(new THREE.SphereGeometry(0.011, 10, 8), darkSteel);
-  handle.position.set(0.0, -0.01, 0.04);
-  bolt.add(handle);
-  // handguard
-  add(new THREE.BoxGeometry(0.044, 0.045, 0.3), wood, 0, -0.005, -0.25);
-  // barrel
-  add(new THREE.CylinderGeometry(0.0095, 0.011, 0.52, 14), steel, 0, 0.02, -0.4, Math.PI / 2, 0, 0);
-  // front sight + rear sight
-  add(new THREE.BoxGeometry(0.006, 0.022, 0.012), darkSteel, 0, 0.038, -0.64);
-  // rear sight: a notch (two posts) so the front post shows through it when aiming
-  add(new THREE.BoxGeometry(0.03, 0.006, 0.012), darkSteel, 0, 0.044, -0.08);
-  add(new THREE.BoxGeometry(0.01, 0.01, 0.012), darkSteel, -0.01, 0.051, -0.08);
-  add(new THREE.BoxGeometry(0.01, 0.01, 0.012), darkSteel, 0.01, 0.051, -0.08);
-  // trigger guard
-  add(new THREE.TorusGeometry(0.022, 0.004, 6, 14, Math.PI), darkSteel, 0, -0.03, 0.07, 0, Math.PI / 2, Math.PI);
-  // magazine
-  const mag = add(new THREE.BoxGeometry(0.028, 0.11, 0.05), darkSteel, 0, -0.065, -0.03, 0.12, 0, 0);
-  // muzzle anchor
-  const muzzle = new THREE.Object3D();
-  muzzle.position.set(0, 0.02, -0.68);
-  group.add(muzzle);
-  group.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = false; } });
-  return { group, mag, magRestY: mag.position.y, bolt, boltRestZ: bolt.position.z, muzzle };
-}
-
-function makeGunWoodTexture() {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64;
-  const g = c.getContext('2d');
-  g.fillStyle = '#5a3520'; g.fillRect(0, 0, 256, 64);
-  for (let i = 0; i < 60; i++) {
-    g.strokeStyle = `rgba(${20 + Math.random() * 30},${10 + Math.random() * 15},5,${0.15 + Math.random() * 0.25})`;
-    g.lineWidth = 0.5 + Math.random() * 1.5;
-    g.beginPath();
-    const y = Math.random() * 64;
-    g.moveTo(0, y);
-    for (let x = 0; x <= 256; x += 16) g.lineTo(x, y + Math.sin(x * 0.03 + i) * 3);
-    g.stroke();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  return t;
-}
 function makeFlashTexture() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
   const g = c.getContext('2d');

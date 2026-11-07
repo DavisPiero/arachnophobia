@@ -106,9 +106,13 @@ export class SpiderRig {
    * `speed` is accepted for API symmetry, `turnRate` (rad/s) leads foot placement and banks the body.
    * mode: 'walk' | 'idle' | 'attack' | 'dead'. attack: 0..1 (0-0.5 rear up, 0.55-1 lunge/strike).
    */
-  update(dt, { speed = 0, turnRate = 0, mode = 'walk', attack = 0 } = {}) { // eslint-disable-line no-unused-vars
+  update(dt, { speed = 0, turnRate = 0, mode = 'walk', attack = 0, thrash = 0 } = {}) { // eslint-disable-line no-unused-vars
     if (!(dt > 0)) return;
     dt = Math.min(dt, 0.05);
+    // hit reactions decay: whole-body jolt (crumple) and per-leg kicks
+    this.joltK = (this.joltK || 0) * Math.exp(-dt * 6);
+    for (const l of this.legs) l.hitK = (l.hitK || 0) * Math.exp(-dt * 5);
+    const jolt = Math.min(1.4, this.joltK);
     const def = this.def, lay = this.layout, R = def.restR, H = def.bodyH, r = this.rand;
     this.time += dt;
     const T = this.time;
@@ -155,6 +159,12 @@ export class SpiderRig {
     let pitch = clamp(this.accel * 0.012, -0.12, 0.12) + 0.03 * this.nPitch(T * 0.5) + aK * (-rear * 0.6 + lunge * 0.18) - aK * 0.08;
     let roll = clamp(-this.turn * spd / R * 0.05, -0.2, 0.2) + 0.035 * this.nRoll(T * 0.6) * (0.4 + moveK);
     let yaw = 0.03 * this.nYaw(T * 0.4) + clamp(this.turn * 0.04, -0.12, 0.12);
+    // hit: the body crumples down and rears back for a moment
+    y -= jolt * H * 0.32; pitch -= jolt * 0.22; roll += jolt * 0.12 * this.nRoll(T * 7);
+    // dying: thrashing on its back legs, rolling
+    if (thrash > 0) {
+      y -= thrash * H * 0.25; roll += thrash * 0.45 * Math.sin(T * 9.3); pitch += thrash * 0.25 * Math.sin(T * 11.7);
+    }
     // dead: drop onto the surface, slightly tilted
     const deadY = def.ceph.ry * 0.85;
     y = lerp(y, deadY, dead); pitch = lerp(pitch, 0.12, dead); roll = lerp(roll, 0.08, dead); x = lerp(x, 0, dead);
@@ -280,8 +290,27 @@ export class SpiderRig {
         const k = l.pair === 0 ? lunge : 0;
         F.lerp(_X.set(lerp(hx, sx, k), lerp(hy, sy, k), lerp(hz, sz, k)), l.raise);
       }
+      // hit reactions: a jolt pulls every leg in under the body; a leg hit kicks that leg up and out
+      if (jolt > 0.01) { F.x = lerp(F.x, A.x, jolt * 0.3); F.z = lerp(F.z, A.z, jolt * 0.3); F.y += jolt * R * 0.12; }
+      if (l.hitK > 0.01) { F.y += l.hitK * R * 0.4; F.x += l.side * l.hitK * R * 0.12; }
+      if (thrash > 0) {
+        const ph = l.index * 1.37;
+        F.x += l.side * R * 0.28 * thrash * Math.sin(T * 21 + ph);
+        F.y += R * 0.45 * thrash * Math.max(0, Math.sin(T * 17 + ph * 1.6));
+        F.z += R * 0.2 * thrash * Math.sin(T * 14 + ph * 0.7);
+      }
       this._legIK(l, A, F, dead);
     }
+  }
+
+  /** A hit: the whole body jolts (k ~0.4 leg hit .. 1 body hit .. 1.4 stagger). */
+  jolt(k) { this.joltK = Math.max(this.joltK || 0, k); }
+
+  /** A leg was hit at this world point: the nearest leg kicks. */
+  hitLeg(point) {
+    let best = null, bd = Infinity;
+    for (const l of this.legs) { const d = l.foot.distanceToSquared(point); if (d < bd) { bd = d; best = l; } }
+    if (best) best.hitK = 1;
   }
 
   // FK for a chain in the body frame (palps). angles are absolute in the (dir, up) plane.

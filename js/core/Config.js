@@ -26,17 +26,35 @@ export const Config = {
     scareRange: 22,          // a watcher caught in the beam closer than this slips away
   },
   weapon: {
-    magSize: 8,
-    damage: 34,              // runner 30hp, climber 60, stalker 70, brute 190
-    fireInterval: 0.32,      // seconds between shots (semi-auto)
+    magSize: 8,              // rounds in the lever-action's tube magazine
+    damage: 40,              // runner 30hp, climber 60, stalker 70, brute 190 (5 shots)
+    fireInterval: 0.5,       // seconds between shots: one lever cycle (user's call)
+    leverAt: 0.08,           // seconds after the shot when the hand starts working the lever
     range: 80,
-    recoilPitch: 0.035,      // radians kick per shot
-    recoilRecover: 7,        // how fast it settles
+    recoilPitch: 0.055,      // radians kick per shot
+    recoilYaw: 0.012,        // random sideways kick per shot (radians, +/-)
+    recoilRecover: 6,        // how fast it settles
     spread: 0.004,           // radians of random spread
     aimFov: 0.74,            // aiming down sights: field of view x this (a gentle zoom)
     aimSpread: 0.25,         // spread x this while aimed
     aimSpeed: 11,            // how fast the rifle comes up to the eye (1/s)
     aimLookScale: 0.8,       // mouse/touch look sensitivity x this while aimed
+    fireBuffer: 0.15,        // a fire press this close to the end of the lever cycle fires as soon as it ends
+    muzzleLight: 60,         // peak brightness of the room light from a shot
+  },
+  // Axe (F) and stomp (V). Reach is measured from the eye to the spider's body.
+  melee: {
+    axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.62, hitAt: 0.3, windowDamage: 9, knockback: 0.35 },
+    stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'] },
+  },
+  // Hit and kill feedback on the spiders.
+  gore: {
+    knockback: 0.18,         // metres a body hit pushes a spider on the ground (x its size factor)
+    staggerEvery: 0.25,      // brutes stagger each time they lose this fraction of their health
+    staggerTime: 0.7,        // seconds a stagger stops a brute
+    thrashTime: 1.4,         // seconds a dying spider thrashes before curling up
+    splats: 60,              // ichor splats kept in the world (cleared at the start of each wave)
+    droplets: 240,           // spray droplets alive at once
   },
   ammo: {
     startStock: 40,          // rounds on the table at the start (not counting the loaded magazine)

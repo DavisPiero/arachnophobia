@@ -23,6 +23,8 @@ export class TouchControls {
     this.btnInteract = ui.querySelector('#btn-interact');
     this.btnTorch = ui.querySelector('#btn-torch');
     this.btnAim = ui.querySelector('#btn-aim');
+    this.btnAxe = ui.querySelector('#btn-axe');
+    this.btnStomp = ui.querySelector('#btn-stomp');
 
     const opts = { passive: false };
     // --- joystick ---
@@ -103,6 +105,10 @@ export class TouchControls {
     // --- flashlight and aim toggles ---
     const tap = (el, fn) => el.addEventListener('pointerdown', (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); fn(); }, opts);
     tap(this.btnTorch, () => input.press('torch'));
+    // melee: a short flash on press so the tap reads
+    for (const [el, action] of [[this.btnAxe, 'axe'], [this.btnStomp, 'stomp']]) {
+      tap(el, () => { input.press(action); el.classList.add('down'); setTimeout(() => el.classList.remove('down'), 160); });
+    }
     tap(this.btnAim, () => { this.aim = !this.aim; this.btnAim.classList.toggle('on', this.aim); });
 
     // stop the page from scrolling / zooming / long-press menus

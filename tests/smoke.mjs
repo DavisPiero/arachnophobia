@@ -83,6 +83,41 @@ for (const device of ['desktop', 'phone']) {
   check(m2.aimK > 0.9 && m2.fovRatio < 0.8, `aim down sights zooms in (aim ${m2.aimK.toFixed(2)}, fov x${m2.fovRatio.toFixed(2)})`);
   check(m2.sprinting && m2.runSpeed > m2.walk * 1.4, `Shift sprints (${m2.runSpeed.toFixed(2)} m/s)`);
 
+  // milestone 3: lever-action, axe, stomp, kill feedback
+  const m3 = await page.evaluate(async () => {
+    const g = window.game;
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = 0;
+    await simWait(0.6);
+    const view = g.weapon.view;
+    const r = { viewAssets: view.usingAssets, hasBoot: !!view.bootMesh };
+    // the lever cycle blocks a second shot until it is done
+    g.weapon.cooldown = 0;
+    const m0 = g.weapon.mag; g.weapon.tryFire(); await simWait(0.2);
+    r.leverOpen = view.leverPivot.rotation.x;
+    g.weapon.tryFire(); r.blocked = g.weapon.mag === m0 - 1;
+    await simWait(0.5);
+    // axe: a full swing comes back to the rifle
+    r.axeStarted = g.melee.tryAxe(); await simWait(0.3); r.axeVisible = view.axe.visible;
+    await simWait(0.6); r.axeDone = !g.melee.busy;
+    // a runner inside, in front: the stomp kills it, with gore
+    const s = g.spiders.spawn('runner', 'north');
+    s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(0, 0, 0.75);
+    let killed = null; const off = g.events.on?.('spiderKilled', (e) => { killed = e.by; });
+    r.stompStarted = g.melee.tryStomp(); await simWait(0.7);
+    r.stompKilled = !s.alive; r.killedBy = killed;
+    r.splats = g.gore.splats.filter((x) => x.mesh.visible).length;
+    off?.();
+    return r;
+  });
+  check(m3.viewAssets && m3.hasBoot, 'Blender hands, rifle and axe loaded');
+  check(m3.leverOpen > 0.3, `lever opens after a shot (${m3.leverOpen.toFixed(2)} rad)`);
+  check(m3.blocked, 'a second shot waits for the lever');
+  check(m3.axeStarted && m3.axeVisible && m3.axeDone, 'axe swings and returns to the rifle');
+  check(m3.stompStarted && m3.stompKilled && m3.killedBy === 'stomp', `stomp kills a runner on the floor (${m3.killedBy})`);
+  check(m3.splats > 0, `kills leave ichor splats (${m3.splats})`);
+
   // reload at the table
   const rl = await page.evaluate(async () => {
     const g = window.game;
@@ -122,6 +157,17 @@ for (const device of ['desktop', 'phone']) {
     await page.locator('#btn-aim').tap();
     check(await page.evaluate(() => window.game.input.aim), 'AIM button toggles aiming');
     await page.locator('#btn-aim').tap();
+    await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
+    await page.locator('#btn-axe').tap();
+    await page.waitForFunction(() => window.game.melee.axeT >= 0, null, { timeout: 3000 }).catch(() => {});
+    const ax = await page.evaluate(() => { const g = window.game; return { t: g.melee.axeT, st: g.state, dead: g.player.dead, rel: g.weapon.reloading, en: g.input.enabled }; });
+    check(ax.t >= 0, `AXE button swings the axe (${JSON.stringify(ax)})`);
+    // game time runs slower than real time in a headless browser: wait for the swing to end, not a fixed time
+    await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
+    await page.locator('#btn-stomp').tap();
+    await page.waitForFunction(() => window.game.melee.stompT >= 0, null, { timeout: 3000 }).catch(() => {});
+    check(await page.evaluate(() => window.game.melee.stompT >= 0), 'STOMP button stomps');
+    await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
     // a double tap must not zoom the page
     await page.touchscreen.tap(600, 200); await page.waitForTimeout(80); await page.touchscreen.tap(600, 200);
     await page.waitForTimeout(300);

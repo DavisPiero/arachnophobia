@@ -1,0 +1,22 @@
+{
+  "_about": "Gloved hands, sleeves and a boot. Read by blender/generators/hands.py and by the game (js/player/ViewModel.js). Each hand is modelled around what it holds, in GAME space (x right, y up, z towards the player): grip = a round handle along z at the origin. Change, then run: npm run assets hands",
+  "finger": { "radius": 0.0098, "lengths": [0.078, 0.084, 0.078, 0.062], "spacing": 0.0195 },
+  "thumb": { "radius": 0.0108, "length": 0.07 },
+  "grip": { "radius": 0.024, "axeRadius": 0.018 },
+  "support": { "rx": 0.021, "ry": 0.024 },
+  "forearm": {
+    "grip": [0.62, -0.62, 0.48],
+    "axe": [0.35, -0.45, 0.82],
+    "support": [-0.25, -0.78, 0.57],
+    "load": [-0.55, -0.45, 0.7]
+  },
+  "sleeve": { "length": 0.34, "cuff": 0.04, "elbow": 0.048, "folds": 0.004 },
+  "look": {
+    "glove": [0.026, 0.018, 0.012],
+    "gloveWorn": [0.07, 0.05, 0.034],
+    "sleeve": [0.02, 0.022, 0.018],
+    "boot": [0.022, 0.016, 0.012],
+    "trousers": [0.011, 0.012, 0.015]
+  },
+  "budget": { "hand": 1600, "texture": 2048, "gameTexture": 2048, "webpQuality": 86, "normalQuality": 90 }
+}

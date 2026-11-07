@@ -8,6 +8,7 @@
 import * as THREE from 'three';
 import { LANTERN, WALL_LAMP, CABIN } from './Layout.js';
 import { Config } from '../core/Config.js';
+const MUZZLE = Config.weapon.muzzleLight;
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glow } from './Textures.js';
 
@@ -175,7 +176,7 @@ export function buildLighting(scene, renderer, quality) {
   group.add(wallLampModel);
 
   // ---------------------------------------------------------- muzzle flash
-  const muzzle = new THREE.PointLight(new THREE.Color().setRGB(1, 0.72, 0.4, THREE.SRGBColorSpace), 0, 10, 2);
+  const muzzle = new THREE.PointLight(new THREE.Color().setRGB(1, 0.72, 0.4, THREE.SRGBColorSpace), 0, 16, 2);
   group.add(muzzle);
   let muzzleAge = 1;
 
@@ -192,7 +193,7 @@ export function buildLighting(scene, renderer, quality) {
   function muzzleFlash(position) {
     muzzle.position.copy(position);
     muzzleAge = 0;
-    muzzle.intensity = 40;
+    muzzle.intensity = MUZZLE;
   }
   function addFlame(light, sprite) {
     extraFlames.push({ light, base: light.intensity, sprite, seed: Math.random() * 100, spriteBase: sprite ? sprite.scale.x : 0 });
@@ -237,7 +238,7 @@ export function buildLighting(scene, renderer, quality) {
     // muzzle
     if (muzzleAge < 1) {
       muzzleAge += dt;
-      muzzle.intensity = muzzleAge < 0.06 ? 40 * (1 - muzzleAge / 0.06) : 0;
+      muzzle.intensity = muzzleAge < 0.08 ? MUZZLE * Math.pow(1 - muzzleAge / 0.08, 1.5) : 0;
     }
   }
 

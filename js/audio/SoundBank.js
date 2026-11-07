@@ -411,10 +411,10 @@ export async function renderIR(kind, sr = SR) {
 export const RECIPES = {
   // ================================================================ weapon
   gunshot: {
-    variants: 4, lowVariants: 3, dur: 1.5, gain: 1.0, reverb: 0.6, peak: 0.97,
+    variants: 4, lowVariants: 3, dur: 1.9, gain: 1.0, reverb: 0.75, peak: 0.97,   // milestone 3: heavier, longer tail (lever-action .30-30)
     render(k) {
       const t0 = 0.003;
-      k.drive(1.7);
+      k.drive(2.0);
       // the crack: an extremely sharp broadband transient
       const c = k.arr(0.05);
       k.burst(c, t0, 1, 0.0009); k.burst(c, t0 + 0.0003, 0.7, 0.003);
@@ -425,13 +425,13 @@ export const RECIPES = {
       k.env(g.gain, [[0, 0], [t0, 0], [t0 + 0.0005, 1], [t0 + 0.01, 0.5, 'x'], [0.08, 0.13, 'x'], [0.35, 0.015, 'x'], [0.95, 0.0001, 'x']]);
       k.chain(n, lp, g, k.mix);
       // chest-thump: sine with a pitch drop
-      const o = k.osc('sine', 140, 0, 0.7); const og = k.g(0);
+      const o = k.osc('sine', 140, 0, 0.9); const og = k.g(0);
       k.env(o.frequency, [[0, k.rr(140, 175)], [t0 + 0.04, 62, 'x'], [0.45, 36, 'x']]);
-      k.env(og.gain, [[0, 0], [t0, 0], [t0 + 0.0015, 1.1], [0.06, 0.55, 'x'], [0.55, 0.0001, 'x']]);
+      k.env(og.gain, [[0, 0], [t0, 0], [t0 + 0.0015, 1.1], [0.08, 0.6, 'x'], [0.75, 0.0001, 'x']]);
       k.chain(o, og, k.mix);
       // pressure body: lowpassed brown noise, longer
-      const b = k.noise('brown', 0, 1.4); const bl = k.f('lowpass', 240, 0.8); const bg = k.g(0);
-      k.env(bg.gain, [[0, 0], [t0, 0], [t0 + 0.003, 1.3], [0.14, 0.35, 'x'], [1.3, 0.0001, 'x']]);
+      const b = k.noise('brown', 0, 1.85); const bl = k.f('lowpass', 240, 0.8); const bg = k.g(0);
+      k.env(bg.gain, [[0, 0], [t0, 0], [t0 + 0.003, 1.3], [0.18, 0.4, 'x'], [1.75, 0.0001, 'x']]);
       k.chain(b, bl, bg, k.mix);
       // mid punch
       const m = k.noise('pink', 0, 0.4); const mb = k.f('bandpass', k.rr(650, 900), 1.1); const mg = k.g(0);
@@ -522,6 +522,126 @@ export const RECIPES = {
       metalClick(k, a, f1, 1, k.rr(1200, 1450)); woodKnock(k, a, f1, 0.8, k.rr(200, 250), 0.9); k.mode(a, f1, 105, 0.5, 0.03);
       metalClick(k, a, f1 + k.rr(0.05, 0.08), 0.6, k.rr(2400, 2800)); // handle down
       k.src(a, 0);
+    },
+  },
+  // lever-action cycle: lever down (hammer cocks, case kicked out), lever up (round chambers, lever locks)
+  leverCycle: {
+    variants: 4, lowVariants: 2, dur: 0.55, gain: 0.7, reverb: 0.12, peak: 0.9,
+    render(k) {
+      const a = k.arr();
+      const t1 = 0.01;
+      metalClick(k, a, t1, 0.8, k.rr(1700, 2100));            // lever unlatches
+      const d0 = t1 + 0.005, d1 = d0 + k.rr(0.07, 0.09);      // bolt slides back
+      const n = k.noise('white', d0, d1); const bp = k.f('bandpass', 1700, 2.4); const g = k.g(0);
+      k.env(bp.frequency, [[d0, 1500], [d1, 2900, 'x']]); k.env(g.gain, [[d0, 0], [d0 + 0.02, 0.35], [d1, 0.25], [d1 + 0.004, 0]]);
+      k.chain(n, bp, g, k.mix);
+      metalClick(k, a, d1, 0.9, k.rr(1300, 1600)); woodKnock(k, a, d1, 0.45, k.rr(260, 320), 0.6);   // fully open
+      const u0 = d1 + k.rr(0.1, 0.13), u1 = u0 + k.rr(0.06, 0.08);   // closing
+      const n2 = k.noise('white', u0, u1); const bp2 = k.f('bandpass', 2400, 2.4); const g2 = k.g(0);
+      k.env(bp2.frequency, [[u0, 2800], [u1, 1500, 'x']]); k.env(g2.gain, [[u0, 0], [u0 + 0.02, 0.3], [u1, 0.32], [u1 + 0.004, 0]]);
+      k.chain(n2, bp2, g2, k.mix);
+      metalClick(k, a, u1, 1, k.rr(1150, 1400)); woodKnock(k, a, u1, 0.9, k.rr(190, 240), 0.9); k.mode(a, u1, 100, 0.5, 0.03);   // locks shut
+      k.src(a, 0);
+    },
+  },
+  // the spent case bouncing on the floorboards
+  caseTink: {
+    variants: 4, lowVariants: 2, dur: 0.6, gain: 0.35, reverb: 0.15, peak: 0.8,
+    render(k) {
+      const a = k.arr();
+      let t = 0.005, amp = 1; const f = k.rr(4200, 5600);
+      for (let i = 0, nn = k.ri(3, 4); i < nn; i++) { brassTink(k, a, t, amp, f * k.rr(0.97, 1.03)); woodKnock(k, a, t, amp * 0.15, k.rr(900, 1300), 0.3); t += k.rr(0.07, 0.12) * Math.pow(0.65, i); amp *= 0.5; }
+      k.src(a, 0);
+    },
+  },
+  // one round pushed into the loading gate: brass on steel, the gate spring snapping shut
+  roundInsert: {
+    variants: 4, lowVariants: 2, dur: 0.25, gain: 0.5, reverb: 0.08, peak: 0.8,
+    render(k) {
+      const a = k.arr();
+      const n = k.noise('white', 0, 0.07); const bp = k.f('bandpass', k.rr(2600, 3400), 2.5); const g = k.g(0);
+      k.env(g.gain, [[0, 0], [0.05, 0.3], [0.065, 0]]); k.chain(n, bp, g, k.mix);
+      const t = k.rr(0.06, 0.075);
+      metalClick(k, a, t, 0.8, k.rr(1900, 2400));
+      brassTink(k, a, t + 0.001, 0.5, k.rr(3800, 5000));
+      metalClick(k, a, t + k.rr(0.012, 0.02), 0.45, k.rr(2900, 3400));   // gate snaps back
+      k.src(a, 0);
+    },
+  },
+  // axe through the air
+  axeSwing: {
+    variants: 4, lowVariants: 2, dur: 0.45, gain: 0.55, reverb: 0.05, peak: 0.85,
+    render(k) {
+      const n = k.noise('pink', 0, 0.42); const bp = k.f('bandpass', 500, 1.6); const g = k.g(0);
+      const pk = k.rr(0.16, 0.2);
+      k.env(bp.frequency, [[0, 350], [pk, k.rr(1100, 1500), 'x'], [0.4, 400, 'x']]);
+      k.env(g.gain, [[0, 0], [pk, 0.9], [0.4, 0.0001, 'x']]);
+      k.chain(n, bp, g, k.mix);
+    },
+  },
+  // the axe biting into a spider: a heavy chop, cracking shell, a wet give
+  axeChop: {
+    variants: 4, lowVariants: 2, dur: 0.7, gain: 0.95, reverb: 0.1, peak: 0.95,
+    render(k) {
+      const a = k.arr(); const t0 = 0.003;
+      k.drive(1.4);
+      k.burst(a, t0, 1, 0.0012, 0.3);
+      k.mode(a, t0, k.rr(85, 110), 1, 0.07);
+      for (let i = 0, nn = k.ri(10, 18); i < nn; i++) {
+        const t = t0 + Math.pow(k.r(), 1.5) * 0.06; const amp = k.rr(0.3, 1) * Math.exp(-(t - t0) / 0.04);
+        k.burst(a, t, amp, k.rr(0.0002, 0.0007)); k.mode(a, t, k.rr(1200, 3500), amp * 0.35, k.rr(0.003, 0.009));
+      }
+      const w = k.arr();
+      for (let i = 0, nn = k.ri(8, 14); i < nn; i++) k.bubble(w, t0 + k.rr(0.02, 0.3), k.rr(150, 500), k.rr(0.2, 0.7), k.rr(0.01, 0.03), k.rr(1, 3));
+      k.add(a, k.norm(w, 0.6));
+      k.src(a, 0);
+    },
+  },
+  // boot stamping the floorboards
+  stomp: {
+    variants: 3, lowVariants: 2, dur: 0.5, gain: 0.8, reverb: 0.2, peak: 0.9,
+    render(k) {
+      const a = k.arr(); const t0 = 0.003;
+      woodKnock(k, a, t0, 1, k.rr(120, 160), 1.6);
+      k.mode(a, t0, k.rr(55, 70), 1, 0.09);
+      k.burst(a, t0, 0.6, 0.004, 0.6);
+      for (let i = 0, nn = k.ri(2, 4); i < nn; i++) woodKnock(k, a, t0 + k.rr(0.01, 0.06), k.rr(0.05, 0.15), k.rr(700, 1300), 0.4);  // boards rattle
+      k.src(k.filt(a, 'lowpass', 3000), 0);
+    },
+  },
+  // a spider crushed under the boot
+  stompSquish: {
+    variants: 3, lowVariants: 2, dur: 0.55, gain: 0.85, reverb: 0.06, peak: 0.9,
+    render(k) {
+      const a = k.arr(); const t0 = 0.004;
+      for (let i = 0, nn = k.ri(14, 24); i < nn; i++) {
+        const t = t0 + Math.pow(k.r(), 1.3) * 0.09; const amp = k.rr(0.3, 1) * Math.exp(-(t - t0) / 0.06);
+        k.burst(a, t, amp, k.rr(0.0002, 0.0006)); k.mode(a, t, k.rr(1800, 4500), amp * 0.3, k.rr(0.002, 0.006));
+      }
+      const w = k.arr();
+      for (let i = 0, nn = k.ri(10, 16); i < nn; i++) k.bubble(w, t0 + k.rr(0.01, 0.35), k.rr(120, 420), k.rr(0.3, 0.8), k.rr(0.012, 0.035), k.rr(0.5, 2));
+      k.add(a, k.norm(w, 0.75));
+      k.src(a, 0);
+    },
+  },
+  // the killing hit: a deep wet crunch on top of the normal impact, so a kill always sounds different from a hit
+  spiderKill: {
+    variants: 4, lowVariants: 2, dur: 0.9, gain: 1.0, reverb: 0.08, peak: 0.95,
+    render(k) {
+      const a = k.arr(); const t0 = 0.004;
+      k.drive(1.6);
+      k.mode(a, t0, k.rr(60, 80), 1, 0.12);                    // body thump
+      k.burst(a, t0, 0.9, 0.002, 0.4);
+      for (let i = 0, nn = k.ri(18, 30); i < nn; i++) {          // carapace splitting
+        const t = t0 + Math.pow(k.r(), 1.4) * 0.12; const amp = k.rr(0.3, 1) * Math.exp(-(t - t0) / 0.07);
+        k.burst(a, t, amp, k.rr(0.0002, 0.0008)); k.mode(a, t, k.rr(900, 3200), amp * 0.4, k.rr(0.004, 0.012));
+      }
+      const w = k.arr();
+      for (let i = 0, nn = k.ri(12, 20); i < nn; i++) k.bubble(w, t0 + k.rr(0.03, 0.55), k.rr(110, 380), k.rr(0.3, 0.9), k.rr(0.015, 0.04), k.rr(0.6, 2));
+      k.add(a, k.norm(w, 0.8));
+      k.src(a, 0);
+      const n = k.noise('brown', 0, 0.6); const lp = k.f('lowpass', 500, 0.8); const g = k.g(0);
+      k.env(g.gain, [[0, 0], [0.01, 0.8], [0.5, 0.0001, 'x']]); k.chain(n, lp, g, k.mix);
     },
   },
   ammoPickup: {
@@ -1243,13 +1363,15 @@ export const REQUIRED_NAMES = [
   'gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup', 'glassCrack', 'glassShatter', 'glassTap',
   'glassScratch', 'woodScrape', 'boardHit', 'boardBreak', 'footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactWood',
   'bulletImpactFlesh', 'uiClick', 'torchClick',
+  'leverCycle', 'caseTink', 'roundInsert', 'axeSwing', 'axeChop', 'stomp', 'stompSquish', 'spiderKill',
   'chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep',
   'spiderHiss', 'spiderScream', 'spiderAttack',
   'wind', 'rain', 'roomTone', 'thunder', 'treeCreak', 'branchSnap', 'cabinCreak', 'lanternCreak', 'distantUnknown', 'drone',
 ];
 
 export const CATEGORIES = {
-  Weapon: ['gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup', 'torchClick'],
+  Weapon: ['gunshot', 'leverCycle', 'caseTink', 'roundInsert', 'dryFire', 'ammoPickup', 'torchClick', 'magOut', 'magIn', 'roundLoad', 'boltRack'],
+  Melee: ['axeSwing', 'axeChop', 'stomp', 'stompSquish', 'spiderKill'],
   'Glass & wood': ['glassTap', 'glassScratch', 'glassCrack', 'glassShatter', 'woodScrape', 'boardHit', 'boardBreak', 'bulletImpactWood'],
   Player: ['footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactFlesh', 'uiClick'],
   Spiders: ['chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep', 'spiderHiss', 'spiderPain', 'spiderScream', 'spiderAttack'],

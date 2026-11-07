@@ -12,7 +12,7 @@ export class Input {
     this.lookDY = 0;          // (pitch)
     this.fireHeld = false;
     this.aimHeld = false;     // right mouse button held (desktop); touch uses its AIM toggle
-    this._pressed = new Set(); // one-frame actions: 'fire', 'interact', 'pause', 'mute', 'start'
+    this._pressed = new Set(); // one-frame actions: 'fire', 'interact', 'axe', 'stomp', 'torch', 'pause', 'mute', 'start'
     this.enabled = false;
     this.isTouch = isTouch;
     this.keyboard = new KeyboardMouse(this, canvas);
