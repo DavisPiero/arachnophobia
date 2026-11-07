@@ -42,7 +42,7 @@ for (const device of ['desktop', 'phone']) {
   const r = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    g.player.position.set(0, 0, -3.2); g.player.yaw = 0; g.player.pitch = -0.05;
+    g.player.position.set(0, 0, -5.2); g.player.yaw = 0; g.player.pitch = -0.05;
     for (const t of ['runner', 'brute', 'climber', 'stalker']) g.spiders.spawn(t, 'north');
     // headless rendering is slow, so wait on simulated time, not wall time
     const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
@@ -123,7 +123,7 @@ for (const device of ['desktop', 'phone']) {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
-    g.player.position.set(-1.1, 0, 2.5); g.player.yaw = Math.PI; g.player.pitch = -0.4;
+    const tp = g.table.position; g.player.position.set(tp.x, 0, tp.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.4;
     await wait(300);
     const stockBefore = g.table.stock;
     const started = g.table.tryStart();

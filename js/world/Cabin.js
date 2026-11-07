@@ -6,7 +6,7 @@
 // so the whole cabin is a handful of draw calls.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { CABIN, WINDOWS, DOOR, AMMO_TABLE, LANTERN, terrainHeight, roofHeight } from './Layout.js';
+import { CABIN, WINDOWS, DOOR, AMMO_TABLE, LANTERN, FURNITURE, terrainHeight, roofHeight } from './Layout.js';
 import * as T from './Textures.js';
 import { interiorMaterial, limitShadow, CANDLE_COLOR } from './Lighting.js';
 
@@ -132,7 +132,7 @@ function makeMaterials() {
   M.rope.userData.tile = [0.3, 0.3];
   for (const k of ['rug', 'jar', 'tin', 'rope', 'endGrain']) M[k].userData.shadow = 'none';
   M.jar.userData.tile = M.tin.userData.tile = [1, 1];
-  M.rug.userData.tile = [2.0, 2.8];
+  M.rug.userData.tile = [FURNITURE.rug.maxX - FURNITURE.rug.minX, FURNITURE.rug.maxZ - FURNITURE.rug.minZ];
   return M;
 }
 
@@ -367,7 +367,7 @@ export function buildCabin(quality) {
 
   // cot in the north-west corner
   {
-    const x0 = -HX + 0.05, x1 = -HX + 0.85, z0 = -HZ + 0.08, z1 = -HZ + 2.05, top = 0.4;
+    const C = FURNITURE.cot, x0 = -HX + 0.05, x1 = x0 + C.width, z0 = -HZ + 0.08, z1 = z0 + C.length, top = 0.4;
     for (const x of [x0 + 0.03, x1 - 0.03]) for (const z of [z0 + 0.03, z1 - 0.03]) b.box('furn', 0.06, top, 0.06, x, top / 2, z, { grain: 'y' });
     for (const x of [x0 + 0.03, x1 - 0.03]) b.boxMM('furn', x - 0.03, x + 0.03, top - 0.14, top, z0, z1, { grain: 'z' });
     for (const z of [z0 + 0.03, z1 - 0.03]) b.boxMM('furn', x0, x1, top - 0.14, top, z - 0.03, z + 0.03, {});
@@ -407,7 +407,7 @@ export function buildCabin(quality) {
 
   // wood stove in the north-east corner, pipe through the roof
   {
-    const cx = HX - 0.55, cz = -HZ + 0.55, sx = 0.5, sz = 0.62, legH = 0.14, bodyH = 0.5;
+    const cx = HX - FURNITURE.stove.inset, cz = -HZ + FURNITURE.stove.inset, sx = 0.5, sz = 0.62, legH = 0.14, bodyH = 0.5;
     for (const dx of [-1, 1]) for (const dz of [-1, 1]) b.box('iron', 0.05, legH, 0.05, cx + dx * (sx / 2 - 0.05), legH / 2, cz + dz * (sz / 2 - 0.06), {});
     b.box('iron', sx, bodyH, sz, cx, legH + bodyH / 2, cz, {});
     b.box('iron', sx + 0.06, 0.03, sz + 0.06, cx, legH + bodyH + 0.015, cz, {});
@@ -445,7 +445,7 @@ export function buildCabin(quality) {
 
   // shelves on the east wall (south part) with jars and tins
   {
-    const z0 = 1.35, z1 = 2.85, depth = 0.28, x1 = HX - 0.005, x0 = HX - depth;
+    const { z0, z1 } = FURNITURE.shelves, depth = 0.28, x1 = HX - 0.005, x0 = HX - depth;
     for (const y of [0.95, 1.35, 1.75]) {
       b.boxMM('furn', x0, x1, y - 0.03, y, z0, z1, { grain: 'z' });
       for (const z of [z0 + 0.12, z1 - 0.12]) {
@@ -505,19 +505,19 @@ export function buildCabin(quality) {
     // find the lowest point after rotation, then rest it on the floor
     const bb = new THREE.Box3();
     for (const q of parts) { const g = new THREE.BoxGeometry(q[0], q[1], q[2]).translate(q[3], q[4], q[5]).applyMatrix4(rot); g.computeBoundingBox(); bb.union(g.boundingBox); }
-    const pos = new THREE.Vector3(-1.35, -bb.min.y, -1.25);
+    const pos = new THREE.Vector3(FURNITURE.chair.x, -bb.min.y, FURNITURE.chair.z);
     const m = new THREE.Matrix4().makeTranslation(pos.x, pos.y, pos.z).multiply(rot);
     for (const q of parts) b.box('furn', q[0], q[1], q[2], q[3], q[4], q[5], { m, grain: q[6] });
     colliders.push({ minX: pos.x + bb.min.x, maxX: pos.x + bb.max.x, minZ: pos.z + bb.min.z, maxZ: pos.z + bb.max.z });
   }
 
   // rug
-  const RUG = { minX: -1.0, maxX: 1.0, minZ: -1.3, maxZ: 1.5 };
+  const RUG = FURNITURE.rug;
   b.boxMM('rug', RUG.minX, RUG.maxX, 0.0, 0.012, RUG.minZ, RUG.maxZ, { off: [-RUG.minX, -RUG.minZ], seamless: true });
 
   // coat hooks with a coiled rope and a canvas bag (west wall, south of the window)
   {
-    const z0 = 2.35, z1 = 3.15, y = 1.72;
+    const { z0, z1, y } = FURNITURE.hooks;
     b.boxMM('beam', -HX, -HX + 0.025, y - 0.05, y + 0.05, z0, z1, { grain: 'z' });
     for (const z of [z0 + 0.15, (z0 + z1) / 2, z1 - 0.15]) {
       const g = new THREE.CylinderGeometry(0.008, 0.008, 0.09, 6); g.rotateZ(Math.PI / 2 - 0.4); g.translate(-HX + 0.06, y + 0.015, z);

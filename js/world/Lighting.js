@@ -61,7 +61,7 @@ const N = Config.night;
 const FOG_COLOR = new THREE.Color().setRGB(...N.fogColor, THREE.LinearSRGBColorSpace);
 const FLASH_FOG = new THREE.Color().setRGB(0.16, 0.18, 0.22, THREE.LinearSRGBColorSpace);
 
-const LANTERN_INTENSITY = 11.5;
+const LANTERN_INTENSITY = 15;   // was 11.5 in the 6 x 8 m cabin
 const WALL_LAMP_INTENSITY = 6.5;
 const MOON_INTENSITY = N.moon;
 const HEMI_INTENSITY = N.hemi;
@@ -147,7 +147,7 @@ export function buildLighting(scene, renderer, quality) {
     lantern.castShadow = true;
     lantern.shadow.mapSize.set(quality.shadowMapSize, quality.shadowMapSize);
     lantern.shadow.camera.near = 0.08;
-    lantern.shadow.camera.far = 14;
+    lantern.shadow.camera.far = 20;
     lantern.shadow.bias = -0.004;
     lantern.shadow.normalBias = 0.02;
     lantern.shadow.radius = 3;
@@ -305,8 +305,8 @@ function buildLanternModel({ wall = null } = {}) {
     add(brace, metal, s * toWall * 0.7, 0.19, 0);
     add(new THREE.TorusGeometry(0.014, 0.003, 4, 10, Math.PI * 1.5).rotateY(Math.PI / 2), metal, 0, 0.215, 0);
   } else {
-    // chain up to the beam bottom (y = 2.42)
-    const chainTop = 2.42 - LANTERN.position.y;
+    // chain up to the beam bottom (0.18 m under the ceiling)
+    const chainTop = CABIN.wallHeight - 0.18 - LANTERN.position.y;
     const linkGeo = new THREE.TorusGeometry(0.012, 0.0028, 4, 8);
     for (let y = 0.18, k = 0; y < chainTop; y += 0.022, k++) {
       const l = add(linkGeo, metal, 0, y, 0);
