@@ -40,3 +40,4 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Aim down sights: field of view x0.74, spread x0.25, look x0.8, walk x0.6; can't fire while sprinting. Touch: AIM is a toggle, sprint = joystick past its edge.
 - 2026-11-07 — Smallest spiders (runner) scaled 1.4x through Config.spiders.runner.scale, which is now actually used.
 - 2026-11-07 — Mobile zoom: CSS touch-action on every layer plus a script that cancels double-tap, pinch and Safari gesture events, and snaps back if the page zoomed anyway.
+- 2026-11-07 — Milestone 2 signed off by the user, merged and live. Note from play: rock textures look low quality and blurry; fix with milestone 3.
