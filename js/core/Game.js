@@ -231,7 +231,7 @@ export class Game {
     this.weapon.update(dt, input, moving);
     // the gun picks up the lantern's warmth depending on how close you are to it
     const dl = this.camera.position.distanceTo(LANTERN.position);
-    this.weapon.viewKey.intensity = 0.25 + 2.2 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1));
+    this.weapon.viewKey.intensity = 1.2 + 6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1));
     this.audio.update(dt);
 
     // HUD

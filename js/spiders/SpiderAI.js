@@ -9,7 +9,7 @@ import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight, WINDOWS } from '../world/Layout.js';
 import { createSpiderVisual } from './SpiderModel.js';
 import { SpiderVoice } from '../audio/SpiderVoice.js';
-import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, groundNode } from './SpiderPaths.js';
+import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const SLOTS = [ { u: 0, y: 1.42 }, { u: -0.32, y: 1.2 }, { u: 0.34, y: 1.62 } ]; // attack spots on a window
@@ -26,6 +26,8 @@ export class Spider {
     this.visual = createSpiderVisual(type, mgr.quality);
     this.root = this.visual.root;
     this.visual.hitbox.userData.spider = this;
+    // forgiving hitbox: players aim at the whole creature, not only its body
+    this.visual.hitbox.scale.multiply(_hitScale);
     this.voice = mgr.audio ? new SpiderVoice(mgr.audio, type, this.root) : null;
     this.visual.rig.onStep = () => this.voice?.step(this.surface);
     mgr.scene.add(this.root);
@@ -414,7 +416,7 @@ export class Spider {
 
 function WINDOW_POINT(win, u, y) {
   const tangent = _t.crossVectors(UP, win.normal);
-  return win.center.clone().addScaledVector(win.normal, CABIN.wallThickness / 2 + 0.03).addScaledVector(tangent, u).setY(y);
+  return win.center.clone().addScaledVector(win.normal, WALL_OUT).addScaledVector(tangent, u).setY(y);
 }
 
 // ======================================================================
@@ -543,4 +545,4 @@ export class SpiderManager {
 
 const _d = new THREE.Vector3(), _f = new THREE.Vector3(), _x = new THREE.Vector3(), _t = new THREE.Vector3();
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
-export { groundNode };
+const _hitScale = new THREE.Vector3(1.7, 2.4, 1.4);

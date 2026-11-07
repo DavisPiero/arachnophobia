@@ -70,6 +70,9 @@ function windPatch(mat, strength, U) {
       mvPosition.z += sway * 0.45;
       mvPosition = modelViewMatrix * mvPosition;
       gl_Position = projectionMatrix * mvPosition;`);
+    // foliage cards use bent "up" normals; do not flip them on back faces (that turns half the cards black)
+    sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>',
+      THREE.ShaderChunk.normal_fragment_begin.replace('float faceDirection = gl_FrontFacing ? 1.0 : - 1.0;', 'float faceDirection = 1.0;'));
   };
   mat.customProgramCacheKey = () => 'wind' + strength;
   return mat;
@@ -426,8 +429,8 @@ export function buildForest(scene, quality, lighting) {
   // ---------------------------------------------------------------- grass (east clearing + yard + west slope)
   {
     const geo = crossedCards(0.8, 1.0, 3);
-    const mat = windPatch(new THREE.MeshStandardMaterial({ map: T.grassBlades(), alphaTest: 0.38, side: THREE.DoubleSide, roughness: 0.42,
-      color: new THREE.Color(0.62, 0.66, 0.5), envMap: env, envMapIntensity: 0.5 }), 0.09, U);
+    const mat = windPatch(new THREE.MeshStandardMaterial({ map: T.grassBlades(), alphaTest: 0.38, side: THREE.DoubleSide, roughness: 0.6,
+      color: new THREE.Color(0.62, 0.66, 0.5), envMap: env, envMapIntensity: 0.15 }), 0.09, U);
     const list = [];
     const n = quality.grassCount;
     let t = 0;
@@ -577,14 +580,17 @@ export function buildForest(scene, quality, lighting) {
   }
 
   // ---------------------------------------------------------------- distant treeline layers
+  const treelineMats = [];
   {
-    const layers = [[62, 0.8, 1, 26], [88, 0.92, 2, 34]];
+    const layers = [[66, 0.75, 1, 22]];
     for (const [rad, k, seed, h] of layers) {
       const geo = new THREE.CylinderGeometry(rad, rad, h, 48, 1, true);
       geo.translate(0, h / 2 - 6, 0);
       const t = T.treeline(seed); t.repeat.set(7, 1);
       const fc = new THREE.Color().setRGB(0.028 * k, 0.036 * k, 0.048 * k, THREE.LinearSRGBColorSpace);
       const mat = new THREE.MeshBasicMaterial({ color: fc, map: t, alphaTest: 0.5, side: THREE.BackSide, fog: false });
+      mat.userData.k = k;
+      treelineMats.push(mat);
       const m = new THREE.Mesh(geo, mat);
       m.name = 'treeline-' + rad;
       m.renderOrder = -5;
@@ -630,6 +636,8 @@ export function buildForest(scene, quality, lighting) {
       s.material.opacity = u.base * (1 + 0.15 * Math.sin(time * 0.1 + u.ph)) * (1 + flash * 2.5);
     }
     rain.update(time, flash);
+    // the distant layer is unfogged; keep it a shade darker than the fog, including during lightning
+    if (scene.fog) for (const m of treelineMats) m.color.copy(scene.fog.color).multiplyScalar(m.userData.k);
   }
 
   return { group, update, rain: rain.mesh };

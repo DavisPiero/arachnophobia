@@ -50,7 +50,7 @@ export class Weapon {
     // bullet holes in the world
     this.holes = [];
     this.holeIdx = 0;
-    const holeMat = new THREE.MeshBasicMaterial({ map: makeHoleTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 });
+    const holeMat = new THREE.MeshBasicMaterial({ map: makeHoleTexture(), transparent: true, depthWrite: false, fog: false, polygonOffset: true, polygonOffsetFactor: -4 });
     const holeGeo = new THREE.PlaneGeometry(0.05, 0.05);
     this.holeGroup = new THREE.Group();
     for (let i = 0; i < 40; i++) {
@@ -104,8 +104,7 @@ export class Weapon {
 
     const muzzleWorld = this.camera.localToWorld(_m.set(0.12, -0.1, -0.7));
     this.audio.play('gunshot', { volume: 1, reverb: 0.6 });
-    this.lighting?.muzzleFlash(muzzleWorld);
-    this.events.emit('muzzleFlash', { position: muzzleWorld.clone() });
+    this.events.emit('muzzleFlash', { position: muzzleWorld.clone() }); // World lights the room from this event
     this.events.emit('shot', { origin: origin.clone(), direction: dir.clone(), hitPoint, hitSpider });
     return true;
   }
@@ -139,8 +138,9 @@ export class Weapon {
     const g = this.gun.group;
     // reload pose: lower the rifle, roll it, magazine drops out and comes back
     const r = this.reloading ? reloadCurve(this.reloadT) : 0;
-    g.position.set(0.16 + this.swayX - r * 0.06, -0.17 + bob + this.swayY - r * 0.12 - this.kick * 0.012, -0.36 + this.kick * 0.05 + r * 0.06);
-    g.rotation.set(this.kick * 0.09 + r * 0.5, r * 0.35, r * 0.6);
+    g.position.set(0.2 + this.swayX - r * 0.06, -0.2 + bob + this.swayY - r * 0.1 - this.kick * 0.012, -0.3 + this.kick * 0.05 + r * 0.06);
+    // slight inward yaw so the barrel points toward the crosshair
+    g.rotation.set(0.03 + this.kick * 0.09 + r * 0.5, 0.06 + r * 0.35, r * 0.6);
     // magazine animation during reload
     const mt = this.reloadT;
     const magDrop = this.reloading ? (mt < 0.1 ? mt / 0.1 : mt < 0.75 ? 1 : Math.max(0, 1 - (mt - 0.75) / 0.12)) : 0;

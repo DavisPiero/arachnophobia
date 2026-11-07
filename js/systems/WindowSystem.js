@@ -9,10 +9,13 @@
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
 import { WINDOWS, CABIN } from '../world/Layout.js';
+import { interiorMaterial } from '../world/Lighting.js';
 
 const WC = Config.windows;
-// How far inside the window centre plane the inner face of the wall is.
-export const INNER_FACE = CABIN.wallThickness / 2;
+// WINDOWS[i].center sits on the INNER face of the wall; the wall runs outward from there.
+const GLASS_Z = CABIN.wallThickness / 2;   // glass in the middle of the wall
+const VEIL_Z = -0.012;                     // veil just inside the inner face
+const BOARD_Z = -0.11;                     // boards nailed on the inside, clear of the window stool
 
 export class WindowSystem {
   constructor({ scene, audio, events, camera }) {
@@ -43,7 +46,7 @@ export class WindowSystem {
       new THREE.PlaneGeometry(w + 0.04, h + 0.04),
       new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: WC.farOpacity, depthWrite: false, fog: false }),
     );
-    veil.position.z = -INNER_FACE + 0.012;
+    veil.position.z = VEIL_Z;
     veil.rotation.y = Math.PI; // face the room
     veil.renderOrder = 10;
     group.add(veil);
@@ -51,6 +54,7 @@ export class WindowSystem {
     // glass: faint, glossy so the lantern glints on it
     const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a2426, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat);
+    glass.position.z = GLASS_Z;
     glass.renderOrder = 11;
     group.add(glass);
 
@@ -60,20 +64,20 @@ export class WindowSystem {
     const crackTex = new THREE.CanvasTexture(crackCanvas);
     crackTex.colorSpace = THREE.SRGBColorSpace;
     const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, color: 0xbfc8c8 }));
-    crack.position.z = -0.002;
+    crack.position.z = GLASS_Z - 0.002;
     crack.renderOrder = 12;
     group.add(crack);
 
     // boards nailed across the inside of the opening
     const boards = [];
-    const boardMat = new THREE.MeshStandardMaterial({ color: 0x5b4532, roughness: 0.85, map: makeBoardTexture() });
+    const boardMat = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x5b4532, roughness: 0.85, map: makeBoardTexture() }));
     const boardDefs = [
       { y: -h * 0.36, rot: 0.05, len: w + 0.34 },
       { y: h * 0.38, rot: -0.06, len: w + 0.3 },
     ];
     for (const bd of boardDefs) {
       const pivot = new THREE.Group(); // pivot at the left nail so a loose board swings
-      pivot.position.set(-bd.len / 2 + 0.06, bd.y, -INNER_FACE - 0.03);
+      pivot.position.set(-bd.len / 2 + 0.06, bd.y, BOARD_Z);
       pivot.rotation.z = bd.rot;
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(bd.len, 0.13, 0.03), boardMat);
       mesh.position.x = bd.len / 2 - 0.06;
@@ -91,7 +95,7 @@ export class WindowSystem {
       health: WC.maxHealth, stage: 0, opacity: WC.farOpacity, closeness: 0, cracks: [],
       center: def.center.clone(), normal: n, width: def.width, height: def.height,
       // world-space point on the outside face of the glass, used by spiders
-      outside: def.center.clone().addScaledVector(n, INNER_FACE + 0.02),
+      outside: def.center.clone().addScaledVector(n, CABIN.wallThickness + 0.02),
     };
     this.drawCracks(win);
     return win;
@@ -170,7 +174,7 @@ export class WindowSystem {
     this.drawCracks(w, true);
     this.audio.play('glassShatter', { position: w.center, volume: 1, reverb: 0.3 });
     // glass shards fall into the room
-    const mat = new THREE.MeshStandardMaterial({ color: 0x9fb0b0, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+    const mat = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x9fb0b0, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
     for (let i = 0; i < 18; i++) {
       const s = 0.03 + Math.random() * 0.07;
       const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(s, Math.random() * s, 0), new THREE.Vector3(Math.random() * s, s * 1.4, 0)]);

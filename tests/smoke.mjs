@@ -74,6 +74,24 @@ for (const device of ['desktop', 'phone']) {
   check(rl.mag === 8 && rl.stockAfter < rl.stockBefore, `reload refills the magazine from the table (${rl.stockBefore} -> ${rl.stockAfter})`);
   await page.screenshot({ path: `shots/smoke-${device}-table.png` });
 
+  if (device === 'phone') {
+    // drag the left joystick forward and press FIRE, as a thumb would
+    await page.evaluate(() => { const g = window.game; g.player.position.set(0, 0, 1); g.player.yaw = 0; });
+    const z0 = await page.evaluate(() => window.game.player.position.z);
+    await page.mouse.move(150, 260); await page.mouse.down();
+    await page.mouse.move(150, 200, { steps: 4 });
+    await page.waitForFunction((z) => window.game.player.position.z < z - 0.3, z0, { timeout: 30000 }).catch(() => {});
+    await page.mouse.up();
+    const z1 = await page.evaluate(() => window.game.player.position.z);
+    check(z1 < z0 - 0.3, `joystick moves the player forward (${z0.toFixed(2)} -> ${z1.toFixed(2)})`);
+    const fire = await page.locator('#btn-fire').boundingBox();
+    const m0 = await page.evaluate(() => window.game.weapon.mag);
+    await page.mouse.move(fire.x + fire.width / 2, fire.y + fire.height / 2); await page.mouse.down();
+    await page.waitForTimeout(800); await page.mouse.up();
+    const m1 = await page.evaluate(() => window.game.weapon.mag);
+    check(m1 === m0 - 1, `FIRE button shoots (${m0} -> ${m1})`);
+  }
+
   // window damage through to breach
   const br = await page.evaluate(async () => {
     const g = window.game;

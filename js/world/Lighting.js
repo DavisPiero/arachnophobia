@@ -203,9 +203,9 @@ export function buildLighting(scene, renderer, quality) {
       fl += flashes[i].s * Math.exp(-age / 0.075);
     }
     flashLevel = Math.min(1.5, fl);
-    moon.intensity = MOON_INTENSITY + flashLevel * 6;
+    moon.intensity = MOON_INTENSITY + flashLevel * 3;
     moon.color.copy(MOON_COLOR).lerp(new THREE.Color(1, 1, 1), Math.min(1, flashLevel));
-    hemi.intensity = HEMI_INTENSITY + flashLevel * 4;
+    hemi.intensity = HEMI_INTENSITY + flashLevel * 2;
     outsideInside.value = OUTSIDE_INSIDE_BASE + flashLevel * 0.12;
     skyUniforms.uFlash.value = flashLevel;
     scene.fog.color.copy(FOG_COLOR).lerp(FLASH_FOG, Math.min(1, flashLevel));
@@ -227,7 +227,8 @@ export function buildLighting(scene, renderer, quality) {
 function buildLanternModel() {
   const g = new THREE.Group();
   g.name = 'lanternModel';
-  const metal = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 0.55, metalness: 0.8 }));
+  // unlit dark metal: the light sits centimetres away and would blow out a lit cap and guards
+  const metal = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.035, 0.027, 0.018) });
   const rust = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x3a2618, roughness: 0.8, metalness: 0.5 }));
   // metal parts are collected and merged into one mesh per material at the end
   const parts = new Map();

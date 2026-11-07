@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { CABIN, ROUTES, terrainHeight, roofHeight, roofNormal } from '../world/Layout.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
-export const WALL_OUT = CABIN.wallThickness / 2 + 0.03; // outer wall face, from the window centre plane
+export const WALL_OUT = CABIN.wallThickness + 0.03; // just off the outer wall face (window centres are on the inner face)
 
 export function terrainNormal(x, z) {
   const e = 0.4;
