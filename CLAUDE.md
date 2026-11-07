@@ -8,8 +8,9 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - **No build step.** Plain HTML/CSS/JS ES modules. Three.js comes from jsDelivr, pinned to `three@0.170.0`
   through the import map in `index.html` (and in each `dev/*.html` page). Bump the version in all of them at once.
 - **Relative paths only** (`./js/...`), so the game runs from GitHub Pages under `/arachnophobia/`.
-- **Everything is made in code** for now: textures (canvas), models (geometry), sounds (Web Audio synthesis).
-  Real recordings or Blender models can replace pieces later; keep each behind the same function names.
+- **Assets come from Blender generator scripts** (`blender/`, run with `npm run assets`) or from hand-made `.blend` files in
+  `blender/source/`, exported as `.glb` to `assets/models/`. Every loaded asset keeps a code-made fallback behind the same
+  function name, so a missing or broken file never breaks the game. Sounds are still synthesised for now.
 - **Shared positions live in `js/world/Layout.js`.** Never hard-code cabin, window, table or route positions elsewhere.
 - **Tuning numbers live in `js/core/Config.js`.** Ammo, damage, speeds, wave sizes.
 - **Mobile is first-class.** Every feature must work with touch controls and on the `low` quality tier.
@@ -19,6 +20,7 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 ## Commands
 
 - `npm start` — local server at http://localhost:8173
+- `npm run assets` — rebuild every `.glb` from the Blender generators (Blender runs in the background, no window)
 - `npm test` — headless smoke test (desktop + phone viewport), fails on console errors
 - `node tools/shot.mjs "index.html?mute=1&autostart=1" shots/x.png [--mobile] [--wait=ms] [--eval=js]`
 
@@ -27,7 +29,7 @@ URL switches: `mute=1`, `autostart=1` (skip the start screen), `quality=low|high
 ## Layout of the code
 
 ```
-js/core     Game state machine, config, quality tier, event bus
+js/core     Game state machine, config, quality tier, event bus, asset loader
 js/world    Layout (shared positions), cabin, forest, procedural textures, lighting
 js/spiders  Spider models and leg rig, types, AI, waves
 js/player   Movement/camera/health, weapon, ammo table
@@ -37,9 +39,10 @@ js/input    Keyboard/mouse and touch controls behind one Input interface
 js/fx       Post-processing (grain, chromatic aberration, vignette)
 js/ui       HUD and menus
 dev/        Stand-alone viewers: spiders, world, sound board
+blender/    Asset generators (Python, run headless), shared helpers, hand-made sources
+assets/     Exported .glb models and the parameter files shared by Blender and the game
 ```
 
 ## Out of scope for now (but wanted later — do not treat as rejected)
 
-Barricade repair, more weapons, sprint/crouch, flashlight, score/saves, story, recorded audio, Blender models,
-spiders on the inside ceiling. See SPEC.md "Later".
+Barricade repair, more weapons, crouch, score/saves, story, recorded audio. See SPEC.md "Later".

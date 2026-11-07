@@ -1,15 +1,16 @@
 # State
 
-**Where we are:** milestone 1 (playable prototype) signed off and live at https://davispiero.github.io/arachnophobia/ (main).
+**Where we are:** second iteration, milestone 2 (Blender pipeline, lighting and darkness fixes, flashlight, sprint, aim down
+sights, phone zoom fix) built on branch `m2-pipeline-and-feel`, pushed, **not merged**. Main is still milestone 1 and is what's live.
 
-**Next:** play it on desktop and on a phone, then a tuning pass from your notes: sound levels, spider look, difficulty,
-the rifle model. Then put it in front of one person who has never seen it and ask where they first got stuck.
+**Next:** you play the branch and sign off milestone 2. Then milestone 3: hands and arms, a lever-action rifle and an axe from
+Blender, the axe on F, the stomp on V, recoil, sway, shake, muzzle flash, blood, combat sounds. Full roadmap in SPEC.md.
 
 **Open with you:**
-- Guesses to confirm: ammo numbers (8 / 40 / +16), 3 s reload, bullets passing through glass, spiders coming inside after a breach,
-  stalkers fleeing light, no flashlight. All in DECISIONS.md.
-- Nobody has listened to the sounds yet; levels were set by measurement.
-- Phone performance is untested on a real device.
+- Guesses to confirm: wall lamp on the west wall at the north end; flashlight on T; unlimited sprint; how dark the night is now.
+- Does double-tap still zoom on your phone? Fixed in a headless phone test, not yet on a real device.
+- Rocks are the only Blender asset so far. Look at them in `dev/assets.html?model=rocks` and say if the style is right
+  before the pipeline makes weapons and spiders.
 
-**Tools:** `dev/spiders.html` (spider viewer), `dev/world.html` (world views), `dev/sounds.html` (sound board), `?debug=1` in the game.
-`npm test` is the quick check (~1.5 min, one line); `node tests/soak.mjs` runs a bot through the waves.
+**Tools:** `npm run assets` (Blender → game), `dev/assets.html` (model viewer), `dev/spiders.html`, `dev/world.html`,
+`dev/sounds.html`, `?debug=1` and `?assets=0` in the game. `npm test` is the quick check (~2 min).

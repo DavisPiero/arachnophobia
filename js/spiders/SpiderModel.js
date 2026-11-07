@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { SpiderRig, BONE, BONE_COUNT } from './SpiderRig.js';
 import { getChitinTextures, getGlowTexture } from './SpiderTextures.js';
+import { Config } from '../core/Config.js';
 
 export const SPIDER_TYPES = ['runner', 'brute', 'climber', 'stalker'];
 
@@ -570,7 +571,7 @@ export function createSpiderVisual(type, quality, opts = {}) {
   const root = new THREE.Group();
   root.name = 'spider-' + type;
   const space = new THREE.Group();
-  const scale = 1 + (r() - 0.5) * 0.16;
+  const scale = (Config.spiders[type]?.scale ?? 1) * (1 + (r() - 0.5) * 0.16);
   space.scale.setScalar(scale);
   root.add(space);
 

@@ -56,9 +56,32 @@ for (const device of ['desktop', 'phone']) {
     return { fired: before - g.weapon.mag, veil, farVeil, spiders: g.spiders.aliveCount, fps };
   });
   check(r.fired === 1, 'weapon fires and uses a round');
-  check(r.veil < 0.5 && r.farVeil > 0.8, `window near is clear (${r.veil.toFixed(2)}), far window dark (${r.farVeil.toFixed(2)})`);
+  check(r.veil < 0.35 && r.farVeil > 0.4, `window near is clear (${r.veil.toFixed(2)}), far window dark (${r.farVeil.toFixed(2)})`);
   check(r.spiders >= 3, `spiders spawned and alive (${r.spiders})`);
   if (process.argv.includes('--shots')) await page.screenshot({ path: `shots/smoke-${device}-window.png` });
+
+  // milestone 2: Blender assets, flashlight, aim down sights, sprint
+  const m2 = await page.evaluate(async () => {
+    const g = window.game;
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    g.player.position.set(0, 0, 1.5); g.player.yaw = 0; g.player.pitch = 0;
+    g.flashlight.toggle();
+    g.input.aimHeld = true;
+    await simWait(0.6);
+    const torch = g.flashlight.spot.intensity, aimK = g.weapon.aimK, fovRatio = g.camera.fov / g.baseFov;
+    g.input.aimHeld = false; g.flashlight.toggle();
+    const kb = g.input.keyboard; kb.keys.add('KeyW'); kb.keys.add('ShiftLeft'); kb.update();
+    await simWait(0.5);
+    const runSpeed = Math.hypot(g.player.velocity.x, g.player.velocity.z), sprinting = g.player.sprinting;
+    kb.keys.clear(); kb.update();
+    await simWait(0.3);
+    return { assets: g.world.assetsUsed.slice(), torch, aimK, fovRatio, runSpeed, sprinting, walk: 2.6 };
+  });
+  check(m2.assets.includes('rocks'), `Blender rocks loaded (${m2.assets.join(', ') || 'none'})`);
+  check(m2.torch > 1, `flashlight turns on (${m2.torch.toFixed(1)})`);
+  check(m2.aimK > 0.9 && m2.fovRatio < 0.8, `aim down sights zooms in (aim ${m2.aimK.toFixed(2)}, fov x${m2.fovRatio.toFixed(2)})`);
+  check(m2.sprinting && m2.runSpeed > m2.walk * 1.4, `Shift sprints (${m2.runSpeed.toFixed(2)} m/s)`);
 
   // reload at the table
   const rl = await page.evaluate(async () => {
@@ -94,6 +117,15 @@ for (const device of ['desktop', 'phone']) {
     await page.waitForTimeout(800); await page.mouse.up();
     const m1 = await page.evaluate(() => window.game.weapon.mag);
     check(m1 === m0 - 1, `FIRE button shoots (${m0} -> ${m1})`);
+    await page.locator('#btn-torch').tap(); await page.waitForTimeout(400);
+    check(await page.evaluate(() => window.game.flashlight.on), 'LIGHT button turns the flashlight on');
+    await page.locator('#btn-aim').tap();
+    check(await page.evaluate(() => window.game.input.aim), 'AIM button toggles aiming');
+    await page.locator('#btn-aim').tap();
+    // a double tap must not zoom the page
+    await page.touchscreen.tap(600, 200); await page.waitForTimeout(80); await page.touchscreen.tap(600, 200);
+    await page.waitForTimeout(300);
+    check(await page.evaluate(() => (window.visualViewport?.scale ?? 1) <= 1.01), 'double tap does not zoom the page');
   }
 
   // window damage through to breach

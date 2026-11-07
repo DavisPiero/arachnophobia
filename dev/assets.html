@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asset viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #1a1c1f; overflow: hidden; }
+  canvas { display: block; }
+  #info { position: fixed; left: 8px; top: 6px; color: #9a9; font: 12px monospace; white-space: pre; pointer-events: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="info">loading…</div>
+<script type="module">
+// Asset viewer: shows every mesh in assets/models/<model>.glb in a row under neutral studio light.
+// URL switches: model=rocks (default)   lod=1 (show the phone/far versions)   night=1 (game-like moonlight)
+// Drag to orbit, scroll to zoom.
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { loadModel } from '../js/core/Assets.js';
+
+const params = new URLSearchParams(location.search);
+const name = params.get('model') || 'rocks';
+const lod = params.get('lod') === '1';
+const night = params.get('night') === '1';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(night ? 0x05070a : 0x1a1c1f);
+const camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 0.05, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+if (night) {
+  scene.add(new THREE.HemisphereLight(0x52668c, 0x0c0c0f, 0.6));
+  const moon = new THREE.DirectionalLight(0x9eb8f2, 0.9); moon.position.set(4, 6, -2); scene.add(moon);
+} else {
+  scene.add(new THREE.HemisphereLight(0xdde4ee, 0x2a2826, 1.2));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2); key.position.set(3, 5, 4); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xaabbff, 1.0); rim.position.set(-4, 2, -5); scene.add(rim);
+}
+
+const models = await loadModel(name);
+const info = document.getElementById('info');
+if (!models) {
+  info.textContent = `assets/models/${name}.glb not found — run: npm run assets ${name}`;
+} else {
+  const list = [...models.entries()].filter(([n]) => n.endsWith('_lod1') === lod);
+  const cols = Math.ceil(Math.sqrt(list.length));
+  let tris = 0;
+  list.forEach(([n, m], i) => {
+    const mesh = new THREE.Mesh(m.geometry, m.material);
+    mesh.position.set((i % cols - (cols - 1) / 2) * 2.6, 0, (Math.floor(i / cols) - (Math.ceil(list.length / cols) - 1) / 2) * 2.6);
+    scene.add(mesh);
+    tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position.count) / 3;
+  });
+  info.textContent = `${name}.glb  ${list.length} meshes${lod ? ' (lod1)' : ''}  ${Math.round(tris)} tris total\nmodel=…  lod=1  night=1`;
+  const far = cols * 2.2 + 2;
+  camera.position.set(0, far * 0.55, far);
+  controls.target.set(0, 0, 0);
+}
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
+window.viewerReady = true;
+</script>
+</body>
+</html>

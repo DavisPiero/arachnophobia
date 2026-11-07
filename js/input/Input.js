@@ -11,6 +11,7 @@ export class Input {
     this.lookDX = 0;          // accumulated radians this frame (yaw)
     this.lookDY = 0;          // (pitch)
     this.fireHeld = false;
+    this.aimHeld = false;     // right mouse button held (desktop); touch uses its AIM toggle
     this._pressed = new Set(); // one-frame actions: 'fire', 'interact', 'pause', 'mute', 'start'
     this.enabled = false;
     this.isTouch = isTouch;
@@ -31,10 +32,14 @@ export class Input {
   }
   setEnabled(v) {
     this.enabled = v;
-    if (!v) { this.moveX = 0; this.moveY = 0; this.fireHeld = false; }
+    if (!v) { this.moveX = 0; this.moveY = 0; this.fireHeld = false; this.aimHeld = false; }
     this.keyboard.setEnabled(v);
     this.touch.setEnabled(v);
   }
+  /** Sprint wanted: Shift held, or the joystick pushed to its edge. */
+  get sprint() { return this.enabled && (this.keyboard.sprint || this.touch.sprint); }
+  /** Aiming down sights: right mouse held, or the touch AIM toggle on. */
+  get aim() { return this.enabled && (this.aimHeld || this.touch.aim); }
   // Read the combined movement vector (keyboard + joystick), clamped to length 1.
   getMove() {
     let x = this.keyboard.moveX + this.touch.moveX;

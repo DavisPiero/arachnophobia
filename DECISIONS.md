@@ -21,3 +21,22 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Up to 3 spiders attack a window at once (a brute takes the main spot); extras wait at the wall.
 - 2026-11-07 — Spider hitboxes enlarged (1.7 × 2.4 × 1.4 of the body) so shots aimed at the creature, not just its tiny body, count.
 - 2026-11-07 — `npm test` runs at low quality in small viewports and prints failures only (~1.5 min). Full/visual runs only on request; they burnt time and tokens.
+- 2026-11-07 — Milestone 1 guesses confirmed by the user: ammo 8/40/+16, 3 s reload, bullets through glass, spiders inside after a breach, vanishing watcher.
+- 2026-11-07 — Flashlight added (user's call), toggled with T / a touch button. Windows stay darker from afar; the beam shows the near room and scares off watchers.
+- 2026-11-07 — "Everything made in code" rule removed. Assets come from Blender generator scripts or hand-made .blend files; code-made versions stay as fallbacks.
+- 2026-11-07 — Jump scares only when the player dies (user's call). Everything else builds dread, not jolts.
+- 2026-11-07 — Second iteration split into milestones: 2 pipeline+fixes+feel, 3 hands/weapons/combat, 4 nine species+locomotion, 5 horror, 6 environment assets.
+- 2026-11-07 — Nine species now; the system takes a tenth as one data entry. Runner→Crawler, Brute, Climber kept, old stalker behaviour→Watcher, new Stalker is the long-legged ambusher.
+- 2026-11-07 — Weapon becomes a lever-action rifle (wood stock and forend) in milestone 3; 8-round tube fits the magazine size.
+- 2026-11-07 — Exported .glb files are committed (GitHub Pages serves them). No Git LFS. Budget: each file under ~2 MB, whole game under ~25 MB.
+- 2026-11-07 — Species details go in SPECIES.md, not the spec, so the spec stays short.
+- 2026-11-07 — Pipeline: Python generators run in background Blender, bake high→low (colour, normals, roughness, AO), then gltf-transform (WebP + meshopt). Params JSON shared by Blender and game.
+- 2026-11-07 — A hand-made blender/source/<name>.glb wins over the generator, so the user's own art always replaces the scripted pass.
+- 2026-11-07 — Variants of one family share a texture atlas and are drawn as one instanced mesh each: few draw calls on phones.
+- 2026-11-07 — Second light is a wall lamp on the west wall at the north end (not by the door as planned): that end was the darkest, the door end already has the table candle. Guess.
+- 2026-11-07 — Night fog is near-black instead of blue-grey, so the forest gets darker with distance. Window darkness from afar 0.965 → 0.58.
+- 2026-11-07 — Flashlight on T (F is taken by the axe in milestone 3). Guess. No battery: not asked for.
+- 2026-11-07 — Sprint is unlimited (no stamina): not asked for, and the cabin is small. Revisit for the open world.
+- 2026-11-07 — Aim down sights: field of view x0.74, spread x0.25, look x0.8, walk x0.6; can't fire while sprinting. Touch: AIM is a toggle, sprint = joystick past its edge.
+- 2026-11-07 — Smallest spiders (runner) scaled 1.4x through Config.spiders.runner.scale, which is now actually used.
+- 2026-11-07 — Mobile zoom: CSS touch-action on every layer plus a script that cancels double-tap, pinch and Safari gesture events, and snaps back if the page zoomed anyway.
