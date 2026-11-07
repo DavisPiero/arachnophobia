@@ -1,7 +1,7 @@
 # ARACHNOPHOBIA — project rules
 
 First-person horror in the browser: a wooden cabin at night, three windows, mutant spiders outside.
-Read `SPEC.md` (what makes it good, what is not in yet) and `STATE.md` (where we are) before starting work.
+Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we are) and `HANDOFF.md` (last session's note) before starting work.
 
 ## Hard rules
 

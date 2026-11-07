@@ -19,3 +19,5 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Before each wave the ambience goes deliberately quiet for ~14 s.
 - 2026-11-07 — Closed windows muffle outside sounds, but a little leaks through unfiltered so spiders stay audible over wind and rain.
 - 2026-11-07 — Up to 3 spiders attack a window at once (a brute takes the main spot); extras wait at the wall.
+- 2026-11-07 — Spider hitboxes enlarged (1.7 × 2.4 × 1.4 of the body) so shots aimed at the creature, not just its tiny body, count.
+- 2026-11-07 — `npm test` runs at low quality in small viewports and prints failures only (~1.5 min). Full/visual runs only on request; they burnt time and tokens.
