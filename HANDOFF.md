@@ -1,65 +1,58 @@
 # Hand-off
 
-*Session of 2026-11-07 (third). Replaces any earlier note.*
+*Session of 2026-11-07 (fourth). Replaces any earlier note.*
 
 ## Repo state
-- `main` is the only branch: clean, pushed, and it includes milestone 3 (signed off).
-- `npm test` passed on main after the merge (desktop + phone, 147 s).
+- `main` includes this session's work. It came from branch `m3b-viewmodel-art`: merged, pushed, then deleted.
+- `npm test` passed before the merge (desktop + phone, 174 s).
 
 ## Read first
-1. `CLAUDE.md` (a new tool, `tools/poses.mjs`, and the `assets=0` switch)
-2. `STATE.md`, `SPEC.md` (pillar 1 rewritten: windows are always clear; weapon section rewritten), `DECISIONS.md`
-3. `blender/README.md` (new rifle, hands and axe families; shared GAME-space coordinates; budgets)
+1. `CLAUDE.md`:
+   - the asset rule now allows CC0 scanned textures;
+   - new commands and check tools.
+2. `STATE.md`, `SPEC.md` (new "First-person body" section; splats now fade), `DECISIONS.md` (the last 9 lines).
+3. `blender/README.md` (new budgets, materials, check tools), `blender/textures.md` (texture sources and licences).
 
-## What was built last session
-1. **Fixes:**
-   - **Rocks:** one packed 2048 atlas, a better normal map, plus a tiling stone grain in the game.
-   - **Night:** brighter (numbers in `Config.night`).
-   - **Windows:** the darkening is removed.
-   - **Flashlight:** now on Q.
-2. **Blender generators:** `blender/generators/rifle.py`, `hands.py` (metaball gloves, sleeves, boot) and `axe.py`.
-   Pivots, grips and colours live in `assets/params/rifle|hands|axe.json`, which the game reads too.
-3. **First-person view** (`js/player/ViewModel.js`):
-   - The lever cycle and the spent case.
-   - The round-by-round reload.
-   - The axe swing (keyframes) and the boot for the stomp.
-   - Code-made fallbacks.
-4. **Melee** (`js/player/Melee.js`): the axe on F and the stomp on V. **Feedback** (`js/fx/Gore.js`, `SpiderAI.js`, `SpiderRig.js`):
-   - Hit zones, knockback, a body jolt and a leg kick.
-   - Brutes stagger.
-   - Spray and splats.
-   - A death thrash and a kill crunch.
-5. **Eight new sounds**, a heavier gunshot, and AXE and STOMP touch buttons.
+## What was built
+- **Materials** (`blender/lib/materials.py`):
+  - CC0 scans from ambientCG, projected along each part, re-tinted from the params;
+  - bump detail: checkering, stitching, ribs;
+  - worn edges and dirt.
+- **Rifle** (`rifle.py`), after the side-gate reference:
+  - receiver from a profile, with boolean cuts (ejection port, loading gate);
+  - round barrel, closed big-loop lever, checkered walnut, rubber butt pad, sights, screws.
+- **Axe** (`axe.py`): forest-axe head with a bright ground edge; S-curved hickory handle.
+- **Hands** (`hands.py`):
+  - one hand skeleton, bent per pose;
+  - fingers wrap the real held shape and are pressed out of it;
+  - fused glove with panels and seams, hard knuckle guard;
+  - separate jacket sleeves.
+  - The trigger hand follows `reference/m4-rifle-hold.png`; the support hand follows the user's description.
+- **Legs** (`legs.py`, `js/player/Legs.js`):
+  - cargo trousers, lace-up boots, belt, the bottom of the jacket;
+  - the body stands 0.24 m behind the eye and the legs swing when walking.
+  - The stomp boot now comes from `legs.glb`.
+- **Pipeline:** phones load `<name>_low.glb` (half-size textures), handled in `Assets.js` and `tools/assets.mjs`. The
+  rifle's hip position now lives in `rifle.json` `view` (values unchanged).
+- **Splats:** dark red, fading after 3 s + 2 s (`Config.gore.splatHold`, `splatFade`).
+
+## What went badly (be honest with the user about this)
+- **The hand poses took many rounds**, and the user was rightly frustrated. Two causes:
+  - I reasoned the grips from geometry instead of copying the reference photos;
+  - for a while I changed the gun position when the user had said the arms were wrong.
+- **For any future pose work:** get a reference photo, match it, check it from the side with
+  `blender/tools/viewmodel.py` (`VM_EYE`), and run `clipcheck.py` before showing the user.
+
+## Known weak spots
+- **Aiming:** the sleeves come up large in the lower middle of the screen.
+- **Legs:** the cargo pockets are plain bevelled boxes, and the legs only swing at the hip (no knee bend).
+- **Loading hand:** the pinch pose was not checked in the reload against the rifle.
+- **Spent cases:** the cartridge model is new, but the ejection was not re-checked.
 
 ## What comes next
-1. **The user's notes on the gloves, the gun and the axe.** Ask for them first.
-   - Most look changes are parameter edits in `assets/params/*.json`, then `npm run assets <name>`.
-   - Check every change with `node tools/poses.mjs`.
-   - Pose positions (hip, aimed, reload, axe keyframes) are numbers in `ViewModel.js`.
-   - If the user starts nudging positions by hand over several rounds, offer a way to place them themselves and save the
-     result to data (global working agreement).
-2. **Milestone 4:**
-   - Nine species, written up in `SPECIES.md`.
-   - A Blender spider generator.
-   - Locomotion.
-   - Spiders climbing in through the window frame, and spiders on the inside ceiling.
-
-## Known weak spots (from my own review)
-- **Stomp:** you mostly see the trouser leg; the boot's toe hides behind the shin.
-- **Reload:** the pose is dark at the table and the feeding hand is hard to read.
-- **Aimed:** the right sleeve takes a fair share of the lower right.
-- **Hands:** metaballs, so they read as gloves rather than detailed hands.
-
-## Open questions for the user
-1. Notes on the gloves, the gun and the axe (promised for this session).
-2. Guesses to confirm:
-   - The ichor is pale yellow-green.
-   - Splats stay until the next wave.
-   - The hands are posed shapes, not skeletons.
-3. Is the night bright enough now (the east clearing especially)?
-4. Does double-tap still zoom on a real phone? (Only checked headless.)
-5. Is the second lamp in the right place (west wall, north end)? Never answered.
+Milestone 4 (see `STATE.md`). Ask the user first about the open questions in `STATE.md`.
 
 ## Testing rules (from the user)
-Keep tests cheap: `npm test` in the background, do not poll, read at most one or two screenshots per change.
-`tools/poses.mjs` is the cheap way to see every first-person pose in one run.
+- Keep tests cheap: `npm test` in the background, do not poll.
+- Read at most one or two screenshots per change.
+- The game is too dark to judge models: use `blender/tools/viewmodel.py` for that.

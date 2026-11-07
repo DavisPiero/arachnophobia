@@ -585,9 +585,38 @@ def bake_metal(high, low, img, extrusion):
         nt.nodes.remove(em)
 
 
+def bake_base_color(high, low, img, extrusion):
+    """Bake each high material's Base Color through a temporary emission shader. (A DIFFUSE colour bake returns black
+    for metals, so blued steel and brass would lose their colour.)"""
+    saved = []
+    for slot in high.material_slots:
+        nt = slot.material.node_tree
+        out = next(n for n in nt.nodes if n.type == 'OUTPUT_MATERIAL')
+        bsdf = next(n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED')
+        old = out.inputs['Surface'].links[0].from_socket if out.inputs['Surface'].links else None
+        em = nt.nodes.new('ShaderNodeEmission')
+        bc = bsdf.inputs['Base Color']
+        if bc.links:
+            nt.links.new(bc.links[0].from_socket, em.inputs['Color'])
+        else:
+            em.inputs['Color'].default_value = bc.default_value
+        nt.links.new(em.outputs[0], out.inputs['Surface'])
+        saved.append((nt, out, old, em))
+    set_bake_image(low, img)
+    select_only(high, low, active=low)
+    bpy.ops.object.bake(type='EMIT', use_selected_to_active=True, cage_extrusion=extrusion, margin=6, use_clear=False)
+    for nt, out, old, em in saved:
+        if old:
+            nt.links.new(old, out.inputs['Surface'])
+        nt.nodes.remove(em)
+
+
 def bake_family(pairs, size, prefix, extrusion=0.01, ao_samples=16, ao_strength=0.7, metal=True):
     """Bake every (high, low) pair into one shared atlas. Lows must already be unwrapped and packed together.
-    Returns the game material (colour, normal, roughness + metalness in one texture)."""
+    Returns the game material (colour, normal, roughness + metalness in one texture).
+    ASSET_FAST=1 in the environment bakes small and quick (for iterating on shapes; never commit a fast build)."""
+    if os.environ.get('ASSET_FAST'):
+        size, ao_samples = min(size, 1024), 4
     img = {
         'color': new_image(prefix + '_color', size),
         'normal': new_image(prefix + '_normal', size, non_color=True, color=(0.5, 0.5, 1.0, 1.0)),
@@ -602,7 +631,9 @@ def bake_family(pairs, size, prefix, extrusion=0.01, ao_samples=16, ao_strength=
     for hi, lo in pairs:
         bake_target_material(lo, img['color'])
         lo.visible_shadow = False; lo.visible_diffuse = False; lo.visible_glossy = False
-        for kind, key, samples in (('COLOR', 'color', 1), ('NORMAL', 'normal', 1), ('ROUGHNESS', 'rough', 1), ('AO', 'ao', ao_samples)):
+        bpy.context.scene.cycles.samples = 1
+        bake_base_color(hi, lo, img['color'], extrusion)
+        for kind, key, samples in (('NORMAL', 'normal', 1), ('ROUGHNESS', 'rough', 1), ('AO', 'ao', ao_samples)):
             bake(hi, lo, kind, img[key], extrusion=extrusion, samples=samples)
         if metal:
             bpy.context.scene.cycles.samples = 1
@@ -672,4 +703,161 @@ def preview(objs, path, eye=(0.6, -0.9, 0.35), target=(0, 0, 0), lens=50, size=6
     for o in hidden:
         o.hide_render = False
     bpy.data.objects.remove(cam, do_unlink=True)
+    scene.render.engine = old
+
+
+# ---------------------------------------------------------------- modelling helpers (viewmodel art redo)
+def catmull(pts, per=6, closed=False):
+    """Smooth curve through GAME-space control points (Catmull-Rom). per = samples per span."""
+    P = [Vector(p) for p in pts]
+    n = len(P)
+    out = []
+    spans = n if closed else n - 1
+    for i in range(spans):
+        p0 = P[(i - 1) % n] if closed or i > 0 else P[0] * 2 - P[1]
+        p1, p2 = P[i % n], P[(i + 1) % n]
+        p3 = P[(i + 2) % n] if closed or i + 2 < n else P[-1] * 2 - P[-2]
+        for k in range(per):
+            t = k / per
+            t2, t3 = t * t, t * t * t
+            out.append(0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 + (-p0 + 3 * p1 - 3 * p2 + p3) * t3))
+    if not closed:
+        out.append(P[-1])
+    return [tuple(p) for p in out]
+
+
+def extrude_profile(name, pts_zy, x0, x1, smooth=None):
+    """A flat part from a side profile: closed polygon of (z, y) GAME points, extruded across x from x0 to x1.
+    smooth=k resamples the outline with a Catmull-Rom curve (k samples per corner) for rounded outlines."""
+    if smooth:
+        pts_zy = [(p[0], p[1]) for p in catmull([(z, y, 0) for z, y in pts_zy], per=smooth, closed=True)]
+    bm = bmesh.new()
+    a = [bm.verts.new(G(x0, y, z)) for z, y in pts_zy]
+    b = [bm.verts.new(G(x1, y, z)) for z, y in pts_zy]
+    n = len(a)
+    for i in range(n):
+        bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return mesh_object(name, bm)
+
+
+def extrude_profile_xy(name, pts_xy, z0, z1):
+    """Like extrude_profile but the outline is in the x-y plane (seen from the player) and extruded along z."""
+    bm = bmesh.new()
+    a = [bm.verts.new(G(x, y, z0)) for x, y in pts_xy]
+    b = [bm.verts.new(G(x, y, z1)) for x, y in pts_xy]
+    n = len(a)
+    for i in range(n):
+        bm.faces.new((a[i], a[(i + 1) % n], b[(i + 1) % n], b[i]))
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    return mesh_object(name, bm)
+
+
+def lathe(name, prof, center=(0, 0), axis='z', n=32, cap_start=True, cap_end=True):
+    """Revolve a profile [(along, radius)] around a GAME axis through `center` (the other two coordinates)."""
+    secs = []
+    for t, r in prof:
+        if axis == 'z':
+            secs.append(ring((center[0], center[1], t), r, r, n=n))
+        elif axis == 'y':
+            secs.append(ring((center[0], t, center[1]), r, r, n=n, axis='y'))
+        else:
+            secs.append(ring((t, center[0], center[1]), r, r, n=n, axis='x'))
+    return loft(name, secs, cap_start=cap_start, cap_end=cap_end)
+
+
+def boolean(ob, cutter, op='DIFFERENCE', keep=False):
+    m = ob.modifiers.new('bool', 'BOOLEAN'); m.operation = op; m.object = cutter; m.solver = 'EXACT'
+    cutter.hide_render = True
+    apply_modifiers(ob)
+    if not keep:
+        bpy.data.objects.remove(cutter, do_unlink=True)
+    return ob
+
+
+def cylinder(name, a, b, r, n=24):
+    """A capped cylinder between two GAME points."""
+    A, B = Vector(a), Vector(b)
+    d = (B - A).normalized()
+    up = Vector((0, 1, 0)) if abs(d.y) < 0.9 else Vector((1, 0, 0))
+    u = d.cross(up).normalized(); v = d.cross(u).normalized()
+    secs = []
+    for c in (A, B):
+        secs.append([G(*(c + u * (r * math.cos(2 * math.pi * i / n)) + v * (r * math.sin(2 * math.pi * i / n)))) for i in range(n)])
+    return loft(name, secs)
+
+
+def bevel_low(ob, width=0.001, angle=40, segments=1):
+    """A small chamfer on the game mesh's sharp edges: catches light like a real machined edge."""
+    add_modifier(ob, 'BEVEL', width=width, segments=segments, limit_method='ANGLE', angle_limit=math.radians(angle),
+                 harden_normals=True)
+    apply_modifiers(ob)
+
+
+def set_material_by(ob, mats, pick):
+    """Several materials on one mesh: pick(face_center_GAME, normal_GAME) -> index into mats."""
+    ob.data.materials.clear()
+    for m, _ in mats:
+        ob.data.materials.append(m)
+    for p in ob.data.polygons:
+        c = p.center; nn = p.normal
+        p.material_index = pick((c.x, c.z, -c.y), (nn.x, nn.z, -nn.y))
+    # keep the metal-mask bookkeeping of the first material (each material carries its own)
+    for m, metal in mats:
+        m['_metal_node'] = metal.node.name
+        m['_metal_out'] = list(metal.node.outputs).index(metal)
+    return ob
+
+
+def render_preview(objs, path, eye, target, lens=50, size=900, bg=0.035, key=40.0, engine='CYCLES', samples=48):
+    """A lit render of the finished (baked) game meshes, to compare with the references without opening Blender."""
+    scene = bpy.context.scene
+    old = scene.render.engine
+    scene.render.engine = engine
+    scene.cycles.samples = samples
+    scene.render.resolution_x = size; scene.render.resolution_y = int(size * 0.75)
+    scene.render.film_transparent = False
+    world = bpy.data.worlds.new('pv') if not scene.world else scene.world
+    scene.world = world
+    world.use_nodes = True
+    wn = world.node_tree.nodes
+    bgn = next(n for n in wn if n.type == 'BACKGROUND')
+    # the camera sees a dark backdrop; reflections see a soft grey room (metal is black with nothing to reflect)
+    sky = wn.new('ShaderNodeTexGradient'); sky.gradient_type = 'LINEAR'
+    tc = wn.new('ShaderNodeTexCoord'); mp = wn.new('ShaderNodeMapping'); mp.inputs['Rotation'].default_value = (0, math.radians(-90), 0)
+    world.node_tree.links.new(tc.outputs['Generated'], mp.inputs['Vector']); world.node_tree.links.new(mp.outputs['Vector'], sky.inputs['Vector'])
+    ramp = wn.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].color = (0.03, 0.03, 0.03, 1); ramp.color_ramp.elements[1].color = (0.35, 0.35, 0.36, 1)
+    world.node_tree.links.new(sky.outputs['Fac'], ramp.inputs['Fac'])
+    lp = wn.new('ShaderNodeLightPath'); mx = wn.new('ShaderNodeMix'); mx.data_type = 'RGBA'
+    world.node_tree.links.new(lp.outputs['Is Camera Ray'], mx.inputs['Factor'])
+    world.node_tree.links.new(ramp.outputs['Color'], mx.inputs[6]); mx.inputs[7].default_value = (bg, bg, bg, 1)
+    world.node_tree.links.new(mx.outputs[2], bgn.inputs['Color'])
+    bgn.inputs['Strength'].default_value = 1.0
+    cam_data = bpy.data.cameras.new('pv'); cam_data.lens = lens; cam_data.clip_start = 0.01
+    cam = bpy.data.objects.new('pv', cam_data)
+    scene.collection.objects.link(cam)
+    cam.location = Vector(eye)
+    cam.rotation_euler = (Vector(target) - Vector(eye)).to_track_quat('-Z', 'Y').to_euler()
+    scene.camera = cam
+    lights = []
+    for loc, power, sz in (((eye[0] + 0.6, eye[1] - 0.4, eye[2] + 1.0), key, 0.6), ((-1.2, 0.8, 0.4), key * 0.35, 1.2), ((0.0, 1.5, -0.6), key * 0.25, 1.0)):
+        ld = bpy.data.lights.new('pvl', 'AREA'); ld.energy = power; ld.size = sz
+        lo = bpy.data.objects.new('pvl', ld); scene.collection.objects.link(lo)
+        lo.location = Vector(loc)
+        lo.rotation_euler = (Vector(target) - Vector(loc)).to_track_quat('-Z', 'Y').to_euler()
+        lights.append(lo)
+    hidden = [o for o in scene.objects if o.type == 'MESH' and o not in objs]
+    for o in hidden:
+        o.hide_render = True
+    scene.render.filepath = path
+    scene.render.image_settings.file_format = 'PNG'
+    bpy.ops.render.render(write_still=True)
+    for o in hidden:
+        o.hide_render = False
+    for o in lights + [cam]:
+        bpy.data.objects.remove(o, do_unlink=True)
     scene.render.engine = old

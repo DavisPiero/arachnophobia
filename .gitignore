@@ -4,3 +4,4 @@ shots/
 .DS_Store
 blender/build/
 __pycache__/
+blender/textures/

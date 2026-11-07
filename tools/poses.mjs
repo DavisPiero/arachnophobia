@@ -43,6 +43,7 @@ const poses = {
   axe: async () => { await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.29, 8); },
   axe3: async () => { await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.38, 8); },
   stomp: async () => { await step(0.8, 16); await page.evaluate(() => { const g = window.game; g.player.position.set(0.3, 0, 1.2); g.player.pitch = 0; g.melee.tryStomp(); }); await step(0.24, 8); },
+  down: async () => { await page.evaluate(() => { window.game.player.pitch = -1.4; }); await step(0.5, 10); },
   kill: async () => {
     await step(0.8, 16);
     await page.evaluate(() => {

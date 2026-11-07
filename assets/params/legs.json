@@ -1,0 +1,73 @@
+{
+  "_about": "The player's legs: cargo trousers and lace-up boots (reference/m4-legs-*.webp). Read by blender/generators/legs.py and by the game (js/player/Legs.js). GAME space, metres: feet on y = 0, toes towards -z, x = 0 between the feet. Change, then run: npm run assets legs behind = how far the body stands behind the eye (so looking down shows its front).",
+  "stance": 0.11,
+  "hip": [
+    0.095,
+    0.93
+  ],
+  "waist": [
+    0.17,
+    0.115
+  ],
+  "trousers": {
+    "radii": [
+      0.07,
+      0.064,
+      0.068,
+      0.088,
+      0.1
+    ],
+    "knee": 0.5,
+    "folds": 0.004
+  },
+  "boot": {
+    "length": 0.3,
+    "width": 0.105,
+    "height": 0.11,
+    "sole": 0.022,
+    "shaft": 0.2
+  },
+  "look": {
+    "trousers": [
+      0.03,
+      0.031,
+      0.026
+    ],
+    "mud": [
+      0.07,
+      0.05,
+      0.03
+    ],
+    "boot": [
+      0.012,
+      0.011,
+      0.01
+    ],
+    "sole": [
+      0.015,
+      0.014,
+      0.013
+    ],
+    "belt": [
+      0.03,
+      0.02,
+      0.012
+    ],
+    "jacket": [
+      0.017,
+      0.019,
+      0.016
+    ]
+  },
+  "budget": {
+    "texture": 2048,
+    "gameTexture": 2048,
+    "lowTexture": 1024,
+    "webpQuality": 88,
+    "normalQuality": 94
+  },
+  "jacket": {
+    "top": 1.2
+  },
+  "behind": 0.24
+}

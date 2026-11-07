@@ -51,7 +51,7 @@ gate one by one, cannot move or shoot, cannot be cancelled. Supplies on the tabl
 Axe (no ammo, ~0.6 s swing): hits a spider within reach in front of you, inside or at the window you stand at. Through
 intact glass it only cracks your own glass. Stomp: kills small spiders on the floor in front of you, shoves bigger ones back.
 
-Hits show on the spider: ichor spray and splats that stay for the wave, a jolt (body hit) or a kicked leg (leg hit),
+Hits show on the spider: dark red spray and splats that fade after a few seconds (so they never block a window), a jolt (body hit) or a kicked leg (leg hit),
 brutes stagger every quarter of their health, a different crunch on the killing hit, a thrash before death. No hit marker.
 
 ## Controls
@@ -67,6 +67,13 @@ brutes stagger every quarter of their health, a different crunch on the killing 
 All synthesised for now. Positional (HRTF) for spiders and events. Indoor echo on gunshots. An ambience director varies
 wind/rain/creaks with danger, plays noises behind the player, distant sounds that creep closer, and uses silence on purpose.
 Volume sliders: master, effects, ambience. Mute with M, the on-screen button, or `?mute=1`.
+
+## First-person body
+
+Gloved hands (full fingers, hard knuckle guard, dark olive-black) and dark jacket sleeves. The trigger hand hangs off
+the stock wrist: thumb on the right side, fingers wrapped onto the left, wrist bent (reference/m4-rifle-hold.png). The
+support hand is under the barrel: thumb up the left side, fingers up the right. Looking down shows the belly, muddy
+cargo trousers and lace-up boots; the legs swing when walking.
 
 ## Flashlight
 

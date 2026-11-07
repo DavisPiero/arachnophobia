@@ -56,3 +56,12 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — The boot is drawn in the world (on the real floor), with a matte material: glossy trousers seen from above read as white cloth.
 - 2026-11-07 — Hit direction pushes the view away from the attacker (yaw, roll) on top of the random shake.
 - 2026-11-07 — Milestone 3 signed off by the user and merged to main. Notes on the gloves, gun and axe to come next session.
+- 2026-11-07 — Viewmodel art redo (user's notes: everything low-poly and low-res). Generators layer CC0 photo-scanned textures from ambientCG (user approved); only baked results are committed.
+- 2026-11-07 — Budgets raised: rifle ~12k tris and hands ~7k per arm with 4096 atlases, axe and legs 2048; phones load `<name>_low.glb` with half-size textures. Files up to ~5 MB each.
+- 2026-11-07 — Gloves: full fingers, hard knuckle guard, dark olive-black (user's choice from two references). Knuckle pads on the fingers dropped: they floated off fingers pressed onto the stock.
+- 2026-11-07 — Hands are one skeleton bent into poses in Blender (still rigid posed meshes in the game). Fingers wrap the real held shape and are pressed out of it; `blender/tools/clipcheck.py` checks nothing passes through.
+- 2026-11-07 — Trigger hand per the user's photo: hangs off the stock wrist, thumb on the right side, fingers wrapped onto the left, wrist bent ~60°. Support hand: palm under the barrel, thumb up the left, fingers up the right (user's call).
+- 2026-11-07 — Rifle hip position moved from ViewModel.js into rifle.json `view`, so the game and the Blender check render read one number. Values unchanged.
+- 2026-11-07 — Legs visible when looking down (user approved): cargo trousers, boots, belt and the bottom of the jacket, standing 0.24 m behind the eye; legs swing when walking; the right leg hides while the stomp boot is out.
+- 2026-11-07 — Splats are dark red and fade after 3 s + 2 s (user's call): they blocked the windows. Replaces "ichor yellow-green, stays for the wave".
+- 2026-11-07 — Rifle reworked after the side-gate reference: round barrel, closed big-loop lever, checkered walnut, rubber butt pad, buckhorn rear sight, brass bead. Axe after the forest-axe reference: bearded bit, hooked handle swell. No maker's marks.

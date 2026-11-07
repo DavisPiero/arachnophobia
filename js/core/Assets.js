@@ -13,15 +13,20 @@ const loader = new GLTFLoader();
 loader.setMeshoptDecoder(MeshoptDecoder);
 const cache = new Map();
 
-/** Resolves to Map(meshName -> { geometry, material }) or null. Geometry is float, with the node transform baked in. */
-export function loadModel(name) {
+/** Resolves to Map(meshName -> { geometry, material }) or null. Geometry is float, with the node transform baked in.
+ *  On the low quality tier (phones) it first tries `<name>_low.glb` (the same meshes with half-size textures, made by
+ *  `npm run assets`), then the full file. */
+export function loadModel(name, quality) {
   if (!assetsEnabled) return Promise.resolve(null);
-  if (!cache.has(name)) {
-    cache.set(name, loader.loadAsync(new URL(`models/${name}.glb`, BASE).href)
-      .then(collectMeshes)
+  const low = quality?.tier === 'low';
+  const key = name + (low ? ':low' : '');
+  if (!cache.has(key)) {
+    const get = (file) => loader.loadAsync(new URL(`models/${file}.glb`, BASE).href).then(collectMeshes);
+    const first = low ? get(`${name}_low`).catch(() => get(name)) : get(name);
+    cache.set(key, first
       .catch((err) => { console.warn(`[assets] ${name}.glb not loaded, using the built-in model`, err?.message || err); return null; }));
   }
-  return cache.get(name);
+  return cache.get(key);
 }
 
 /** The parameter file shared with Blender (assets/params/<name>.json), or {} if missing. */

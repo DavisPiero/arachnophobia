@@ -1,8 +1,8 @@
-// First-person view: gloved hands, the lever-action rifle, the axe and the boot, and how they move.
+// First-person view: gloved hands, the lever-action rifle, the axe and the stomp boot, and how they move.
 // The rifle, hands and axe are drawn in the weapon's own scene (on top of the world, never clipping walls);
 // the boot is drawn in the world (it stamps on the real floor).
 //
-// Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb) with code-made fallbacks.
+// Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb, legs.glb 'boot') with code-made fallbacks.
 // Every pivot and grip position comes from assets/params/{rifle,hands,axe}.json, the same numbers Blender used.
 //
 // Spaces: "rifle space" = the params' GAME space (x right, y up, z towards the player, origin = receiver).
@@ -18,7 +18,9 @@ const RIFLE_DEFAULTS = {
   muzzle: [0, 0.022, -0.665],
   ejectPort: [0.006, 0.048, -0.01],
   loadingGate: [0.021, -0.008, -0.03],
-  grips: { right: [0, -0.004, 0.105], left: [0, 0.012, -0.25] },
+  grips: { right: [0, -0.004, 0.105], left: [0, 0.006, -0.25] },
+  // where the rifle sits in front of the eye (camera space): hip pose position + rotation (x pitch, y yaw); aimed depth
+  view: { hip: { pos: [0.17, -0.165, -0.4], rot: [0.03, 0.07, 0] }, aimZ: -0.5 },
 };
 
 const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
@@ -119,9 +121,9 @@ export class ViewModel {
 
   /** Swap in the Blender models. Any family that fails keeps its fallback. */
   async loadAssets(quality) {
-    const [rifle, hands, axe, rp, hp] = await Promise.all([loadModel('rifle'), loadModel('hands'), loadModel('axe'), loadParams('rifle'), loadParams('hands')]);
-    if (rp && rp.lever) this.P = { ...RIFLE_DEFAULTS, ...rp };
-    if (hp?.forearm?.axe) this.axeForearm.fromArray(hp.forearm.axe).normalize();
+    const [rifle, hands, axe, legs, rp, hp] = await Promise.all([loadModel('rifle', quality), loadModel('hands', quality), loadModel('axe', quality), loadModel('legs', quality), loadParams('rifle'), loadParams('hands')]);
+    if (rp && rp.lever) this.P = { ...RIFLE_DEFAULTS, ...rp, view: { ...RIFLE_DEFAULTS.view, ...(rp.view || {}) } };
+    if (hp?.poses?.axe?.forearm) this.axeForearm.fromArray(hp.poses.axe.forearm).normalize();
     const lod = quality?.tier === 'low' ? '_lod1' : '';
     const pick = (m, name) => m && (m.get(name + lod) || m.get(name));
     const fix = (mat) => {
@@ -143,7 +145,9 @@ export class ViewModel {
     if (hands && pick(hands, 'arm_grip_r')) {
       parts.armR = mk(hands, 'arm_grip_r'); parts.armL = mk(hands, 'arm_support_l');
       parts.armLoad = mk(hands, 'arm_load_l'); parts.armAxe = mk(hands, 'arm_axe_r');
-      const b = mk(hands, 'boot');
+    }
+    if (legs && pick(legs, 'boot')) {
+      const b = mk(legs, 'boot');
       if (b) {
         // matte: seen from above, the trouser leg is all grazing angles, and a glossy sheen read as white cloth
         const src = b.material;
@@ -156,7 +160,7 @@ export class ViewModel {
     if (axe && pick(axe, 'axe')) parts.axe = mk(axe, 'axe');
     if (Object.keys(parts).length) this.setParts(parts);
     this.applyPivots();
-    this.usingAssets = !!(rifle || hands || axe);
+    this.usingAssets = !!(rifle || hands || axe || legs);
     return this.usingAssets;
   }
 
@@ -222,7 +226,8 @@ export class ViewModel {
     const sx = s.swayX * steady, sy = s.swayY * steady;
     const sightY = this.P.sights.lineY;
     // hip pose -> aimed pose: the sights line up on the centre of the screen
-    const hx = lerp(0.17, 0, a), hy = lerp(-0.165, -sightY - 0.001, a), hz = lerp(-0.4, -0.5, a);
+    const H = this.P.view.hip;
+    const hx = lerp(H.pos[0], 0, a), hy = lerp(H.pos[1], -sightY - 0.001, a), hz = lerp(H.pos[2], this.P.view.aimZ, a);
     // the lever kick: the rifle dips slightly as the lever is thrown
     const lv = leverCurve(s.leverT / 0.5);
     const g = this.rifle;
@@ -233,8 +238,8 @@ export class ViewModel {
     );
     // reload: rifle turned so the loading gate on its right side faces up towards the eye
     g.rotation.set(
-      lerp(0.03, 0.005, a) + s.kick * 0.1 * (1 - a * 0.4) + r * 0.18 - sp * 0.35 - lv * 0.05 - down * 0.7,
-      lerp(0.07, 0, a) + r * 0.3 + sp * 0.6,
+      lerp(H.rot[0], 0.005, a) + s.kick * 0.1 * (1 - a * 0.4) + r * 0.18 - sp * 0.35 - lv * 0.05 - down * 0.7,
+      lerp(H.rot[1], 0, a) + r * 0.3 + sp * 0.6,
       r * 0.95 + sp * 0.25,
     );
     // lever and hammer

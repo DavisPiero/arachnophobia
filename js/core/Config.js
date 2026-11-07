@@ -53,7 +53,9 @@ export const Config = {
     staggerEvery: 0.25,      // brutes stagger each time they lose this fraction of their health
     staggerTime: 0.7,        // seconds a stagger stops a brute
     thrashTime: 1.4,         // seconds a dying spider thrashes before curling up
-    splats: 60,              // ichor splats kept in the world (cleared at the start of each wave)
+    splats: 60,              // blood splats kept in the world at once (oldest reused first)
+    splatHold: 3,            // seconds a splat stays fully visible
+    splatFade: 2,            // seconds it then takes to fade away (so splats never block a window for long)
     droplets: 240,           // spray droplets alive at once
   },
   ammo: {
