@@ -50,13 +50,13 @@ for (const device of ['desktop', 'phone']) {
     const before = g.weapon.mag;
     g.weapon.tryFire();
     await simWait(0.4);
-    const veil = g.windows.byId.north.opacity;
-    const farVeil = g.windows.byId.east.opacity;
+    const near = g.windows.byId.north.closeness;
+    const far = g.windows.byId.east.closeness;
     const fps = g.renderer.info.render.frame / Math.max(1, performance.now() / 1000);
-    return { fired: before - g.weapon.mag, veil, farVeil, spiders: g.spiders.aliveCount, fps };
+    return { fired: before - g.weapon.mag, near, far, spiders: g.spiders.aliveCount, fps };
   });
   check(r.fired === 1, 'weapon fires and uses a round');
-  check(r.veil < 0.35 && r.farVeil > 0.4, `window near is clear (${r.veil.toFixed(2)}), far window dark (${r.farVeil.toFixed(2)})`);
+  check(r.near > 0.6 && r.far < 0.4, `player is close to the near window (${r.near?.toFixed(2)}), not the far one (${r.far?.toFixed(2)})`);
   check(r.spiders >= 3, `spiders spawned and alive (${r.spiders})`);
   if (process.argv.includes('--shots')) await page.screenshot({ path: `shots/smoke-${device}-window.png` });
 
