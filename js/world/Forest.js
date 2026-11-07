@@ -489,6 +489,8 @@ export function buildForest(scene, quality, lighting) {
   }
 
   // ---------------------------------------------------------------- rocks
+  // Built-in rocks first (always works); useRocks() swaps in the Blender rock family when it has loaded.
+  let rockData = null;
   {
     const geo = new THREE.IcosahedronGeometry(1, high ? 2 : 1);
     const p = geo.attributes.position;
@@ -517,6 +519,7 @@ export function buildForest(scene, quality, lighting) {
     for (let k = 0, t = 0; k < 8 && t < 400; t++) { const x = 6 + R() * 22, z = (R() - 0.5) * 30; if (tryRock(x, z, 0.3 + R() * 0.5)) k++; }
     const im = mkInst(geo, mat, list, 'rocks', cast);
     if (im) im.receiveShadow = quality.shadows;
+    rockData = { list, im, cast };
   }
 
   // ---------------------------------------------------------------- fallen logs
@@ -609,7 +612,7 @@ export function buildForest(scene, quality, lighting) {
     for (const [x, z, w] of spots) {
       // sprites always face the camera, so a wide one near the cabin would swing through the room
       if (Math.hypot(x, z) - w / 2 - 3 < CABIN.halfZ + 2) continue;
-      const mat = new THREE.SpriteMaterial({ map: tex, color: new THREE.Color(0.42, 0.47, 0.55), transparent: true, opacity: 0.1 + R() * 0.06, depthWrite: false, fog: true });
+      const mat = new THREE.SpriteMaterial({ map: tex, color: new THREE.Color(0.2, 0.23, 0.28), transparent: true, opacity: 0.1 + R() * 0.06, depthWrite: false, fog: true });
       const s = new THREE.Sprite(mat);
       s.scale.set(w, w * 0.28, 1);
       const y = terrainHeight(x, z) + creekCarve(x, z) + w * 0.06;
@@ -640,7 +643,39 @@ export function buildForest(scene, quality, lighting) {
     if (scene.fog) for (const m of treelineMats) m.color.copy(scene.fog.color).multiplyScalar(m.userData.k);
   }
 
-  return { group, update, rain: rain.mesh };
+  // Replace the built-in rocks with the Blender rock family (assets/models/rocks.glb). Returns true if used.
+  function useRocks(models, params = {}) {
+    if (!models || !rockData) return false;
+    const suffix = high ? '' : '_lod1';
+    const variants = [];
+    for (let i = 0; models.has(`rock_${i}`); i++) variants.push(models.get(`rock_${i}${suffix}`) || models.get(`rock_${i}`));
+    if (!variants.length) return false;
+    const src = variants[0].material;
+    const mat = new THREE.MeshStandardMaterial({ map: src.map, normalMap: src.normalMap, roughnessMap: src.roughnessMap,
+      roughness: 1, metalness: 0, envMap: env, envMapIntensity: 0.7 });
+    mat.normalScale.copy(src.normalScale); // the loader knows the file's normal-map convention
+    if (rockData.im) { group.remove(rockData.im); rockData.im.geometry.dispose(); rockData.im.material.dispose(); }
+    const jitter = params.game?.tintJitter ?? 0.12;
+    const buckets = variants.map(() => []);
+    rockData.list.forEach((m, i) => buckets[i % variants.length].push(m));
+    const c = new THREE.Color();
+    const meshes = [];
+    variants.forEach((v, k) => {
+      const im = mkInst(v.geometry, mat, buckets[k], `rocks-${k}`, rockData.cast);
+      if (!im) return;
+      im.receiveShadow = quality.shadows;
+      for (let i = 0; i < buckets[k].length; i++) {
+        const t = 1 + (R() - 0.5) * 2 * jitter;
+        im.setColorAt(i, c.setRGB(t, t * (1 + (R() - 0.5) * 0.04), t * (1 + (R() - 0.5) * 0.05)));
+      }
+      im.instanceColor.needsUpdate = true;
+      meshes.push(im);
+    });
+    rockData = { ...rockData, im: null, meshes };
+    return true;
+  }
+
+  return { group, update, rain: rain.mesh, useRocks };
 }
 
 // ------------------------------------------------------------------ shed

@@ -16,6 +16,7 @@ export class HUD {
     this.msgTimer = 0;
     this._last = {};
   }
+  setAim(v) { this.set('aim', v, (on) => { $('crosshair').style.opacity = on ? '0' : ''; }); }
   show(v) { this.root.classList.toggle('hidden', !v); }
 
   set(key, value, fn) { if (this._last[key] !== value) { this._last[key] = value; fn(value); } }

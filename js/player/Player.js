@@ -24,13 +24,16 @@ export class Player {
     this.shake = 0;
     this.hurtFlash = 0;
     this.dead = false;
+    this.sprinting = false;
+    this.aiming = false;     // set by the game from the weapon (true once the rifle is up)
+    this.lookScale = 1;      // the game lowers this while aiming
     camera.rotation.order = 'YXZ';
   }
   reset() {
     this.position.set(0, 0, 2.2);
     this.velocity.set(0, 0, 0);
     this.yaw = 0; this.pitch = 0; this.recoil = 0;
-    this.health = C.maxHealth; this.dead = false; this.locked = false;
+    this.health = C.maxHealth; this.dead = false; this.locked = false; this.sprinting = false; this.aiming = false;
     this.shake = 0; this.hurtFlash = 0;
   }
   get eye() { return this.camera.position; }
@@ -43,15 +46,17 @@ export class Player {
 
   update(dt, input) {
     // --- look ---
-    this.yaw += input.lookDX;
-    this.pitch = THREE.MathUtils.clamp(this.pitch + input.lookDY, -C.pitchLimit, C.pitchLimit);
+    this.yaw += input.lookDX * this.lookScale;
+    this.pitch = THREE.MathUtils.clamp(this.pitch + input.lookDY * this.lookScale, -C.pitchLimit, C.pitchLimit);
     this.recoil *= Math.exp(-Config.weapon.recoilRecover * dt);
 
     // --- move ---
     const mv = this.locked || this.dead ? { x: 0, y: 0 } : input.getMove();
     const fwd = this.forward(_v1);
     const right = _v2.set(-fwd.z, 0, fwd.x);
-    const target = _v3.set(0, 0, 0).addScaledVector(fwd, mv.y).addScaledVector(right, mv.x).multiplyScalar(C.walkSpeed);
+    this.sprinting = !this.locked && !this.dead && !this.aiming && input.sprint && mv.y > 0.5;
+    const speedMul = this.sprinting ? C.sprintMultiplier : this.aiming ? C.aimMoveMultiplier : 1;
+    const target = _v3.set(0, 0, 0).addScaledVector(fwd, mv.y).addScaledVector(right, mv.x).multiplyScalar(C.walkSpeed * speedMul);
     const k = 1 - Math.exp(-C.accel * dt);
     this.velocity.lerp(target, k);
     if (this.locked) this.velocity.multiplyScalar(0.5);
@@ -67,14 +72,16 @@ export class Player {
       if (this.stepTimer <= 0) {
         this.stepTimer = C.stepInterval;
         const surface = this.floorTypeAt(this.position.x, this.position.z);
-        this.audio.play(surface === 'rug' ? 'footRug' : 'footWood', { volume: 0.55 + 0.25 * (speed / C.walkSpeed), reverb: 0.15 });
+        const loud = this.sprinting ? C.sprintStepVolume : 1;
+        this.audio.play(surface === 'rug' ? 'footRug' : 'footWood', { volume: Math.min(1.2, (0.55 + 0.25 * Math.min(1, speed / C.walkSpeed)) * loud), reverb: 0.15 });
       }
     } else {
       this.stepTimer = Math.min(this.stepTimer, 0.12);
       this.bobPhase *= 0.9;
     }
-    const bob = Math.sin(this.bobPhase) * C.headBob * Math.min(1, speed / C.walkSpeed);
-    const sway = Math.cos(this.bobPhase * 0.5) * C.headBob * 0.5 * Math.min(1, speed / C.walkSpeed);
+    this.bobAmp = THREE.MathUtils.lerp(this.bobAmp ?? 1, this.sprinting ? C.sprintBob : this.aiming ? 0.4 : 1, 1 - Math.exp(-6 * dt));
+    const bob = Math.sin(this.bobPhase) * C.headBob * Math.min(1, speed / C.walkSpeed) * this.bobAmp;
+    const sway = Math.cos(this.bobPhase * 0.5) * C.headBob * 0.5 * Math.min(1, speed / C.walkSpeed) * this.bobAmp;
 
     // --- camera ---
     this.shake *= Math.exp(-6 * dt);

@@ -6,7 +6,7 @@
 //    the walls would otherwise let the moon "leak" in on the low tier, which has no moon shadows.
 //  - flash(strength): lightning. muzzleFlash(position): 60 ms warm burst.
 import * as THREE from 'three';
-import { LANTERN } from './Layout.js';
+import { LANTERN, WALL_LAMP, CABIN } from './Layout.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { glow } from './Textures.js';
 
@@ -53,12 +53,15 @@ export function limitShadow(mesh, only) {
 const LANTERN_COLOR = new THREE.Color().setRGB(1.0, 0.6, 0.3, THREE.LinearSRGBColorSpace); // ~2400 K
 const CANDLE_COLOR = new THREE.Color().setRGB(1.0, 0.56, 0.24, THREE.LinearSRGBColorSpace);
 const MOON_COLOR = new THREE.Color().setRGB(0.62, 0.72, 0.95, THREE.SRGBColorSpace);
-const FOG_COLOR = new THREE.Color().setRGB(0.028, 0.036, 0.048, THREE.LinearSRGBColorSpace);
+// Night fog is close to black: things get DARKER with distance, not hazier. (It was a blue-grey haze,
+// which made the far forest brighter than the near one.)
+const FOG_COLOR = new THREE.Color().setRGB(0.006, 0.008, 0.011, THREE.LinearSRGBColorSpace);
 const FLASH_FOG = new THREE.Color().setRGB(0.16, 0.18, 0.22, THREE.LinearSRGBColorSpace);
 
-const LANTERN_INTENSITY = 9;
-const MOON_INTENSITY = 0.55;
-const HEMI_INTENSITY = 0.75;
+const LANTERN_INTENSITY = 11.5;
+const WALL_LAMP_INTENSITY = 6.5;
+const MOON_INTENSITY = 0.5;
+const HEMI_INTENSITY = 0.6;
 
 // smooth pseudo-random 0..1 signal
 function wobble(t, seed) {
@@ -71,7 +74,7 @@ export function buildLighting(scene, renderer, quality) {
   scene.add(group);
 
   scene.background = new THREE.Color().setRGB(0.012, 0.015, 0.02, THREE.LinearSRGBColorSpace);
-  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), 0.05);
+  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), 0.046);
   renderer.toneMappingExposure = 1.15;
 
   // ---------------------------------------------------------- sky dome
@@ -97,10 +100,10 @@ export function buildLighting(scene, renderer, quality) {
           float e = vDir.y;
           // fogged trees take the fog colour; the sky behind them must stay a little lighter
           // up to the treetops (~30 deg) so they read as silhouettes, then fall off to a dark zenith
-          vec3 horizon = vec3(0.04, 0.05, 0.064);
-          vec3 zenith = vec3(0.012, 0.015, 0.021);
+          vec3 horizon = vec3(0.016, 0.02, 0.027);
+          vec3 zenith = vec3(0.006, 0.0075, 0.011);
           vec3 c = mix(horizon, zenith, smoothstep(0.3, 0.95, e));
-          c = mix(c, vec3(0.028, 0.036, 0.048), smoothstep(0.02, -0.05, e));
+          c = mix(c, vec3(0.006, 0.008, 0.011), smoothstep(0.02, -0.05, e));
           // cloud-hidden moon: broad cold glow
           float m = max(dot(vDir, uMoonDir), 0.0);
           c += vec3(0.05, 0.06, 0.08) * pow(m, 10.0) + vec3(0.02, 0.025, 0.03) * pow(m, 3.0);
@@ -151,6 +154,24 @@ export function buildLighting(scene, renderer, quality) {
   lanternModel.position.copy(LANTERN.position);
   group.add(lanternModel);
 
+  // ---------------------------------------------------------- wall lamp (second light, north end of the room)
+  const wallLamp = new THREE.PointLight(LANTERN_COLOR, WALL_LAMP_INTENSITY, 9, 2);
+  wallLamp.position.copy(WALL_LAMP.position);
+  if (quality.shadows && quality.tier === 'high') {
+    wallLamp.castShadow = true;
+    wallLamp.shadow.mapSize.set(512, 512);
+    wallLamp.shadow.camera.near = 0.08;
+    wallLamp.shadow.camera.far = 10;
+    wallLamp.shadow.bias = -0.004;
+    wallLamp.shadow.normalBias = 0.02;
+    wallLamp.shadow.radius = 3;
+  }
+  group.add(wallLamp);
+  const wallLampModel = buildLanternModel({ wall: WALL_LAMP });
+  wallLampModel.scale.setScalar(0.85);
+  wallLampModel.position.copy(WALL_LAMP.position);
+  group.add(wallLampModel);
+
   // ---------------------------------------------------------- muzzle flash
   const muzzle = new THREE.PointLight(new THREE.Color().setRGB(1, 0.72, 0.4, THREE.SRGBColorSpace), 0, 10, 2);
   group.add(muzzle);
@@ -174,6 +195,8 @@ export function buildLighting(scene, renderer, quality) {
   function addFlame(light, sprite) {
     extraFlames.push({ light, base: light.intensity, sprite, seed: Math.random() * 100, spriteBase: sprite ? sprite.scale.x : 0 });
   }
+
+  addFlame(wallLamp, wallLampModel.userData.glow);
 
   function update(dt, time) {
     clock += dt;
@@ -217,14 +240,14 @@ export function buildLighting(scene, renderer, quality) {
   }
 
   return {
-    group, lantern, moon, hemi, sky, lanternModel,
+    group, lantern, wallLamp, moon, hemi, sky, lanternModel,
     update, flash, muzzleFlash, addFlame,
     get flashLevel() { return flashLevel; },
   };
 }
 
 // Hurricane lantern: tank, glass globe, wire guards, cap, bail handle, chain to the beam above.
-function buildLanternModel() {
+function buildLanternModel({ wall = null } = {}) {
   const g = new THREE.Group();
   g.name = 'lanternModel';
   // unlit dark metal: the light sits centimetres away and would blow out a lit cap and guards
@@ -266,14 +289,27 @@ function buildLanternModel() {
   // cap + chimney
   add(new THREE.CylinderGeometry(0.035, 0.06, 0.035, 16), metal, 0, 0.105, 0);
   add(new THREE.CylinderGeometry(0.02, 0.025, 0.03, 12), metal, 0, 0.135, 0);
-  // bail handle (half ring) and chain up to the beam bottom (y = 2.42)
+  // bail handle (half ring)
   add(new THREE.TorusGeometry(0.075, 0.004, 5, 20, Math.PI), metal, 0, 0.1, 0);
-  const chainTop = 2.42 - LANTERN.position.y;
-  const linkGeo = new THREE.TorusGeometry(0.012, 0.0028, 4, 8);
-  for (let y = 0.18, k = 0; y < chainTop; y += 0.022, k++) {
-    const l = add(linkGeo, metal, 0, y, 0);
-    l.rotation.y = k % 2 ? Math.PI / 2 : 0;
-    l.scale.set(1, 1.4, 1);
+  if (wall) {
+    // iron bracket: a plate on the wall, an arm out to a hook above the bail handle (model space, scaled 0.85)
+    const toWall = (wall.position.x - (-CABIN.halfX)) / 0.85;   // distance from flame centre back to the wall face
+    const s = -Math.sign(wall.wallNormal.x || 1);                 // direction toward the wall along x
+    add(new THREE.BoxGeometry(0.012, 0.16, 0.07), rust, s * (toWall - 0.006), 0.2, 0);
+    const arm = new THREE.CylinderGeometry(0.006, 0.006, toWall, 6).rotateZ(Math.PI / 2);
+    add(arm, metal, s * toWall / 2, 0.24, 0);
+    const brace = new THREE.CylinderGeometry(0.004, 0.004, Math.hypot(toWall * 0.6, 0.1), 5).rotateZ(Math.atan2(toWall * 0.6, 0.1) * -s);
+    add(brace, metal, s * toWall * 0.7, 0.19, 0);
+    add(new THREE.TorusGeometry(0.014, 0.003, 4, 10, Math.PI * 1.5).rotateY(Math.PI / 2), metal, 0, 0.215, 0);
+  } else {
+    // chain up to the beam bottom (y = 2.42)
+    const chainTop = 2.42 - LANTERN.position.y;
+    const linkGeo = new THREE.TorusGeometry(0.012, 0.0028, 4, 8);
+    for (let y = 0.18, k = 0; y < chainTop; y += 0.022, k++) {
+      const l = add(linkGeo, metal, 0, y, 0);
+      l.rotation.y = k % 2 ? Math.PI / 2 : 0;
+      l.scale.set(1, 1.4, 1);
+    }
   }
   // flame
   const flameMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.1, 0.35), fog: false });

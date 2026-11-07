@@ -1,32 +1,33 @@
 # Hand-off
 
-*Session of 2026-11-07. Replaces any earlier note.*
+*Session of 2026-11-07 (second). Replaces any earlier note.*
 
 ## Repo state
-- `main` is the only branch, clean, pushed. Milestone 1 is signed off and live at https://davispiero.github.io/arachnophobia/.
-- The quick test (`npm test`) passed locally and against the live site after the last code change.
+- Branch `m2-pipeline-and-feel`, pushed to origin, not merged. `main` is milestone 1 and is what GitHub Pages serves.
+- `npm test` passed on the branch after the last code change.
 
 ## Read first
-1. `CLAUDE.md` (hard rules, commands, code layout)
-2. `STATE.md` (where we are)
-3. `SPEC.md` (what makes it good; "Later" list = wanted later, not rejected)
-4. `DECISIONS.md` (every guess made so far)
+1. `CLAUDE.md` (hard rules changed: assets now come from Blender, with code fallbacks)
+2. `STATE.md`, `SPEC.md` (roadmap for milestones 2–6), `DECISIONS.md`
+3. `blender/README.md` (how the pipeline works, budgets, hand-editing)
+
+## What was built
+- Blender pipeline: `npm run assets` → background Blender → bake → WebP/meshopt → `assets/models/*.glb`. First family: rocks
+  (8 variants, 650/180 tris, one shared atlas, 271 KB). `js/core/Assets.js` loads them; Forest swaps them in over the old rocks.
+- Lighting: second lamp (west wall, north end), brighter lantern, near-black night fog, windows much less dark from afar.
+- Flashlight (T / LIGHT), sprint (Shift / joystick past the edge), aim down sights (right mouse / AIM), runners 1.4x bigger,
+  phone zoom guard (`js/input/NoZoom.js`).
 
 ## What comes next
-- The user plays it on desktop and on a phone and brings notes. Expect a tuning pass on: sound levels and the weakest sounds
-  (spider scream/pain, brute breathing, glass scratch, rain), spider looks (plain head, stick-like palps, hair too spiky),
-  the rifle model, darkness of the ground outside the north/west windows, difficulty and ammo numbers.
-- Then: first outside tester, and ask where they first got stuck.
+- User plays the branch and signs off (then merge to main, push, delete branch).
+- Milestone 3: hands/arms + lever-action rifle + axe as Blender generators with armature animations; axe on F (F currently also
+  means "interact": move that to E only), stomp on V, combat feedback.
 
 ## Open questions for the user
-1. Are the ammo numbers right (8 per magazine, 40 at start, +16 per wave) and the 3 s reload?
-2. Should bullets pass through glass without breaking it (current), or should shooting break your own window?
-3. Spiders come inside after a breach and attack you — keep?
-4. Stalkers vanish when you get close or a flash lights them, then attack after two vanishes — keep?
-5. No flashlight — confirm.
-6. How do the sounds sound? Nobody has listened yet.
-7. How does it run and control on your phone? Untested on a real device.
+1. Is the night too dark now, or right? Is the second lamp in the right place?
+2. Flashlight on T and unlimited sprint: OK?
+3. Does double-tap still zoom on a real phone?
+4. Are the Blender rocks the right style before we make weapons and spiders this way?
 
 ## Testing rules (from the user)
-Keep tests cheap: `npm test` in the background, do not poll, read at most one or two screenshots per change,
-use `--full` / `--shots` / `tests/soak.mjs` only when actually needed.
+Keep tests cheap: `npm test` in the background, do not poll, read at most one or two screenshots per change.

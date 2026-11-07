@@ -11,6 +11,19 @@ export const Config = {
     pitchLimit: 1.45,        // radians up/down
     stepInterval: 0.52,      // seconds between footsteps at full speed
     headBob: 0.028,          // metres
+    sprintMultiplier: 1.75,  // Shift: speed x this (forward only, not while aiming or reloading)
+    sprintBob: 1.5,          // head bob x this while sprinting
+    sprintStepVolume: 1.35,  // footsteps louder when running
+    aimMoveMultiplier: 0.6,  // walking speed while aiming down sights
+  },
+  flashlight: {
+    intensity: 42,           // candela-ish (three.js physical units)
+    range: 26,               // metres; beyond this it lights nothing
+    angle: 0.34,             // radians, half-angle of the cone
+    penumbra: 0.6,           // soft edge
+    decay: 2,
+    color: 0xffe2b8,         // old incandescent bulb
+    scareRange: 22,          // a watcher caught in the beam closer than this slips away
   },
   weapon: {
     magSize: 8,
@@ -20,6 +33,10 @@ export const Config = {
     recoilPitch: 0.035,      // radians kick per shot
     recoilRecover: 7,        // how fast it settles
     spread: 0.004,           // radians of random spread
+    aimFov: 0.74,            // aiming down sights: field of view x this (a gentle zoom)
+    aimSpread: 0.25,         // spread x this while aimed
+    aimSpeed: 11,            // how fast the rifle comes up to the eye (1/s)
+    aimLookScale: 0.8,       // mouse/touch look sensitivity x this while aimed
   },
   ammo: {
     startStock: 40,          // rounds on the table at the start (not counting the loaded magazine)
@@ -33,10 +50,10 @@ export const Config = {
     // window visibility (distance from the player's eye to the window centre)
     clearDistance: 0.9,      // fully see-through at or closer than this
     darkDistance: 5.0,       // almost black at or beyond this
-    farOpacity: 0.965,       // darkness of the glass from across the room
+    farOpacity: 0.58,        // darkness of the glass from across the room (was 0.965; the night itself now gives the depth)
   },
   spiders: {
-    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.0 },
+    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4 },  // 1.4: smallest spiders were too small to read
     brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0 },
     climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0 },
     stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0 },

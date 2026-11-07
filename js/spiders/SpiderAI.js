@@ -349,6 +349,11 @@ export class Spider {
     this.fwd.set(this.window.center.x - this.root.position.x, 0, this.window.center.z - this.root.position.z).normalize();
     const w = this.window;
     if (w.closeness > 0.65 && player.camera.getWorldDirection(_d).dot(w.normal) > 0.5) { this.startVanish(); return; }
+    // caught in the flashlight beam: it slips away (a beat later, so you see it)
+    if (this.mgr.flashlight?.lights(this.root.position)) {
+      this.litT = (this.litT || 0) + dt;
+      if (this.litT > 0.35) { this.litT = 0; this.startVanish(); return; }
+    } else this.litT = 0;
     if (this.watchT <= 0) {
       // done watching: come for the window
       this.visual.setEyeGlow(1);

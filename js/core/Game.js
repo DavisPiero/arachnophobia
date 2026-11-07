@@ -11,6 +11,7 @@ import { Input } from '../input/Input.js';
 import { Player } from '../player/Player.js';
 import { Weapon } from '../player/Weapon.js';
 import { AmmoTable } from '../player/AmmoTable.js';
+import { Flashlight } from '../player/Flashlight.js';
 import { WindowSystem } from '../systems/WindowSystem.js';
 import { EyesSystem } from '../systems/EyesSystem.js';
 import { SpiderManager } from '../spiders/SpiderAI.js';
@@ -52,8 +53,10 @@ export class Game {
     this.weapon = new Weapon({ camera: this.camera, audio: this.audio, events, lighting: this.world.lighting, player: this.player });
     this.scene.add(this.weapon.holeGroup);
     this.table = new AmmoTable({ player: this.player, weapon: this.weapon, audio: this.audio, events, tableVisual: this.world.cabin.ammoTable });
+    this.flashlight = new Flashlight({ camera: this.camera, audio: this.audio, events, quality: Quality });
     this.eyes = new EyesSystem({ scene: this.scene, audio: this.audio });
     this.spiders = new SpiderManager({ scene: this.scene, audio: this.audio, events, quality: Quality, windows: this.windows, colliders: this.world.cabin.colliders });
+    this.spiders.flashlight = this.flashlight;
     this.waves = new WaveSystem({ spiders: this.spiders, events, quality: Quality, player: this.player });
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
@@ -104,6 +107,8 @@ export class Game {
   async init() {
     this.menu.setLoading('Building sounds…');
     try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
+    this.menu.setLoading('Carving rocks…');
+    await this.world.loadAssets();
     this.state = 'title';
     this.menu.ready();
     this.loop();
@@ -155,6 +160,7 @@ export class Game {
     this.weapon.reset();
     this.table.reset();
     this.eyes.reset();
+    this.flashlight.reset();
     this.waves.reset();
     this.kills = 0;
     this.overTimer = 0;
@@ -167,7 +173,8 @@ export class Game {
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     // keep a sensible horizontal view on tall/narrow screens
-    this.camera.fov = w / h < 1.2 ? 80 : 72;
+    this.baseFov = w / h < 1.2 ? 80 : 72;
+    this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
     this.postfx.setSize(w, h);
   }
@@ -197,6 +204,7 @@ export class Game {
     if (playing) {
       if (input.consume('interact')) this.table.tryStart();
       if (input.consume('fire')) this.weapon.tryFire();
+      if (input.consume('torch')) this.flashlight.toggle();
     }
     this.time += simulate ? dt : 0;
     this.player.update(simulate ? dt : 0, input);
@@ -229,9 +237,18 @@ export class Game {
     this.world.update(simulate ? dt : dt * 0.3, this.time);
     const moving = Math.hypot(this.player.velocity.x, this.player.velocity.z) > 0.4;
     this.weapon.update(dt, input, moving);
+    this.flashlight.update(dt, this.danger);
+    // aiming down sights: a gentle zoom, slower look; running: a touch wider
+    const fovK = THREE.MathUtils.lerp(1, Config.weapon.aimFov, this.weapon.aimK) * (1 + 0.04 * this.weapon.sprintK);
+    const fov = this.baseFov * fovK;
+    if (Math.abs(this.camera.fov - fov) > 0.01) { this.camera.fov = fov; this.camera.updateProjectionMatrix(); }
+    this.player.lookScale = THREE.MathUtils.lerp(1, Config.weapon.aimLookScale, this.weapon.aimK);
+    this.hud.setAim(this.weapon.aimK > 0.6);
+    this.input.touch.setTorchOn(this.flashlight.on);
     // the gun picks up the lantern's warmth depending on how close you are to it
     const dl = this.camera.position.distanceTo(LANTERN.position);
-    this.weapon.viewKey.intensity = 1.2 + 6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1));
+    this.weapon.viewKey.intensity = 1.2 + 6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
+      + this.flashlight.level * 1.6;
     this.audio.update(dt);
 
     // HUD
@@ -256,14 +273,14 @@ export class Game {
       if (types[e.code]) this.spiders.spawn(types[e.code], WINDOWS[Math.floor(Math.random() * 3)].id);
       if (e.code === 'KeyK') for (const s of this.spiders.spiders) if (s.alive) s.die();
       if (e.code === 'KeyB') for (const w of this.windows.windows) this.windows.damage(w.id, 30);
-      if (e.code === 'KeyL') events.emit('lightning', { strength: 1 });
+      if (e.code === 'KeyJ') events.emit('lightning', { strength: 1 });
     });
   }
   updateDebug(dt) {
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const i = this.renderer.info;
-    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  K kill  B damage windows  L lightning`;
+    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  K kill  B damage windows  J lightning`;
   }
 }
 

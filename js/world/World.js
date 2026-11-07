@@ -10,6 +10,7 @@ import { initTextures } from './Textures.js';
 import { buildLighting } from './Lighting.js';
 import { buildCabin } from './Cabin.js';
 import { buildForest } from './Forest.js';
+import { loadModel, loadParams } from '../core/Assets.js';
 
 export function buildWorld(scene, renderer, quality, events) {
   initTextures(renderer, quality);
@@ -31,7 +32,16 @@ export function buildWorld(scene, renderer, quality, events) {
     forestUpdate(dt, time);
   }
 
+  // Swap built-in models for Blender ones where a .glb exists. Safe to skip: everything already works without it.
+  const used = [];
+  async function loadAssets() {
+    const [rocks, rockParams] = await Promise.all([loadModel('rocks'), loadParams('rocks')]);
+    if (forest.useRocks(rocks, rockParams)) used.push('rocks');
+    return used;
+  }
+
   return {
+    loadAssets, assetsUsed: used,
     cabin: {
       group: cabin.group,
       colliders: cabin.colliders,
@@ -43,6 +53,7 @@ export function buildWorld(scene, renderer, quality, events) {
     forest: { group: forest.group, update: forestUpdate, rain: forest.rain },
     lighting: {
       lantern: lighting.lantern,
+      wallLamp: lighting.wallLamp,
       moon: lighting.moon,
       hemi: lighting.hemi,
       update: lighting.update,

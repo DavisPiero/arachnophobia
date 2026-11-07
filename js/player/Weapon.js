@@ -20,6 +20,8 @@ export class Weapon {
     this.kick = 0;
     this.flashT = 0;
     this.swayX = 0; this.swayY = 0;
+    this.aimK = 0;             // 0 = hip, 1 = aimed down the sights
+    this.sprintK = 0;          // 0 = ready, 1 = lowered for running
     this.targets = [];         // filled each frame by the spider manager: hitbox meshes
     this.worldMeshes = [];     // cabin meshes and window boards that stop bullets
     this.raycaster = new THREE.Raycaster();
@@ -61,11 +63,11 @@ export class Weapon {
     }
   }
 
-  reset() { this.mag = W.magSize; this.cooldown = 0; this.reloading = false; this.reloadT = 0; for (const h of this.holes) h.visible = false; }
+  reset() { this.mag = W.magSize; this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.aimK = 0; this.sprintK = 0; for (const h of this.holes) h.visible = false; }
 
   /** Try to fire. Returns true if a round was fired. */
   tryFire() {
-    if (this.reloading || this.cooldown > 0 || this.player.dead) return false;
+    if (this.reloading || this.cooldown > 0 || this.player.dead || this.sprintK > 0.5) return false;
     if (this.mag <= 0) {
       this.audio.play('dryFire', { volume: 0.8 });
       this.cooldown = 0.35;
@@ -81,8 +83,9 @@ export class Weapon {
 
     const origin = this.camera.getWorldPosition(_o);
     const dir = this.camera.getWorldDirection(_d);
-    dir.x += (Math.random() - 0.5) * W.spread * 2;
-    dir.y += (Math.random() - 0.5) * W.spread * 2;
+    const spread = W.spread * THREE.MathUtils.lerp(1, W.aimSpread, this.aimK);
+    dir.x += (Math.random() - 0.5) * spread * 2;
+    dir.y += (Math.random() - 0.5) * spread * 2;
     dir.normalize();
     this.raycaster.set(origin, dir);
 
@@ -129,7 +132,14 @@ export class Weapon {
     this.swayX = THREE.MathUtils.lerp(this.swayX, THREE.MathUtils.clamp(-input.lookDX * 4, -0.05, 0.05), 1 - Math.exp(-10 * dt));
     this.swayY = THREE.MathUtils.lerp(this.swayY, THREE.MathUtils.clamp(-input.lookDY * 4, -0.05, 0.05), 1 - Math.exp(-10 * dt));
     const t = performance.now() / 1000;
-    const bob = moving ? Math.sin(t * 8.5) * 0.008 : Math.sin(t * 1.3) * 0.002;
+    // aim and sprint poses ease in and out
+    const wantAim = input.aim && !this.reloading && !this.player.dead && !this.player.sprinting;
+    this.aimK += ((wantAim ? 1 : 0) - this.aimK) * (1 - Math.exp(-W.aimSpeed * dt));
+    this.sprintK += ((this.player.sprinting ? 1 : 0) - this.sprintK) * (1 - Math.exp(-9 * dt));
+    this.player.aiming = this.aimK > 0.5;
+    const a = smooth(this.aimK), sp = smooth(this.sprintK);
+    const steady = 1 - 0.75 * a;
+    const bob = (moving ? Math.sin(t * (this.player.sprinting ? 11 : 8.5)) * 0.008 * (1 + sp) : Math.sin(t * 1.3) * 0.002) * steady;
 
     // the gun follows the camera exactly
     this.viewRoot.position.copy(this.camera.position);
@@ -138,9 +148,13 @@ export class Weapon {
     const g = this.gun.group;
     // reload pose: lower the rifle, roll it, magazine drops out and comes back
     const r = this.reloading ? reloadCurve(this.reloadT) : 0;
-    g.position.set(0.2 + this.swayX - r * 0.06, -0.2 + bob + this.swayY - r * 0.1 - this.kick * 0.012, -0.3 + this.kick * 0.05 + r * 0.06);
-    // slight inward yaw so the barrel points toward the crosshair
-    g.rotation.set(0.03 + this.kick * 0.09 + r * 0.5, 0.06 + r * 0.35, r * 0.6);
+    const sx = this.swayX * steady, sy = this.swayY * steady;
+    // hip pose -> aimed pose: the rear and front sights line up on the centre of the screen
+    const hx = THREE.MathUtils.lerp(0.2, 0, a), hy = THREE.MathUtils.lerp(-0.2, -0.051, a), hz = THREE.MathUtils.lerp(-0.3, -0.36, a);
+    g.position.set(hx + sx - r * 0.06 + sp * 0.03, hy + bob + sy - r * 0.1 - this.kick * 0.012 * (1 - a * 0.5) - sp * 0.07, hz + this.kick * 0.05 + r * 0.06 + sp * 0.04);
+    // slight inward yaw at the hip so the barrel points toward the crosshair; none when aimed; turned across the body when running
+    g.rotation.set(THREE.MathUtils.lerp(0.03, 0.01, a) + this.kick * 0.09 * (1 - a * 0.4) + r * 0.5 - sp * 0.35,
+      THREE.MathUtils.lerp(0.06, 0, a) + r * 0.35 + sp * 0.6, r * 0.6 + sp * 0.25);
     // magazine animation during reload
     const mt = this.reloadT;
     const magDrop = this.reloading ? (mt < 0.1 ? mt / 0.1 : mt < 0.75 ? 1 : Math.max(0, 1 - (mt - 0.75) / 0.12)) : 0;
@@ -196,7 +210,10 @@ function buildRifle() {
   add(new THREE.CylinderGeometry(0.0095, 0.011, 0.52, 14), steel, 0, 0.02, -0.4, Math.PI / 2, 0, 0);
   // front sight + rear sight
   add(new THREE.BoxGeometry(0.006, 0.022, 0.012), darkSteel, 0, 0.038, -0.64);
-  add(new THREE.BoxGeometry(0.03, 0.014, 0.012), darkSteel, 0, 0.048, -0.08);
+  // rear sight: a notch (two posts) so the front post shows through it when aiming
+  add(new THREE.BoxGeometry(0.03, 0.006, 0.012), darkSteel, 0, 0.044, -0.08);
+  add(new THREE.BoxGeometry(0.01, 0.01, 0.012), darkSteel, -0.01, 0.051, -0.08);
+  add(new THREE.BoxGeometry(0.01, 0.01, 0.012), darkSteel, 0.01, 0.051, -0.08);
   // trigger guard
   add(new THREE.TorusGeometry(0.022, 0.004, 6, 14, Math.PI), darkSteel, 0, -0.03, 0.07, 0, Math.PI / 2, Math.PI);
   // magazine

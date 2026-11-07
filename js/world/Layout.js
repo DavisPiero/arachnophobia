@@ -48,6 +48,10 @@ export const AMMO_TABLE = {
 // Hanging lantern: the main interior light.
 export const LANTERN = { position: new THREE.Vector3(0.2, 2.05, 0.4) };
 
+// Second light: an oil lamp hanging from an iron bracket on the west wall, at the north end of the room
+// (the far end from the table, which was the darkest corner). position = centre of the flame.
+export const WALL_LAMP = { position: new THREE.Vector3(-2.66, 1.72, -2.5), wallNormal: new THREE.Vector3(1, 0, 0) };
+
 // Ground height outside. Flat (CABIN.groundY) near the cabin, then each side has its own shape:
 //  north: dense forest, ground rises gently away from the cabin
 //  east:  open clearing, nearly flat, long sightline to a dead tree line at x ~ 32

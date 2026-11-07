@@ -8,6 +8,8 @@ export class TouchControls {
   constructor(input, ui) {
     this.input = input;
     this.moveX = 0; this.moveY = 0;
+    this.sprint = false;      // joystick pushed to the edge (and mostly forward)
+    this.aim = false;         // AIM toggle
     this.enabled = false;
     this.stickId = null; this.stickOrigin = { x: 0, y: 0 };
     this.lookIds = new Map(); // pointerId -> last {x, y}
@@ -19,6 +21,8 @@ export class TouchControls {
     this.knob = ui.querySelector('#stick-knob');
     this.btnFire = ui.querySelector('#btn-fire');
     this.btnInteract = ui.querySelector('#btn-interact');
+    this.btnTorch = ui.querySelector('#btn-torch');
+    this.btnAim = ui.querySelector('#btn-aim');
 
     const opts = { passive: false };
     // --- joystick ---
@@ -45,11 +49,14 @@ export class TouchControls {
       const k = m < 0.12 ? 0 : Math.min(1, (m - 0.12) / 0.88) / (m || 1);
       this.moveX = nx * k;
       this.moveY = -ny * k;
+      // past the ring's edge counts as sprint: the thumb has to reach for it
+      this.sprint = Math.hypot(e.clientX - this.stickOrigin.x, e.clientY - this.stickOrigin.y) > this.radius * 1.15 && this.moveY > 0.6;
+      this.stick.classList.toggle('sprint', this.sprint);
     }, opts);
     const endStick = (e) => {
       if (e.pointerId !== this.stickId) return;
-      this.stickId = null; this.moveX = 0; this.moveY = 0;
-      this.stick.classList.remove('active');
+      this.stickId = null; this.moveX = 0; this.moveY = 0; this.sprint = false;
+      this.stick.classList.remove('active', 'sprint');
     };
     this.zoneMove.addEventListener('pointerup', endStick);
     this.zoneMove.addEventListener('pointercancel', endStick);
@@ -93,15 +100,22 @@ export class TouchControls {
     this.btnInteract.addEventListener('pointerup', upI);
     this.btnInteract.addEventListener('pointercancel', upI);
 
+    // --- flashlight and aim toggles ---
+    const tap = (el, fn) => el.addEventListener('pointerdown', (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); fn(); }, opts);
+    tap(this.btnTorch, () => input.press('torch'));
+    tap(this.btnAim, () => { this.aim = !this.aim; this.btnAim.classList.toggle('on', this.aim); });
+
     // stop the page from scrolling / zooming / long-press menus
     ui.addEventListener('touchmove', (e) => e.preventDefault(), opts);
     ui.addEventListener('contextmenu', (e) => e.preventDefault());
   }
+  setTorchOn(v) { this.btnTorch.classList.toggle('on', v); }
   setKnob(dx, dy) { this.knob.style.transform = `translate(${dx}px, ${dy}px)`; }
   setEnabled(v) {
     this.enabled = v;
     if (!v) {
-      this.stickId = null; this.moveX = 0; this.moveY = 0; this.lookIds.clear();
+      this.stickId = null; this.moveX = 0; this.moveY = 0; this.sprint = false; this.lookIds.clear();
+      this.aim = false; this.btnAim?.classList.remove('on');
       this.stick.classList.remove('active');
       this.btnFire.classList.remove('down');
     }

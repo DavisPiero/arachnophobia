@@ -7,9 +7,11 @@
   "scripts": {
     "start": "node tools/serve.mjs",
     "test": "node tests/smoke.mjs",
-    "shot": "node tools/shot.mjs"
+    "shot": "node tools/shot.mjs",
+    "assets": "node tools/assets.mjs"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "playwright": "^1.49.1"
   }
 }

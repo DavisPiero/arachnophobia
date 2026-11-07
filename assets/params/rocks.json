@@ -1,0 +1,28 @@
+{
+  "_about": "Rock family. Read by blender/generators/rocks.py (shape, texture) and by the game (js/world/Forest.js: how many variants, tint). Change, then run: npm run assets",
+  "seed": 11,
+  "variants": 8,
+  "shape": {
+    "irregularity": 0.32,
+    "lumpScale": 1.1,
+    "flatness": [0.5, 0.85],
+    "elongation": [0.85, 1.35],
+    "fractures": [1, 4],
+    "fractureDepth": [0.55, 0.85],
+    "bottom": -0.3
+  },
+  "surface": {
+    "detail": 0.035,
+    "detailScale": 7.0,
+    "cracks": 0.025,
+    "crackScale": 3.0
+  },
+  "look": {
+    "stone": [[0.075, 0.072, 0.068], [0.2, 0.195, 0.185]],
+    "moss": [0.045, 0.06, 0.028],
+    "mossAmount": 0.55,
+    "wetness": 0.5
+  },
+  "budget": { "high": 650, "low": 180, "texture": 2048, "gameTexture": 1024 },
+  "game": { "tintJitter": 0.12 }
+}

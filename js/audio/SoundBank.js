@@ -783,6 +783,17 @@ export const RECIPES = {
       k.env(g.gain, [[0, 0], [0.006, 0.8], [0.25, 0.0001, 'x']]); k.chain(n, bp, g, k.mix);
     },
   },
+  // flashlight switch: a stiff plastic-and-spring click, slightly hollow (the battery tube)
+  torchClick: {
+    variants: 3, lowVariants: 2, dur: 0.16, gain: 0.45, reverb: 0.08, peak: 0.75,
+    render(k) {
+      const a = k.arr(); const t = 0.003;
+      metalClick(k, a, t, 0.6, k.rr(3200, 4200), 0.5);
+      k.burst(a, t + k.rr(0.004, 0.008), 0.5, 0.0012, 0.4);
+      k.mode(a, t, k.rr(900, 1150), 0.25, 0.012);   // hollow tube body
+      k.src(k.filt(a, 'highpass', 400), 0);
+    },
+  },
   uiClick: {
     variants: 3, lowVariants: 2, dur: 0.09, gain: 0.3, peak: 0.7,
     render(k) {
@@ -1231,14 +1242,14 @@ export const RECIPES = {
 export const REQUIRED_NAMES = [
   'gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup', 'glassCrack', 'glassShatter', 'glassTap',
   'glassScratch', 'woodScrape', 'boardHit', 'boardBreak', 'footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactWood',
-  'bulletImpactFlesh', 'uiClick',
+  'bulletImpactFlesh', 'uiClick', 'torchClick',
   'chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep',
   'spiderHiss', 'spiderScream', 'spiderAttack',
   'wind', 'rain', 'roomTone', 'thunder', 'treeCreak', 'branchSnap', 'cabinCreak', 'lanternCreak', 'distantUnknown', 'drone',
 ];
 
 export const CATEGORIES = {
-  Weapon: ['gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup'],
+  Weapon: ['gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup', 'torchClick'],
   'Glass & wood': ['glassTap', 'glassScratch', 'glassCrack', 'glassShatter', 'woodScrape', 'boardHit', 'boardBreak', 'bulletImpactWood'],
   Player: ['footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactFlesh', 'uiClick'],
   Spiders: ['chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep', 'spiderHiss', 'spiderPain', 'spiderScream', 'spiderAttack'],
