@@ -1,21 +1,160 @@
 {
   "_about": "Lever-action rifle. Read by blender/generators/rifle.py (shape, texture) and by the game (js/player/ViewModel.js: pivots, sights, muzzle). Positions are in GAME space, metres: x right, y up, z towards the player; origin = centre of the receiver. Change, then run: npm run assets rifle",
-  "barrel": { "from": -0.1, "to": -0.66, "y": 0.022, "radius": 0.0105, "muzzleRadius": 0.0092, "sides": 8 },
-  "tube": { "from": -0.12, "to": -0.6, "y": 0.0015, "radius": 0.0085 },
-  "receiver": { "width": 0.04, "top": 0.043, "bottom": -0.026, "front": -0.1, "back": 0.075 },
-  "forend": { "from": -0.105, "to": -0.36, "y": 0.012, "rx": 0.02, "ry": 0.023 },
-  "stock": { "from": 0.075, "to": 0.43, "wristTop": 0.024, "wristBottom": -0.03, "buttTop": -0.018, "buttBottom": -0.14, "wristWidth": 0.033, "buttWidth": 0.042 },
-  "lever": { "pivot": [0, -0.028, -0.07], "openAngle": 52, "loop": [0, -0.072, 0.115], "loopRadius": 0.032 },
-  "hammer": { "pivot": [0, 0.012, 0.068], "cockAngle": 38 },
-  "sights": { "front": -0.645, "rear": -0.27, "lineY": 0.046 },
-  "muzzle": [0, 0.022, -0.665],
-  "ejectPort": [0.006, 0.048, -0.01],
-  "loadingGate": [0.021, -0.008, -0.03],
-  "round": { "length": 0.064, "radius": 0.0062 },
-  "grips": {
-    "right": [0.0, -0.004, 0.105],
-    "left": [0.0, 0.012, -0.25]
+  "barrel": {
+    "from": -0.1,
+    "to": -0.66,
+    "y": 0.022,
+    "radius": 0.0105,
+    "muzzleRadius": 0.0092
   },
-  "look": { "walnut": [[0.028, 0.013, 0.006], [0.075, 0.035, 0.015]], "blued": [0.022, 0.025, 0.032], "bare": [0.24, 0.24, 0.25] },
-  "budget": { "texture": 2048, "gameTexture": 2048, "webpQuality": 92, "normalQuality": 96 }
+  "tube": {
+    "from": -0.12,
+    "to": -0.6,
+    "y": 0.0015,
+    "radius": 0.0085
+  },
+  "receiver": {
+    "width": 0.04,
+    "top": 0.043,
+    "bottom": -0.026,
+    "front": -0.1,
+    "back": 0.075
+  },
+  "forend": {
+    "from": -0.105,
+    "to": -0.36,
+    "y": 0.006,
+    "rx": 0.0205,
+    "ry": 0.0175
+  },
+  "stock": {
+    "from": 0.075,
+    "to": 0.43,
+    "wristTop": 0.024,
+    "wristBottom": -0.03,
+    "buttTop": -0.018,
+    "buttBottom": -0.14,
+    "wristWidth": 0.033,
+    "buttWidth": 0.042
+  },
+  "lever": {
+    "pivot": [
+      0,
+      -0.028,
+      -0.07
+    ],
+    "openAngle": 52,
+    "loop": [
+      0,
+      -0.076,
+      0.098
+    ],
+    "loopRadius": 0.028,
+    "loopLength": 0.13
+  },
+  "hammer": {
+    "pivot": [
+      0,
+      0.012,
+      0.068
+    ],
+    "cockAngle": 38
+  },
+  "sights": {
+    "front": -0.645,
+    "rear": -0.27,
+    "lineY": 0.046
+  },
+  "muzzle": [
+    0,
+    0.022,
+    -0.665
+  ],
+  "ejectPort": [
+    0.006,
+    0.048,
+    -0.01
+  ],
+  "loadingGate": [
+    0.021,
+    -0.008,
+    -0.03
+  ],
+  "round": {
+    "length": 0.064,
+    "radius": 0.0062
+  },
+  "grips": {
+    "right": [
+      0.0,
+      -0.004,
+      0.105
+    ],
+    "left": [
+      0.0,
+      0.006,
+      -0.25
+    ]
+  },
+  "look": {
+    "walnut": [
+      0.095,
+      0.048,
+      0.024
+    ],
+    "blued": [
+      0.02,
+      0.022,
+      0.027
+    ],
+    "bare": [
+      0.42,
+      0.42,
+      0.43
+    ],
+    "bolt": [
+      0.36,
+      0.36,
+      0.37
+    ],
+    "rubber": [
+      0.02,
+      0.02,
+      0.021
+    ],
+    "brass": [
+      0.6,
+      0.4,
+      0.13
+    ],
+    "copper": [
+      0.52,
+      0.24,
+      0.11
+    ]
+  },
+  "budget": {
+    "texture": 4096,
+    "gameTexture": 4096,
+    "lowTexture": 2048,
+    "webpQuality": 90,
+    "normalQuality": 95,
+    "maxKB": 5600
+  },
+  "view": {
+    "_about": "Where the rifle sits in front of the eye (camera space, metres / radians): hip pose position and rotation (x pitch, y yaw), and how far out it sits when aimed. Read by the game and blender/tools/viewmodel.py.",
+    "hip": {
+      "pos": [
+        0.17,
+        -0.165,
+        -0.4
+      ],
+      "rot": [
+        0.03,
+        0.07,
+        0
+      ]
+    },
+    "aimZ": -0.5
+  }
 }

@@ -1,13 +1,13 @@
 // Ichor: the spray when a spider is hit, and the splats it leaves on the ground, walls, floor and window glass.
-// Spray droplets are one instanced mesh (one draw call). Splats are a fixed pool of decals that stay for the wave.
-// The ichor is a pale, sickly yellow-green so it still reads at night (a guess: the spec only says "blood").
+// Spray droplets are one instanced mesh (one draw call). Splats are a fixed pool of decals that fade after a few seconds
+// (Config.gore.splatHold + splatFade), so they never block a window for long. Dark red (user's call).
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight } from '../world/Layout.js';
 
 const G = Config.gore;
-const DROP_COLOR = 0x6f7a2a;
-const SPLAT_COLOR = 0x5c6a1e;
+const DROP_COLOR = 0x7a0d0a;
+const SPLAT_COLOR = 0x640a08;
 
 export class Gore {
   constructor({ scene, events, windows }) {
@@ -33,11 +33,11 @@ export class Gore {
     this.splatGroup = new THREE.Group();
     this.splatGroup.name = 'gore-splats';
     for (let i = 0; i < G.splats; i++) {
-      const m = new THREE.Mesh(geo, mat);
+      const m = new THREE.Mesh(geo, mat.clone());   // own material: each splat fades on its own
       m.visible = false;
       m.renderOrder = 2;
       this.splatGroup.add(m);
-      this.splats.push({ mesh: m, window: null });
+      this.splats.push({ mesh: m, window: null, age: 0 });
     }
     scene.add(this.splatGroup);
     events.on('waveStart', () => this.clear());
@@ -74,7 +74,9 @@ export class Gore {
     const k = size * (0.8 + Math.random() * 0.4);
     m.scale.set(k, k * (0.75 + Math.random() * 0.5), 1);
     m.visible = true;
+    m.material.opacity = 0.92;
     s.window = glassOf;
+    s.age = 0;
   }
 
   /** Splat on a window's glass, seen from inside the room. Skipped if the glass is already gone. */
@@ -112,8 +114,14 @@ export class Gore {
     }
     this.drops.count = this.live;
     this.drops.instanceMatrix.needsUpdate = true;
-    // splats on glass go when the glass breaks
-    for (const s of this.splats) if (s.window && s.window.stage >= 2) { s.mesh.visible = false; s.window = null; }
+    // splats fade after a few seconds; splats on glass go at once when the glass breaks
+    for (const s of this.splats) {
+      if (!s.mesh.visible) continue;
+      s.age += dt;
+      const f = 1 - (s.age - G.splatHold) / G.splatFade;
+      if (f <= 0 || (s.window && s.window.stage >= 2)) { s.mesh.visible = false; s.window = null; continue; }
+      s.mesh.material.opacity = 0.92 * Math.min(1, f);
+    }
   }
 }
 

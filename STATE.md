@@ -1,28 +1,34 @@
 # State
 
-**Where we are:** milestone 3 (gloved hands, lever-action rifle, axe, stomp, combat feedback), plus the session's fixes
-(sharper rocks, a lighter night, no window darkening, flashlight on Q), is signed off, merged into main and pushed.
-GitHub Pages serves main, so it should be live at https://davispiero.github.io/arachnophobia/.
+**Where we are:** the gloves, gun and axe notes are done and merged into main (branch `m3b-viewmodel-art`):
+- **New models:** the rifle, axe, hands and sleeves are rebuilt with CC0 photo-scanned materials.
+- **New body:** legs, boots and the bottom of the jacket now show when you look down.
+- **Grips:** both hands follow the user's photos.
+- **Splats:** red, and they fade after about 5 s.
 
-**Next:** your notes on the gloves, the gun and the axe (you said they come next session), then milestone 4: nine spider
-species (`SPECIES.md`), the Blender spider generator, locomotion, and spiders climbing in through the window frame.
+GitHub Pages serves main.
+
+**Next:** milestone 4: nine spider species (`SPECIES.md` does not exist yet; writing it is the first job), the Blender
+spider generator, locomotion, and spiders climbing in through the window frame. The spider references are in
+`reference/m4-spider-*.jpg`. They are mostly pale, gaunt and big-eyed, unlike the spec's "dark, tiny red eyes"; the user
+agreed the spec should change to a mix.
 
 **Open with you:**
-- Guesses to confirm:
-  - The ichor is pale yellow-green so it shows at night.
-  - Splats stay until the next wave.
-  - The hands are posed meshes, not animated skeletons.
-  - The boot's toe mostly hides behind the shin.
-- Look and feel:
-  - Are the hands, sleeves and rifle the right darkness under the lantern?
-  - Is the aimed rifle too big in the view?
-  - Does the reload read?
-- Is the night bright enough now (the east clearing especially)?
-- Does double-tap still zoom on your real phone? (Since milestone 2, only checked headless.)
+- **Aiming:** both sleeves come up large in the lower middle of the screen. Make the forearms angle further down?
+- **Check by eye in the real game:**
+  - the hands, rifle, axe and legs under the lantern;
+  - the look-down view (`?debug=1`, look at your feet);
+  - the stomp.
+- **Old guesses, never answered:**
+  - Is the night bright enough (the east clearing especially)?
+  - Does double-tap still zoom on a real phone?
+  - Is the second lamp in the right place (west wall, north end)?
 
 **Tools:**
-- `npm run assets` rebuilds the Blender models: rocks, rifle, hands, axe.
-- `node tools/poses.mjs` screenshots every first-person pose.
-- Viewers: `dev/assets.html?model=rifle|hands|axe|rocks`, `dev/sounds.html` (new "Melee" group), `dev/world.html`.
-- `?debug=1`: I spawns a runner inside, in front of you (try the stomp and the axe), K kills all, 1–4 spawn.
-- `npm test` is the quick check (~2 min).
+- `npm run assets` rebuilds the models (about 18 min at full size). `ASSET_FAST=1` gives a quick small bake for shapes.
+- `node tools/fetch-textures.mjs` fetches the CC0 texture sets (needed once per machine).
+- Blender checks:
+  - `blender/tools/viewmodel.py`: a studio-lit first-person render;
+  - `blender/tools/clipcheck.py`: does any hand pass through the rifle?
+- `node tools/poses.mjs` screenshots every pose; there's a new `down` pose.
+- `npm test` is the quick check (~3 min).

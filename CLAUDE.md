@@ -9,8 +9,10 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
   through the import map in `index.html` (and in each `dev/*.html` page). Bump the version in all of them at once.
 - **Relative paths only** (`./js/...`), so the game runs from GitHub Pages under `/arachnophobia/`.
 - **Assets come from Blender generator scripts** (`blender/`, run with `npm run assets`) or from hand-made `.blend` files in
-  `blender/source/`, exported as `.glb` to `assets/models/`. Every loaded asset keeps a code-made fallback behind the same
-  function name, so a missing or broken file never breaks the game. Sounds are still synthesised for now.
+  `blender/source/`, exported as `.glb` to `assets/models/`. Generators may layer **CC0** photo-scanned texture sets
+  (ambientCG, fetched by `node tools/fetch-textures.mjs` into git-ignored `blender/textures/`, listed in
+  `blender/textures.md`); only the baked results are committed. Every loaded asset keeps a code-made fallback behind the
+  same function name, so a missing or broken file never breaks the game. Sounds are still synthesised for now.
 - **Shared positions live in `js/world/Layout.js`.** Never hard-code cabin, window, table or route positions elsewhere.
 - **Tuning numbers live in `js/core/Config.js`.** Ammo, damage, speeds, wave sizes.
 - **Mobile is first-class.** Every feature must work with touch controls and on the `low` quality tier.
@@ -23,7 +25,10 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - `npm run assets` — rebuild every `.glb` from the Blender generators (Blender runs in the background, no window)
 - `npm test` — headless smoke test (desktop + phone viewport), fails on console errors
 - `node tools/shot.mjs "index.html?mute=1&autostart=1" shots/x.png [--mobile] [--wait=ms] [--eval=js]`
-- `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,...]` — every first-person pose in one headless session
+- `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,down,...]` — every first-person pose in one headless session
+- `ASSET_FAST=1 npm run assets <name>` — quick small bake for iterating on shapes (never commit a fast build)
+- Blender check tools (run with `Blender -b --factory-startup -P <tool> -- ...`): `blender/tools/viewmodel.py hip|aim|axe|arm_<name>`
+  (studio-lit render of the first-person layout, to `shots/`), `blender/tools/clipcheck.py` (does any hand pass through the rifle?)
 
 URL switches: `mute=1`, `autostart=1` (skip the start screen), `quality=low|high`, `debug=1` (stats + free keys), `assets=0` (code-made models).
 

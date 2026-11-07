@@ -1,22 +1,266 @@
 {
-  "_about": "Gloved hands, sleeves and a boot. Read by blender/generators/hands.py and by the game (js/player/ViewModel.js). Each hand is modelled around what it holds, in GAME space (x right, y up, z towards the player): grip = a round handle along z at the origin. Change, then run: npm run assets hands",
-  "finger": { "radius": 0.0098, "lengths": [0.078, 0.084, 0.078, 0.062], "spacing": 0.0195 },
-  "thumb": { "radius": 0.0108, "length": 0.07 },
-  "grip": { "radius": 0.024, "axeRadius": 0.018 },
-  "support": { "rx": 0.021, "ry": 0.024 },
-  "forearm": {
-    "grip": [0.62, -0.62, 0.48],
-    "axe": [0.35, -0.45, 0.82],
-    "support": [-0.25, -0.78, 0.57],
-    "load": [-0.55, -0.45, 0.7]
+  "_about": "Gloved hands and jacket sleeves. Read by blender/generators/hands.py and by the game (js/player/ViewModel.js). The skeleton is a RIGHT hand in the hand frame (x = thumb side, y = back of the hand, z = towards the finger tips, origin = middle of the wrist, metres); left hands are mirrored. Poses: 'grip' wraps the fingers round a handle along GAME z at the origin (rx, ry = the handle's half sizes, cy = its centre's y, across = where it crosses the palm, gap = looser fingers); 'pinch' holds a round. forearm = the GAME direction the forearm leaves in: the hand turns round the handle so the wrist stays straight; wrist = [bend up, bend sideways] degrees of natural bend on top; thumb = 'forward' (default) or 'back'. With back (the way the back of the hand faces) and tilt (degrees the handle crosses the palm), the hand is set by those instead and the wrist bends to meet the forearm (the trigger hand). Change, then run: npm run assets hands thumbAt = where the thumb tip rests (GAME space). shape 'stock' = press the hand against the real rifle wrist.",
+  "skeleton": {
+    "wristWidth": 0.06,
+    "wristThickness": 0.036,
+    "palmWidth": 0.088,
+    "palmThickness": 0.028,
+    "fingers": [
+      {
+        "name": "index",
+        "mcp": [
+          0.026,
+          0.001,
+          0.088
+        ],
+        "lengths": [
+          0.044,
+          0.026,
+          0.021
+        ],
+        "radius": 0.0098,
+        "spread": 5
+      },
+      {
+        "name": "middle",
+        "mcp": [
+          0.008,
+          0.002,
+          0.093
+        ],
+        "lengths": [
+          0.048,
+          0.029,
+          0.022
+        ],
+        "radius": 0.0101,
+        "spread": 1
+      },
+      {
+        "name": "ring",
+        "mcp": [
+          -0.01,
+          0.001,
+          0.089
+        ],
+        "lengths": [
+          0.045,
+          0.028,
+          0.021
+        ],
+        "radius": 0.0096,
+        "spread": -3
+      },
+      {
+        "name": "pinky",
+        "mcp": [
+          -0.027,
+          -0.002,
+          0.079
+        ],
+        "lengths": [
+          0.035,
+          0.021,
+          0.019
+        ],
+        "radius": 0.0086,
+        "spread": -8
+      }
+    ],
+    "thumb": {
+      "cmc": [
+        0.021,
+        -0.008,
+        0.02
+      ],
+      "lengths": [
+        0.042,
+        0.032,
+        0.027
+      ],
+      "radius": 0.0118
+    }
   },
-  "sleeve": { "length": 0.34, "cuff": 0.04, "elbow": 0.048, "folds": 0.004 },
+  "poses": {
+    "grip": {
+      "kind": "grip",
+      "forearm": [
+        0.5,
+        -0.5,
+        0.7
+      ],
+      "rx": 0.0175,
+      "ry": 0.03,
+      "cy": -0.012,
+      "across": 0.062,
+      "wrist": [
+        0,
+        0
+      ],
+      "back": [
+        0.9,
+        -0.4,
+        0.0
+      ],
+      "tilt": 60,
+      "shape": "stock",
+      "thumbAt": [
+        0.03,
+        0.002,
+        -0.045
+      ]
+    },
+    "axe": {
+      "kind": "grip",
+      "forearm": [
+        0.35,
+        -0.45,
+        0.82
+      ],
+      "rx": 0.0112,
+      "ry": 0.016,
+      "cy": 0.0,
+      "across": 0.062,
+      "wrist": [
+        0,
+        0
+      ],
+      "back": [
+        0.9,
+        -0.35,
+        0.0
+      ],
+      "tilt": 45
+    },
+    "support": {
+      "kind": "grip",
+      "forearm": [
+        -0.6,
+        -0.6,
+        0.53
+      ],
+      "rx": 0.0215,
+      "ry": 0.0185,
+      "cy": 0.0,
+      "across": 0.056,
+      "gap": 0.002,
+      "wrist": [
+        0,
+        0
+      ],
+      "back": [
+        -0.1,
+        -1.0,
+        0.0
+      ],
+      "tilt": 20,
+      "thumbAt": [
+        -0.031,
+        0.008,
+        -0.03
+      ],
+      "barrel": true
+    },
+    "load": {
+      "kind": "pinch",
+      "forearm": [
+        -0.55,
+        -0.45,
+        0.7
+      ],
+      "pinch": [
+        0.034,
+        -0.045,
+        0.125
+      ],
+      "pinchDir": [
+        0,
+        1,
+        0
+      ],
+      "gapIndex": 0.0147,
+      "gapThumb": 0.0157,
+      "roundDir": [
+        0.75,
+        -0.15,
+        0.65
+      ],
+      "alongRound": -0.015,
+      "curl": {
+        "middle": [
+          75,
+          95,
+          45
+        ],
+        "ring": [
+          80,
+          95,
+          45
+        ],
+        "pinky": [
+          85,
+          90,
+          40
+        ]
+      },
+      "wrist": [
+        0,
+        0
+      ]
+    }
+  },
+  "sleeve": {
+    "length": 0.36,
+    "cuff": 0.04,
+    "forearm": 0.05,
+    "elbow": 0.047,
+    "folds": 0.003
+  },
   "look": {
-    "glove": [0.026, 0.018, 0.012],
-    "gloveWorn": [0.07, 0.05, 0.034],
-    "sleeve": [0.02, 0.022, 0.018],
-    "boot": [0.022, 0.016, 0.012],
-    "trousers": [0.011, 0.012, 0.015]
+    "gloveBack": [
+      0.02,
+      0.021,
+      0.018
+    ],
+    "glovePalm": [
+      0.028,
+      0.027,
+      0.022
+    ],
+    "cuff": [
+      0.016,
+      0.016,
+      0.016
+    ],
+    "guard": [
+      0.012,
+      0.012,
+      0.012
+    ],
+    "sleeve": [
+      0.017,
+      0.019,
+      0.016
+    ],
+    "sleeveCuff": [
+      0.014,
+      0.014,
+      0.014
+    ],
+    "grime": [
+      0.06,
+      0.05,
+      0.035
+    ]
   },
-  "budget": { "hand": 1600, "texture": 2048, "gameTexture": 2048, "webpQuality": 86, "normalQuality": 90 }
+  "budget": {
+    "hand": 4500,
+    "voxel": 0.0009,
+    "texture": 4096,
+    "gameTexture": 4096,
+    "lowTexture": 2048,
+    "webpQuality": 80,
+    "normalQuality": 88,
+    "maxKB": 9000
+  }
 }
