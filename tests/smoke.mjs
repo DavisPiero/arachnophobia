@@ -2,11 +2,12 @@
 // and fails on any console error or if the core loop does not work.
 // Usage: npm test            (screenshots land in shots/)
 //        node tests/smoke.mjs https://davispiero.github.io/arachnophobia/   (test the live site)
+//        flags: --full (high-quality desktop, slow), --shots (save screenshots), --verbose (list every check)
 import { chromium } from 'playwright';
 import { startServer } from '../tools/serve.mjs';
 import fs from 'node:fs';
 
-const remote = process.argv[2];
+const remote = process.argv.slice(2).find((a) => a.startsWith('http'));
 let server = null, base = remote;
 if (!remote) {
   const port = 8700 + Math.floor(Math.random() * 200);
@@ -17,18 +18,22 @@ fs.mkdirSync('shots', { recursive: true });
 
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
 let failures = 0;
-const check = (ok, msg) => { console.log(`${ok ? '  ok  ' : '  FAIL'} ${msg}`); if (!ok) failures++; };
+// Prints only failures (and a one-line summary) so the output stays short.
+const check = (ok, msg) => { if (!ok) { console.log(`  FAIL ${msg}`); failures++; } else if (process.argv.includes('--verbose')) console.log(`  ok   ${msg}`); };
 
 for (const device of ['desktop', 'phone']) {
-  console.log(`\n${device}`);
+  if (process.argv.includes('--verbose')) console.log(`\n${device}`);
   const ctx = await browser.newContext(device === 'phone'
     ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
-    : { viewport: { width: 1280, height: 720 } });
+    : { viewport: { width: 960, height: 540 } });
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}index.html?mute=1&autostart=1`);
+  // Low quality and small viewports keep headless (CPU) rendering fast; this tests behaviour, not looks.
+  // Pass --full to test the high-quality desktop renderer too.
+  const q = device === 'desktop' && process.argv.includes('--full') ? 'high' : 'low';
+  await page.goto(`${base}index.html?mute=1&autostart=1&quality=${q}`);
   await page.waitForFunction(() => window.game && window.game.state === 'playing', null, { timeout: 60000 }).catch(() => {});
   check(await page.evaluate(() => window.game?.state === 'playing'), 'game starts and reaches the playing state');
   check(await page.evaluate(() => document.body.classList.contains('touch')) === (device === 'phone'), 'touch controls only on touch devices');
@@ -50,11 +55,10 @@ for (const device of ['desktop', 'phone']) {
     const fps = g.renderer.info.render.frame / Math.max(1, performance.now() / 1000);
     return { fired: before - g.weapon.mag, veil, farVeil, spiders: g.spiders.aliveCount, fps };
   });
-  console.log(`  (headless fps ~${r.fps.toFixed(1)})`);
   check(r.fired === 1, 'weapon fires and uses a round');
   check(r.veil < 0.5 && r.farVeil > 0.8, `window near is clear (${r.veil.toFixed(2)}), far window dark (${r.farVeil.toFixed(2)})`);
   check(r.spiders >= 3, `spiders spawned and alive (${r.spiders})`);
-  await page.screenshot({ path: `shots/smoke-${device}-window.png` });
+  if (process.argv.includes('--shots')) await page.screenshot({ path: `shots/smoke-${device}-window.png` });
 
   // reload at the table
   const rl = await page.evaluate(async () => {
@@ -72,7 +76,7 @@ for (const device of ['desktop', 'phone']) {
   });
   check(rl.started && rl.lockedDuring, 'reload starts at the table and locks movement');
   check(rl.mag === 8 && rl.stockAfter < rl.stockBefore, `reload refills the magazine from the table (${rl.stockBefore} -> ${rl.stockAfter})`);
-  await page.screenshot({ path: `shots/smoke-${device}-table.png` });
+  if (process.argv.includes('--shots')) await page.screenshot({ path: `shots/smoke-${device}-table.png` });
 
   if (device === 'phone') {
     // drag the left joystick forward and press FIRE, as a thumb would
@@ -106,5 +110,5 @@ for (const device of ['desktop', 'phone']) {
 
 await browser.close();
 server?.close();
-console.log(failures ? `\n${failures} check(s) failed` : '\nall checks passed');
+console.log(failures ? `${failures} check(s) failed` : `smoke: all checks passed (${((performance.now()) / 1000).toFixed(0)} s)`);
 process.exit(failures ? 1 : 0);

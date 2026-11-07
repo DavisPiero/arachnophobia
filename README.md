@@ -23,7 +23,7 @@ npm test
 ```
 
 Loads the game headless at desktop and phone sizes, checks shooting, reloading, window visibility, touch controls
-and breaches, and fails on any console error. Screenshots land in `shots/`.
+and breaches, and fails on any console error. Takes about 1.5 minutes and prints one line. Flags: `--full` (high-quality desktop, slow), `--shots` (save screenshots to `shots/`), `--verbose`.
 
 ```bash
 node tests/soak.mjs 150
