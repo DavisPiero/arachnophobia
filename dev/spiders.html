@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spider viewer</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #050607; overflow: hidden; font: 12px/1.4 system-ui, sans-serif; color: #b9c0c8; }
+  canvas { display: block; }
+  #panel { position: fixed; top: 8px; left: 8px; background: rgba(10, 12, 14, 0.78); padding: 8px 10px; border-radius: 6px; max-width: 320px; }
+  #panel label { display: inline-block; margin: 2px 8px 2px 0; }
+  #panel select, #panel input { background: #15191d; color: #cfd6dd; border: 1px solid #2a3036; border-radius: 3px; }
+  #stats { white-space: pre; margin-top: 6px; color: #8d97a1; font-family: ui-monospace, monospace; font-size: 11px; }
+  #panel.hidden { display: none; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="panel">
+  <label>type <select id="type"><option value="all">all</option><option>runner</option><option>brute</option><option>climber</option><option>stalker</option></select></label>
+  <label>mode <select id="mode"><option>walk</option><option>idle</option><option>attack</option><option>dead</option></select></label><br>
+  <label>speed <input id="speed" type="range" min="0" max="2" step="0.05" value="1" style="width:90px"></label>
+  <label>attack <input id="attack" type="range" min="-0.01" max="1" step="0.01" value="-0.01" style="width:70px" title="left = auto cycle"></label><br>
+  <label>eye glow <input id="glow" type="range" min="0" max="1" step="0.01" value="1" style="width:70px"></label>
+  <label>opacity <input id="opacity" type="range" min="0" max="1" step="0.01" value="1" style="width:70px"></label><br>
+  <label>surface <select id="surface"><option>ground</option><option>wall</option><option>roof</option></select></label>
+  <label>detail <select id="detail"><option value="1">1 (high)</option><option value="0">0 (low)</option></select></label>
+  <label><input id="hit" type="checkbox"> hitbox</label>
+  <div id="stats"></div>
+  <div style="margin-top:4px;color:#5d666f">drag = orbit, wheel = zoom, H = hide panel. URL: ?type= &amp;mode= &amp;cam=close|side|front|top &amp;t=sec &amp;speed=x &amp;detail=0|1 &amp;surface=wall|roof &amp;walk=circle|line|still</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createSpiderVisual, SPIDER_TYPES, spiderStats } from '../js/spiders/SpiderModel.js';
+import { Quality } from '../js/core/Quality.js';
+
+const P = new URLSearchParams(location.search);
+const state = {
+  type: P.get('type') || 'all',
+  mode: P.get('mode') || 'walk',
+  cam: P.get('cam') || 'default',
+  t: Number(P.get('t') || 0),
+  speedMul: Number(P.get('speed') ?? 1),
+  attack: P.has('attack') ? Number(P.get('attack')) : -1,
+  glow: Number(P.get('glow') ?? 1),
+  opacity: Number(P.get('opacity') ?? 1),
+  surface: P.get('surface') || 'ground',
+  detail: P.has('detail') ? Number(P.get('detail')) : Quality.spiderDetail,
+  walk: P.get('walk') || (['idle', 'attack', 'dead'].includes(P.get('mode')) ? 'still' : 'circle'),
+  freeze: P.has('t') && !P.has('play'),
+  hitbox: P.has('hitbox'),
+};
+const $ = (id) => document.getElementById(id);
+$('type').value = state.type; $('mode').value = state.mode; $('speed').value = state.speedMul; $('attack').value = state.attack;
+$('glow').value = state.glow; $('opacity').value = state.opacity; $('surface').value = state.surface; $('detail').value = String(state.detail);
+$('hit').checked = state.hitbox;
+if (P.has('nopanel')) $('panel').classList.add('hidden');
+
+// ------------------------------------------------------------- renderer / scene
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = P.get('light') === 'bright' ? 2.4 : P.get('light') === 'dark' ? 0.8 : 1.5;
+renderer.info.autoReset = false;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x07090c);
+scene.fog = new THREE.FogExp2(0x07090c, 0.045);
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.02, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+
+// moonlight (cold), warm lantern-ish point light, faint sky fill
+const moon = new THREE.DirectionalLight(0x9db4e0, 2.2);
+moon.position.set(-6, 10, 4);
+moon.castShadow = true;
+moon.shadow.mapSize.set(2048, 2048);
+Object.assign(moon.shadow.camera, { left: -8, right: 8, top: 8, bottom: -8, near: 1, far: 30 });
+moon.shadow.bias = -0.0005; moon.shadow.normalBias = 0.02;
+scene.add(moon);
+const warm = new THREE.PointLight(0xff9a48, 5, 14, 1.6);
+warm.position.set(4.5, 1.8, 4.5);
+warm.castShadow = true;
+warm.shadow.mapSize.set(1024, 1024);
+warm.shadow.bias = -0.002;
+scene.add(warm);
+scene.add(new THREE.HemisphereLight(0x405060, 0x080604, 0.35));
+// a rim light from behind so dark silhouettes read
+const rim = new THREE.DirectionalLight(0x6f86b0, 0.9);
+rim.position.set(2, 4, -8);
+scene.add(rim);
+
+// lights the underside of the roof panel in surface=roof mode
+const roofLight = new THREE.PointLight(0xffa860, 3, 8, 1.5);
+roofLight.position.set(1.5, 0.6, 1.5);
+scene.add(roofLight);
+
+// ground with a little procedural dirt texture
+function dirtTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  g.fillStyle = '#2a2622'; g.fillRect(0, 0, 256, 256);
+  for (let i = 0; i < 5000; i++) {
+    const v = 20 + Math.random() * 40;
+    g.fillStyle = `rgba(${v + 10},${v + 6},${v},${Math.random() * 0.5})`;
+    g.fillRect(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 3, 1 + Math.random() * 3);
+  }
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(20, 20); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const surfaceMat = new THREE.MeshStandardMaterial({ map: dirtTexture(), roughness: 0.95 });
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), surfaceMat);
+ground.rotation.x = -Math.PI / 2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// ------------------------------------------------------------- spiders
+const DEFAULT_SPEED = { runner: 1.6, brute: 0.9, climber: 1.4, stalker: 0.9 };
+const CIRCLE_R = { runner: 0.45, brute: 0.9, climber: 0.7, stalker: 0.75 };
+const SLOT = { runner: -3.4, brute: -0.6, climber: 2.2, stalker: 4.6 };
+let actors = [];
+const stageRoot = new THREE.Group();
+scene.add(stageRoot);
+
+function build() {
+  for (const a of actors) a.vis.dispose();
+  actors = [];
+  stageRoot.clear();
+  // the surface the spiders stand on: ground (default), a wall (normal +Z) or a roof (upside down)
+  const stage = new THREE.Group();
+  if (state.surface === 'wall') { stage.rotation.x = Math.PI / 2; stage.position.set(0, 3.5, -2); }
+  if (state.surface === 'roof') { stage.rotation.x = Math.PI; stage.position.set(0, 2.6, 0); }
+  roofLight.visible = state.surface === 'roof';
+  stageRoot.add(stage);
+  if (state.surface !== 'ground') {
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(14, 7), new THREE.MeshStandardMaterial({ color: 0x3a2f26, roughness: 0.9, side: THREE.DoubleSide }));
+    panel.rotation.x = -Math.PI / 2; panel.position.y = -0.002; panel.receiveShadow = true;
+    stage.add(panel);
+  }
+  const types = state.type === 'all' ? SPIDER_TYPES : [state.type];
+  types.forEach((type, i) => {
+    const vis = createSpiderVisual(type, { spiderDetail: state.detail }, { seed: 1234 + i * 77 });
+    stage.add(vis.root);
+    vis.setEyeGlow(state.glow);
+    vis.setOpacity(state.opacity);
+    const centre = new THREE.Vector3(types.length > 1 ? SLOT[type] : 0, 0, 0);
+    let steps = 0;
+    vis.rig.onStep = () => { steps++; };
+    const a = { type, vis, centre, phase: i * 1.3, dist: 0, steps: () => steps, hitHelper: null };
+    actors.push(a);
+    place(a, 0, 0);
+    vis.rig.snapFeet();
+  });
+  setHitboxes();
+}
+
+function setHitboxes() {
+  for (const a of actors) {
+    a.vis.hitbox.visible = state.hitbox;
+  }
+}
+
+// moves the root along its path; returns {speed, turnRate}
+function place(a, t, dt) {
+  const root = a.vis.root;
+  const sp = (state.walk === 'still' ? 0 : DEFAULT_SPEED[a.type] * state.speedMul);
+  if (state.walk === 'circle') {
+    const R = CIRCLE_R[a.type];
+    a.dist += sp * dt;
+    const th = a.dist / R + a.phase;
+    root.position.set(a.centre.x + Math.sin(th) * R, 0, a.centre.z + Math.cos(th) * R);
+    root.rotation.set(0, th + Math.PI / 2, 0); // tangent, walking counter-clockwise seen from above
+    return { speed: sp, turnRate: sp / R };
+  }
+  if (state.walk === 'line') {
+    a.dist += sp * dt;
+    const L = 6;
+    const u = ((a.dist % (2 * L)) + 2 * L) % (2 * L);
+    const fwd = u < L;
+    const z = fwd ? -L / 2 + u : L / 2 - (u - L);
+    root.position.set(a.centre.x, 0, z);
+    root.rotation.set(0, fwd ? 0 : Math.PI, 0);
+    return { speed: sp, turnRate: 0 };
+  }
+  root.position.copy(a.centre);
+  root.rotation.set(0, 0, 0);
+  return { speed: 0, turnRate: 0 };
+}
+
+let simTime = 0;
+function step(dt) {
+  simTime += dt;
+  for (const a of actors) {
+    const mv = place(a, simTime, dt);
+    const atk = state.attack >= 0 ? state.attack : (simTime % 2.6) / 2.6;
+    a.vis.rig.update(dt, { ...mv, mode: state.mode, attack: atk });
+  }
+}
+
+// ------------------------------------------------------------- camera presets
+function framing() {
+  const a = actors[0];
+  const span = a ? a.vis.legSpan : 2;
+  const c = state.type === 'all' ? new THREE.Vector3(0.6, 0.0, 0) : (a ? a.vis.root.position.clone() : new THREE.Vector3());
+  return { span, c };
+}
+function setCamera(name) {
+  const { span, c } = framing();
+  const all = state.type === 'all';
+  const s = all ? 6.5 : span;
+  const target = c.clone();
+  let pos;
+  if (name === 'close') {
+    // in front of the spider's face, low
+    const r = actors[0] && actors[0].vis.root;
+    const fwd = r ? new THREE.Vector3(0, 0, 1).applyQuaternion(r.getWorldQuaternion(new THREE.Quaternion())) : new THREE.Vector3(0, 0, 1);
+    target.copy(r ? r.getWorldPosition(new THREE.Vector3()) : c).add(new THREE.Vector3(0, s * 0.12, 0));
+    pos = target.clone().addScaledVector(fwd, s * 0.55).add(new THREE.Vector3(s * 0.12, s * 0.06, 0));
+  } else if (name === 'side') {
+    target.y = s * 0.12;
+    pos = new THREE.Vector3(c.x + s * 1.0, s * 0.16, c.z + 0.001);
+  } else if (name === 'front') {
+    target.y = s * 0.15;
+    pos = new THREE.Vector3(c.x + s * 0.05, s * 0.2, c.z + s * 1.1);
+  } else if (name === 'top') {
+    pos = new THREE.Vector3(c.x, s * 1.4, c.z + 0.01);
+  } else {
+    target.y = s * 0.08;
+    pos = all ? new THREE.Vector3(c.x + 0.3, 2.9, c.z + 7.0) : new THREE.Vector3(c.x + s * 0.55, s * 0.45, c.z + s * 0.85);
+  }
+  if (state.surface === 'wall') { const d = all ? 6 : 1.2 + s * 1.1; target.set(all ? 0.6 : 0, 3.5, -2); pos = new THREE.Vector3(target.x + d * 0.35, 3.3, -2 + d); }
+  if (state.surface === 'roof') { const d = all ? 5 : 0.8 + s * 0.9; target.set(all ? 0.6 : 0, 2.55, 0); pos = new THREE.Vector3(target.x + d * 0.3, 2.55 - d * 0.75, d * 0.7); }
+  camera.position.copy(pos);
+  controls.target.copy(target);
+  controls.update();
+}
+
+// ------------------------------------------------------------- UI
+function rebuild() { build(); if (state.freeze || state.t) { for (let i = 0; i < state.t * 60; i++) step(1 / 60); } setCamera(state.cam); }
+$('type').onchange = (e) => { state.type = e.target.value; rebuild(); };
+$('mode').onchange = (e) => { state.mode = e.target.value; if (state.mode !== 'walk' && state.walk === 'circle') state.walk = 'still'; if (state.mode === 'walk') state.walk = 'circle'; state.freeze = false; };
+$('speed').oninput = (e) => { state.speedMul = Number(e.target.value); state.freeze = false; };
+$('attack').oninput = (e) => { state.attack = Number(e.target.value); };
+$('glow').oninput = (e) => { state.glow = Number(e.target.value); actors.forEach((a) => a.vis.setEyeGlow(state.glow)); };
+$('opacity').oninput = (e) => { state.opacity = Number(e.target.value); actors.forEach((a) => a.vis.setOpacity(state.opacity)); };
+$('surface').onchange = (e) => { state.surface = e.target.value; rebuild(); };
+$('detail').onchange = (e) => { state.detail = Number(e.target.value); rebuild(); };
+$('hit').onchange = (e) => { state.hitbox = e.target.checked; setHitboxes(); };
+addEventListener('keydown', (e) => { if (e.key === 'h' || e.key === 'H') $('panel').classList.toggle('hidden'); });
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+
+rebuild();
+
+// ------------------------------------------------------------- loop
+const clock = new THREE.Clock();
+let frames = 0, fpsT = 0, fps = 0;
+function frame() {
+  requestAnimationFrame(frame);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!state.freeze) step(dt);
+  controls.update();
+  renderer.info.reset();
+  renderer.render(scene, camera);
+  frames++; fpsT += dt;
+  if (fpsT > 0.5) { fps = frames / fpsT; frames = 0; fpsT = 0; updateStats(); }
+}
+function updateStats() {
+  const i = renderer.info;
+  const lines = [`fps ${fps.toFixed(0)}  calls ${i.render.calls}  tris ${i.render.triangles}`];
+  for (const t of (state.type === 'all' ? SPIDER_TYPES : [state.type])) {
+    const s = spiderStats(t, state.detail);
+    lines.push(`${t.padEnd(8)} span ${s.legSpan.toFixed(2)} m  tris ${s.tris + s.eyeTris}`);
+  }
+  $('stats').textContent = lines.join('\n');
+}
+frame();
+
+// for headless checks
+window.__view = { THREE, scene, renderer, camera, actors, state, step, spiderStats, createSpiderVisual };
+</script>
+</body>
+</html>
