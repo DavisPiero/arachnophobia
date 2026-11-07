@@ -61,7 +61,7 @@ export class Game {
     this.eyes = new EyesSystem({ scene: this.scene, audio: this.audio });
     this.spiders = new SpiderManager({ scene: this.scene, audio: this.audio, events, quality: Quality, windows: this.windows, colliders: this.world.cabin.colliders });
     this.spiders.flashlight = this.flashlight;
-    this.gore = new Gore({ scene: this.scene, events, windows: this.windows });
+    this.gore = new Gore({ scene: this.scene, events, windows: this.windows, quality: Quality });
     this.spiders.gore = this.gore;
     this.melee = new Melee({ player: this.player, weapon: this.weapon, camera: this.camera, audio: this.audio, events, windows: this.windows, spiders: this.spiders });
     this.scene.add(this.weapon.view.boot);

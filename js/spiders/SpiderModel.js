@@ -632,6 +632,9 @@ export function createSpiderVisual(type, quality, opts = {}) {
     radius: Math.max(def.ceph.rx, def.abd.r, (def.abd.len + def.ceph.rz * 2) / 2) * scale,
     legSpan: A.lay.legSpan * scale,
     scale,
+    bones,                                   // for the death burst: leg pieces come from where the legs were
+    legRadius: def.legR * scale,
+    skinColor: new THREE.Color(...def.color).multiply(material.color).multiplyScalar(1.3),
     setEyeGlow(v) { glowV = Math.max(0, Math.min(1, v)); applyEyes(); },
     setOpacity(v) {
       opac = Math.max(0, Math.min(1, v));

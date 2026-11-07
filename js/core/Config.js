@@ -53,7 +53,10 @@ export const Config = {
     knockback: 0.18,         // metres a body hit pushes a spider on the ground (x its size factor)
     staggerEvery: 0.25,      // brutes stagger each time they lose this fraction of their health
     staggerTime: 0.7,        // seconds a stagger stops a brute
-    thrashTime: 1.4,         // seconds a dying spider thrashes before curling up
+    chunks: 160,             // a killed spider bursts into chunks: most alive at once (oldest go first)
+    chunksLow: 90,           // the same on phones (and fewer per burst)
+    chunkHold: 4,            // seconds a chunk stays fully visible once it has landed
+    chunkFade: 2,            // seconds it then takes to fade away
     splats: 60,              // blood splats kept in the world at once (oldest reused first)
     splatHold: 3,            // seconds a splat stays fully visible
     splatFade: 2,            // seconds it then takes to fade away (so splats never block a window for long)

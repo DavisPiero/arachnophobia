@@ -3,7 +3,7 @@
 // Life of a spider:
 //   approach (walk a forest route) -> [stalker: watch from the dark] -> climb to a window slot
 //   -> attackWindow (claw at the glass / boards) -> window breached -> enter -> inside (hunt the player)
-//   Any time: killed -> dying (thrashes, falls off walls, curls up) -> fades away.
+//   Any time: killed -> bursts into chunks (js/fx/Chunks.js); the spider itself is gone at once.
 // Hits: where the shot lands (body or leg) sets the spray and the jolt; brutes stagger every quarter of their health.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
@@ -120,9 +120,15 @@ export class Spider {
     this.voice?.die();
     const at = point || this.root.position;
     this.mgr.audio?.play('spiderKill', { position: at, volume: 1, exterior: !(Math.abs(at.x) < CABIN.halfX && Math.abs(at.z) < CABIN.halfZ) });
-    if (dir) this.mgr.gore?.spray(at, dir, 2.2);
-    this.splatHere(at, 0.55 * Math.max(0.7, this.cfg.scale) * (this.type === 'brute' ? 1.8 : 1));
-    this.fallV = this.surface === 'ground' || this.surface === 'floor' ? null : this.up.clone().multiplyScalar(1.2);
+    // burst: chunks of flesh, shell and its own legs, a heavy spray and a big splat; the body is gone at once
+    const big = this.type === 'brute' ? 1.8 : 1;
+    const center = this.visual.hitbox.getWorldPosition(new THREE.Vector3());
+    this.root.updateMatrixWorld(true);
+    this.mgr.gore?.burst(this.visual, center, dir, Math.max(0.7, this.cfg.scale) * (this.visual.legSpan || 1) * big);
+    this.mgr.gore?.spray(center, dir || UP, 3 * big);
+    this.splatHere(at, 0.6 * Math.max(0.7, this.cfg.scale) * big);
+    this.root.visible = false;
+    this.visual.hitbox.userData.spider = null;
     this.mgr.events.emit('spiderKilled', { spider: this, point: at, by });
   }
 
@@ -149,7 +155,6 @@ export class Spider {
       this.pause = Math.max(this.pause, this.stagger);
       this.attackT = Math.max(this.attackT, this.stagger + 0.2);
     }
-    let thrash = 0;
     let mode = 'walk';
     let moveSpeed = 0;
 
@@ -182,18 +187,17 @@ export class Spider {
         mode = this.attackAnim > 0 ? 'attack' : (moveSpeed > 0.05 ? 'walk' : 'idle');
         break;
       case 'dying':
-        this.updateDying(dt);
-        // thrash first (legs flailing), then curl up
-        thrash = Math.max(0, 1 - this.deadT / GORE.thrashTime);
-        mode = thrash > 0 ? 'idle' : 'dead';
-        break;
+        // nothing left to show: the voice finishes its death rattle, then the spider is removed
+        this.deadT += dt;
+        if (this.deadT > 2.5) this.remove();
+        return;
     }
     if (this.state === 'approach' || this.state === 'enter' || this.state === 'scuttle') mode = moveSpeed > 0.05 ? 'walk' : 'idle';
 
     // smooth speed for the rig
     this.speed += (moveSpeed - this.speed) * (1 - Math.exp(-10 * dt));
     this.orient(dt);
-    this.visual.rig.update(dt, { speed: this.speed, mode, thrash, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
+    this.visual.rig.update(dt, { speed: this.speed, mode, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
         : this.state === 'attackWindow' ? 'attackWindow'
@@ -438,30 +442,6 @@ export class Spider {
       }
       this.visual.rig.snapFeet();
     });
-  }
-
-  updateDying(dt) {
-    this.deadT += dt;
-    if (this.fallV) {
-      this.fallV.y -= 9.8 * dt;
-      this.root.position.addScaledVector(this.fallV, dt);
-      const p = this.root.position;
-      const inside = Math.abs(p.x) < CABIN.halfX && Math.abs(p.z) < CABIN.halfZ;
-      const ground = inside ? 0 : terrainHeight(p.x, p.z);
-      this.up.lerp(UP, 1 - Math.exp(-4 * dt)).normalize();
-      if (p.y <= ground) {
-        p.y = ground; this.fallV = null; this.up.copy(UP);
-        this.mgr.audio?.play('bulletImpactWood', { position: p, volume: 0.4, rate: 0.6, exterior: !inside });
-      }
-    }
-    if (this.deadT > 7) {
-      this.fade = Math.max(0, 1 - (this.deadT - 7) / 2);
-      this.visual.setOpacity(this.fade);
-      this.visual.setEyeGlow(0);
-      if (this.fade <= 0) this.remove();
-    } else {
-      this.visual.setEyeGlow(Math.max(0, 1 - this.deadT * 1.5));
-    }
   }
 
   remove() {
