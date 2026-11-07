@@ -38,13 +38,18 @@ function toolQ(h, b, out = new THREE.Quaternion()) {
   return out.setFromRotationMatrix(_m);
 }
 
-// Axe swing keyframes in camera space: t (0..1 of the swing), hand position, handle direction (grip -> head), bit direction.
+// The held axe at rest, in camera space: hand position, handle direction (grip -> head), bit direction.
+// The head stands up and a little forward on the right, bit facing left, so you see the side of the head.
+const AXE_IDLE = [[0.27, -0.29, -0.5], [-0.06, 0.8, -0.6], [-0.95, 0.1, -0.2]];
+// Axe swing keyframes: t (0..1 of the swing), then as AXE_IDLE. Starts and ends at rest.
+// The chop (0.46) lines up with Config.melee.axe.hitAt / time.
 const AXE_KEYS = [
-  [0.0, [0.38, -0.66, -0.24], [0.3, 0.9, 0.2], [-0.6, 0.3, -0.7]],
-  [0.3, [0.3, 0.02, -0.4], [0.45, 0.85, 0.15], [-0.55, 0.35, -0.75]],
-  [0.48, [0.02, -0.14, -0.44], [-0.2, 0.3, -0.93], [-0.45, -0.85, -0.2]],
-  [0.62, [-0.16, -0.36, -0.38], [-0.6, -0.25, -0.75], [-0.3, -0.9, 0.3]],
-  [1.0, [-0.32, -0.85, -0.2], [-0.55, -0.65, -0.5], [-0.2, -0.9, 0.4]],
+  [0.0, ...AXE_IDLE],
+  [0.26, [0.3, 0.02, -0.4], [0.45, 0.85, 0.15], [-0.55, 0.35, -0.75]],
+  [0.46, [0.02, -0.14, -0.44], [-0.2, 0.3, -0.93], [-0.45, -0.85, -0.2]],
+  [0.6, [-0.16, -0.36, -0.38], [-0.6, -0.25, -0.75], [-0.3, -0.9, 0.3]],
+  [0.76, [-0.05, -0.6, -0.36], [-0.3, 0.3, -0.9], [-0.6, -0.3, 0.3]],
+  [1.0, ...AXE_IDLE],
 ];
 
 export class ViewModel {
@@ -217,10 +222,11 @@ export class ViewModel {
     const a = smooth(s.aimK), sp = smooth(s.sprintK);
     const steady = 1 - 0.75 * a;
     const r = s.reloading ? reloadCurve(s.reloadT) : 0;
-    // rifle lowered out of the way for the axe and the stomp
-    const axeDown = s.axeT >= 0 ? Math.min(ramp(s.axeT, 0, 0.14), 1 - ramp(s.axeT, 0.72, 1)) : 0;
+    // the stomp lowers whatever you hold; switching weapons lowers one and raises the other
     const stompDown = s.stompT >= 0 ? Math.min(ramp(s.stompT, 0, 0.12), 1 - ramp(s.stompT, 0.6, 1)) * 0.6 : 0;
-    const down = Math.max(axeDown, stompDown);
+    const held = s.held || 'rifle', draw = s.drawK ?? 1;
+    const holdDown = 1 - smooth(draw);
+    const down = held === 'rifle' ? Math.max(stompDown, holdDown) : 1;
     this.rifle.visible = down < 0.98;
 
     const sx = s.swayX * steady, sy = s.swayY * steady;
@@ -253,9 +259,15 @@ export class ViewModel {
     // left hand: on the forend, or feeding rounds into the loading gate during a reload
     this.updateLoading(s);
 
-    // axe
-    this.axe.visible = s.axeT >= 0 && s.axeT < 1;
-    if (this.axe.visible) this.poseAxe(s.axeT);
+    // axe: held at rest, or mid-swing; lowered by the stomp and the weapon switch
+    this.axe.visible = held === 'axe' && holdDown < 0.98;
+    if (this.axe.visible) {
+      this.poseAxe(s.axeT >= 0 && s.axeT < 1 ? s.axeT : 0);
+      const ad = Math.max(holdDown, stompDown);
+      this.axe.position.x += sx * 0.6 + ad * 0.08;
+      this.axe.position.y += s.bob + sy * 0.6 - ad * 0.55 - sp * 0.06;
+      if (ad > 0) this.axe.rotateX(-ad * 0.6);
+    }
 
     // spent cases
     for (const c of this.cases) {

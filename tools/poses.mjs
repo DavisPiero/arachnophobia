@@ -1,6 +1,6 @@
 // Headless screenshots of every first-person pose in one session (cheaper than one browser per shot).
 // Usage: node tools/poses.mjs [outDir=shots/poses] [--mobile] [--only=name,name]
-// Poses: hip, aim, lever, reload, axe1/axe/axe3 (wind-up, strike, follow-through), stomp, kill. Drives the game through window.game; never opens a window.
+// Poses: hip, aim, lever, reload, axehold (axe held at rest), axe1/axe/axe3 (wind-up, strike, follow-through), stomp, kill. Drives the game through window.game; never opens a window.
 import { chromium } from 'playwright';
 import { startServer } from './serve.mjs';
 import fs from 'node:fs';
@@ -39,9 +39,10 @@ const poses = {
     await page.evaluate(() => { const g = window.game; g.weapon.mag = 3; const p = g.table.position; g.player.position.set(p.x, 0, p.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.35; g.table.tryStart(); });
     await step(1.2, 24);
   },
-  axe1: async () => { await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.19, 6); },
-  axe: async () => { await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.29, 8); },
-  axe3: async () => { await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.38, 8); },
+  axehold: async () => { await page.evaluate(() => window.game.weapon.select('axe')); await step(0.8, 16); },
+  axe1: async () => { await page.evaluate(() => window.game.weapon.select('axe')); await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.19, 6); },
+  axe: async () => { await page.evaluate(() => window.game.weapon.select('axe')); await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.33, 8); },
+  axe3: async () => { await page.evaluate(() => window.game.weapon.select('axe')); await step(0.8, 16); await page.evaluate(() => window.game.melee.tryAxe()); await step(0.45, 8); },
   stomp: async () => { await step(0.8, 16); await page.evaluate(() => { const g = window.game; g.player.position.set(0.3, 0, 1.8); g.player.pitch = 0; g.melee.tryStomp(); }); await step(0.24, 8); },
   down: async () => { await page.evaluate(() => { window.game.player.pitch = -1.4; }); await step(0.5, 10); },
   kill: async () => {

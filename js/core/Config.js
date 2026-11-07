@@ -41,10 +41,11 @@ export const Config = {
     aimLookScale: 0.8,       // mouse/touch look sensitivity x this while aimed
     fireBuffer: 0.15,        // a fire press this close to the end of the lever cycle fires as soon as it ends
     muzzleLight: 60,         // peak brightness of the room light from a shot
+    switchTime: 0.45,        // seconds to swap rifle <-> axe (1 / 2): half lowering, half raising
   },
-  // Axe (F) and stomp (V). Reach is measured from the eye to the spider's body.
+  // Axe (held with 2, swung with left click) and stomp (C). Reach is measured from the eye to the spider's body.
   melee: {
-    axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.62, hitAt: 0.3, windowDamage: 9, knockback: 0.35 },
+    axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.72, hitAt: 0.33, windowDamage: 9, knockback: 0.35 },
     stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'] },
   },
   // Hit and kill feedback on the spiders.

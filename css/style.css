@@ -43,6 +43,8 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
   position: absolute; right: calc(28px + var(--safe-r)); bottom: calc(24px + var(--safe-b));
   font-size: 30px; text-align: right; text-shadow: 0 0 8px #000; font-variant-numeric: tabular-nums;
 }
+#ammo { transition: opacity 0.25s; }
+#ammo.dim { opacity: 0.3; }  /* holding the axe */
 #ammo .sep { color: var(--dim); margin: 0 8px; font-size: 22px; }
 #ammo #ammo-stock { font-size: 20px; color: var(--dim); }
 #ammo .label { font-size: 10px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }

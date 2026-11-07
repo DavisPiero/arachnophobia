@@ -99,8 +99,12 @@ for (const device of ['desktop', 'phone']) {
     g.weapon.tryFire(); r.blocked = g.weapon.mag === m0 - 1;
     await simWait(0.5);
     // axe: a full swing comes back to the rifle
+    // weapon switch: 2 brings the axe up, a click swings it, 1 brings the rifle back
+    g.weapon.select('axe'); await simWait(0.6);
+    r.axeHeld = g.weapon.ready('axe') && view.axe.visible && !view.rifle.visible;
     r.axeStarted = g.melee.tryAxe(); await simWait(0.3); r.axeVisible = view.axe.visible;
-    await simWait(0.6); r.axeDone = !g.melee.busy;
+    await simWait(0.7); r.axeDone = !g.melee.busy;
+    g.weapon.select('rifle'); await simWait(0.6); r.rifleBack = g.weapon.ready('rifle') && !view.axe.visible;
     // a runner inside, in front: the stomp kills it, with gore
     const s = g.spiders.spawn('runner', 'north');
     s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(0, 0, 0.75);
@@ -114,7 +118,9 @@ for (const device of ['desktop', 'phone']) {
   check(m3.viewAssets && m3.hasBoot, 'Blender hands, rifle and axe loaded');
   check(m3.leverOpen > 0.3, `lever opens after a shot (${m3.leverOpen.toFixed(2)} rad)`);
   check(m3.blocked, 'a second shot waits for the lever');
-  check(m3.axeStarted && m3.axeVisible && m3.axeDone, 'axe swings and returns to the rifle');
+  check(m3.axeHeld, 'pressing 2 puts the axe in your hands');
+  check(m3.axeStarted && m3.axeVisible && m3.axeDone, 'the held axe swings');
+  check(m3.rifleBack, 'pressing 1 brings the rifle back');
   check(m3.stompStarted && m3.stompKilled && m3.killedBy === 'stomp', `stomp kills a runner on the floor (${m3.killedBy})`);
   check(m3.splats > 0, `kills leave ichor splats (${m3.splats})`);
 

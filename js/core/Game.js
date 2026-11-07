@@ -217,8 +217,13 @@ export class Game {
 
     if (playing) {
       if (input.consume('interact')) this.table.tryStart();
-      if (input.consume('fire')) this.weapon.tryFire();
-      if (input.consume('axe')) this.melee.tryAxe();
+      if (input.consume('rifle')) this.weapon.select('rifle');
+      if (input.consume('axe')) this.weapon.select('axe');
+      if (input.consume('swap')) this.weapon.toggle();
+      // left click / FIRE uses whatever is in your hands; holding it keeps swinging the axe
+      const fire = input.consume('fire');
+      if (this.weapon.held === 'axe') { if (fire || input.fireHeld) this.melee.tryAxe(); }
+      else if (fire) this.weapon.tryFire();
       if (input.consume('stomp')) this.melee.tryStomp();
       if (input.consume('torch')) this.flashlight.toggle();
     }
@@ -274,8 +279,9 @@ export class Game {
     this.input.touch.setInteractAvailable(!!prompt?.can, this.table.reloading ? '…' : 'USE');
     this.hud.update(dt, {
       mag: this.weapon.mag, stock: this.table.stock, health: this.player.health,
-      prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted,
+      prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted, held: this.weapon.want,
     });
+    this.input.touch.setHeld(this.weapon.want);
     input.endFrame();
   }
 

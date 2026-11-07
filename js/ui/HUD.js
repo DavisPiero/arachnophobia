@@ -21,7 +21,8 @@ export class HUD {
 
   set(key, value, fn) { if (this._last[key] !== value) { this._last[key] = value; fn(value); } }
 
-  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted }) {
+  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held }) {
+    this.set('held', held, (v) => { this.ammo.classList.toggle('dim', v === 'axe'); });
     this.set('mag', mag, (v) => { this.mag.textContent = v; this.ammo.classList.toggle('empty', v === 0); });
     this.set('stock', stock, (v) => { this.stock.textContent = v; });
     this.set('health', Math.round(health), (v) => {

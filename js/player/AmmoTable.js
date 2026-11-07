@@ -52,6 +52,7 @@ export class AmmoTable {
       return false;
     }
     this.reloading = true;
+    this.weapon.forceRifle();   // holding the axe: the rifle comes straight up for the reload
     this.t = 0;
     this.player.locked = true;
     this.weapon.reloading = true;
