@@ -3,7 +3,7 @@
 *Session of 2026-11-07 (second). Replaces any earlier note.*
 
 ## Repo state
-- Branch `m2-pipeline-and-feel`, pushed to origin, not merged. `main` is milestone 1 and is what GitHub Pages serves.
+- `main` is the only branch: milestone 2 signed off, merged, pushed and live. The branch was deleted.
 - `npm test` passed on the branch after the last code change.
 
 ## Read first
@@ -19,7 +19,6 @@
   phone zoom guard (`js/input/NoZoom.js`).
 
 ## What comes next
-- User plays the branch and signs off (then merge to main, push, delete branch).
 - Milestone 3: hands/arms + lever-action rifle + axe as Blender generators with armature animations; axe on F (F currently also
   means "interact": move that to E only), stomp on V, combat feedback.
 

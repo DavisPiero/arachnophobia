@@ -1,9 +1,9 @@
 # State
 
-**Where we are:** second iteration, milestone 2 (Blender pipeline, lighting and darkness fixes, flashlight, sprint, aim down
-sights, phone zoom fix) built on branch `m2-pipeline-and-feel`, pushed, **not merged**. Main is still milestone 1 and is what's live.
+**Where we are:** milestone 2 (Blender pipeline, lighting and darkness fixes, flashlight, sprint, aim down sights,
+phone zoom fix) signed off, merged to main and live at https://davispiero.github.io/arachnophobia/.
 
-**Next:** you play the branch and sign off milestone 2. Then milestone 3: hands and arms, a lever-action rifle and an axe from
+**Next:** milestone 3: hands and arms, a lever-action rifle and an axe from
 Blender, the axe on F, the stomp on V, recoil, sway, shake, muzzle flash, blood, combat sounds. Full roadmap in SPEC.md.
 
 **Open with you:**
