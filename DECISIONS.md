@@ -65,3 +65,16 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Legs visible when looking down (user approved): cargo trousers, boots, belt and the bottom of the jacket, standing 0.24 m behind the eye; legs swing when walking; the right leg hides while the stomp boot is out.
 - 2026-11-07 — Splats are dark red and fade after 3 s + 2 s (user's call): they blocked the windows. Replaces "ichor yellow-green, stays for the wave".
 - 2026-11-07 — Rifle reworked after the side-gate reference: round barrel, closed big-loop lever, checkered walnut, rubber butt pad, buckhorn rear sight, brass bead. Axe after the forest-axe reference: bearded bit, hooked handle swell. No maker's marks.
+- 2026-11-07 — Milestone 4 started. Order: quick fixes first (cabin, weapon switch, stomp key, burst deaths), then spider models and locomotion.
+- 2026-11-07 — Cabin 9 × 12 m (1.5×, user's call) and 3.0 m to the ceiling (user: "a little bit taller"). Windows stay 1.1 × 1.0 m, so the squeeze matters. Furniture positions now live in Layout.js `FURNITURE`.
+- 2026-11-07 — Lantern 11.5 → 15 for the bigger room; no new lights. Guess.
+- 2026-11-07 — Weapon switch: 1 rifle, 2 axe, 0.45 s swap; click swings the held axe; the F quick-swing is gone (user agreed). Reloading switches back to the rifle. Touch: the AXE button swaps and names the other weapon.
+- 2026-11-07 — Stomp moved from V to C (user's call).
+- 2026-11-07 — Killed spiders burst into chunks instead of thrashing (user's call): wet red lumps, bits of shell, pieces of their own legs; they fall, bounce, stick to and slide down walls, then fade (4 s + 2 s). Two instanced meshes, so no extra draw calls.
+- 2026-11-07 — Trigger and support forearms angled 10° further down (user: yes). Sleeves are still large when aiming.
+- 2026-11-07 — Spider look is a mix (user agreed): runner and climber dark with red eyes, brute pale-legged with a skull-like plate and quills, stalker pale with two huge black eyes. Traits borrowed from the references, no creature copied.
+- 2026-11-07 — Spiders are one smooth skinned mesh per species from Blender; the game rebuilds the skeleton from the generator's rest pose (.json), and the existing leg code drives it. Mesh compression's position offset is recovered from the bind data on load.
+- 2026-11-07 — Spider stance flattened (shorter legs relative to foot distance): the first build stood like a harvestman with knees far above the body.
+- 2026-11-07 — Brute gait: one leg at a time (wave); the rest alternate sets of four. Feet land on the real terrain; the body lifts and tilts with its feet.
+- 2026-11-07 — Window entry: every leg grips the frame on the side of the wall it reaches for, re-gripping one at a time, the body narrows as it passes the wall. Squeeze speeds: runner 1.4, climber 0.7, stalker 0.55, brute 0.45 m/s (a brute takes about 5 s). Guess.
+- 2026-11-07 — Five more species written up in SPECIES.md as guesses (stilt, swarmling, weaver, burrower, mother); not built.

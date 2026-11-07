@@ -134,15 +134,20 @@ export function climberRoute(win, from) {
   return nodes;
 }
 
-/** Through a broken window into the room, ending on the floor. */
-export function enterPath(from, fromN, win) {
+/**
+ * Through a broken window into the room, ending on the floor. bodyLen: the spider's length (m), so a big one starts
+ * further out and ends further in. Nodes with `squeeze` start a segment where the spider grips the frame and pulls
+ * itself through (SpiderRig squeeze); everything from leaving the glass to clearing the inside face.
+ */
+export function enterPath(from, fromN, win, bodyLen = 0.4) {
   const n = win.normal;
   const sill = win.center.y - win.height / 2;
+  const half = bodyLen * 0.5;
   return [
-    { p: from.clone(), n: fromN.clone(), s: 'glass' },
-    { p: win.center.clone().addScaledVector(n, WALL_OUT + 0.05).setY(sill + 0.05), n: UP.clone(), s: 'wall' },
-    { p: win.center.clone().addScaledVector(n, -0.35).setY(sill + 0.02), n: UP.clone(), s: 'floor' },
-    { p: win.center.clone().addScaledVector(n, -1.1).setY(0), n: UP.clone(), s: 'floor' },
+    { p: from.clone(), n: fromN.clone(), s: 'glass', squeeze: true },
+    { p: win.center.clone().addScaledVector(n, WALL_OUT + half + 0.05).setY(sill + 0.02), n: UP.clone(), s: 'wall', squeeze: true },
+    { p: win.center.clone().addScaledVector(n, -half - 0.1).setY(sill + 0.02), n: UP.clone(), s: 'wall' },
+    { p: win.center.clone().addScaledVector(n, -half - 0.9).setY(0), n: UP.clone(), s: 'floor' },
   ];
 }
 

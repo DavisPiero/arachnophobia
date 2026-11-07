@@ -13,6 +13,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { SpiderRig, BONE, BONE_COUNT } from './SpiderRig.js';
 import { getChitinTextures, getGlowTexture } from './SpiderTextures.js';
 import { Config } from '../core/Config.js';
+import { loadModel, assetsEnabled } from '../core/Assets.js';
 
 export const SPIDER_TYPES = ['runner', 'brute', 'climber', 'stalker'];
 
@@ -407,10 +408,88 @@ function makeLayout(def) {
 }
 
 
+// ---------------------------------------------------------------- Blender models (milestone 4)
+// blender/generators/spiders.py writes assets/models/spider_<type>.glb (one smooth skinned mesh, 58 joints named
+// b00..b57 in BONE order) and spider_<type>.json: the rig numbers, the leg layout and the rest frame of every bone the
+// mesh was built around. The game rebuilds the skeleton from those frames, so SpiderRig drives the Blender mesh with
+// the same maths as the code-made one. Missing files: the code-made spiders below are used.
+const glb = {};   // type -> { def, lay, rest, mesh: {geometry, material, joints}, lod, glow }
+const v3a = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+
+/** Load every species' model before the first spider is made. Safe to call more than once. */
+export async function loadSpiderModels(quality) {
+  if (!assetsEnabled) return [];
+  const base = new URL('../../assets/models/', import.meta.url);
+  const loaded = await Promise.all(SPIDER_TYPES.map(async (type) => {
+    if (glb[type]) return type;
+    try {
+      const [side, model] = await Promise.all([
+        fetch(new URL(`spider_${type}.json`, base)).then((r) => (r.ok ? r.json() : null)),
+        loadModel(`spider_${type}`, quality),
+      ]);
+      const mesh = model?.get(`spider_${type}`);
+      if (!side || !mesh || !mesh.joints) return null;
+      const L = side.layout;
+      const lay = {
+        bodyZ0: L.bodyZ0, legSpan: L.legSpan, abdAttach: v3a(L.abdAttach),
+        legs: L.legs.map((l) => ({ ...l, dir: v3a(l.dir), attach: v3a(l.attach), rest: v3a(l.rest) })),
+        palps: L.palps.map((p) => ({ ...p, attach: v3a(p.attach) })),
+        chel: L.chel.map((c) => ({ ...c, attach: v3a(c.attach) })),
+      };
+      glb[type] = { side, lay, rest: side.rest.map((m) => new THREE.Matrix4().fromArray(m)),
+        mesh: remapJoints(mesh), lod: model.get(`spider_${type}_lod1`) ? remapJoints(model.get(`spider_${type}_lod1`)) : null };
+      return type;
+    } catch (err) {
+      console.warn(`[assets] spider_${type} not loaded, using the built-in model`, err?.message || err);
+      return null;
+    }
+  }));
+  return loaded.filter(Boolean);
+}
+
+/** The glTF's joints are in its own order; rewrite skinIndex so index i is our bone i (joint name 'b07' -> 7). */
+function remapJoints(m) {
+  const map = m.joints.map((n) => parseInt(String(n).replace(/\D/g, ''), 10));
+  const si = m.geometry.attributes.skinIndex;
+  if (!m.remapped && si) {
+    for (let i = 0; i < si.array.length; i++) si.array[i] = map[si.array[i]] ?? 0;
+    si.needsUpdate = true;
+    m.remapped = true;
+  }
+  return m;
+}
+
+function buildGlbAssets(type, detail) {
+  const G = glb[type];
+  const key = type + ':glb:' + detail;
+  if (assetCache.has(key)) return assetCache.get(key);
+  const def = { ...DEFS[type], ...G.side.def };
+  const lay = G.lay;
+  const src = (!detail && G.lod) ? G.lod : G.mesh;
+  const material = src.material.clone();
+  material.envMapIntensity = 0.5;
+  // the red eye glow (glowing species): points in body-bone space from the generator
+  const glowGeometry = new THREE.BufferGeometry();
+  glowGeometry.setAttribute('position', new THREE.Float32BufferAttribute(G.side.glow.flat(), 3));
+  const front = lay.bodyZ0 + def.ceph.rz * 1.05, back = lay.bodyZ0 - def.ceph.rz * 0.95 - def.abd.len;
+  const hit = {
+    center: new THREE.Vector3(0, def.bodyH + def.abd.r * 0.1, (front + back) / 2),
+    radii: new THREE.Vector3(Math.max(def.ceph.rx, def.abd.r * def.abd.sx) * 1.15, Math.max(def.ceph.ry, def.abd.r * def.abd.sy) * 1.25, (front - back) / 2 * 1.05),
+  };
+  const boneInverses = G.rest.map((m) => m.clone().invert());
+  const glowColor = G.side.eyes?.color;
+  const out = { def, lay, geometry: src.geometry, eyeGeometry: null, glowGeometry, material, hit, boneInverses, glowColor,
+    fromBlender: true, legR: G.side.legR, skin: G.side.color,
+    tris: (src.geometry.index ? src.geometry.index.count : src.geometry.attributes.position.count) / 3, eyeTris: 0 };
+  assetCache.set(key, out);
+  return out;
+}
+
 // ---------------------------------------------------------------- shared assets cache
 const assetCache = new Map();
 
 function buildAssets(type, detail) {
+  if (glb[type]) return buildGlbAssets(type, detail);
   const key = type + ':' + detail;
   if (assetCache.has(key)) return assetCache.get(key);
   const def = DEFS[type];
@@ -582,7 +661,8 @@ export function createSpiderVisual(type, quality, opts = {}) {
 
   const bones = [];
   for (let i = 0; i < BONE_COUNT; i++) { const b = new THREE.Bone(); space.add(b); bones.push(b); }
-  const skeleton = new THREE.Skeleton(bones, bones.map(() => new THREE.Matrix4()));
+  // code-made geometry is stored in each bone's own space (identity inverses); a Blender mesh is in its rest pose
+  const skeleton = new THREE.Skeleton(bones, A.boneInverses ? A.boneInverses.map((m) => m.clone()) : bones.map(() => new THREE.Matrix4()));
   const mesh = new THREE.SkinnedMesh(A.geometry, material);
   mesh.bind(skeleton, new THREE.Matrix4());
   mesh.castShadow = true;
@@ -592,7 +672,7 @@ export function createSpiderVisual(type, quality, opts = {}) {
 
   // eyes: per-instance materials so glow can be dimmed per spider
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff1008, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false });
-  const eyeMesh = new THREE.Mesh(A.eyeGeometry, eyeMat);
+  const eyeMesh = A.eyeGeometry ? new THREE.Mesh(A.eyeGeometry, eyeMat) : new THREE.Group();   // Blender eyes are in the mesh
   eyeMesh.renderOrder = 20;
   const glowMat = new THREE.PointsMaterial({
     map: getGlowTexture(), color: 0xff1a0a, size: def.glow, sizeAttenuation: true,
@@ -633,8 +713,9 @@ export function createSpiderVisual(type, quality, opts = {}) {
     legSpan: A.lay.legSpan * scale,
     scale,
     bones,                                   // for the death burst: leg pieces come from where the legs were
-    legRadius: def.legR * scale,
-    skinColor: new THREE.Color(...def.color).multiply(material.color).multiplyScalar(1.3),
+    legRadius: (A.legR ?? def.legR) * scale,
+    skinColor: new THREE.Color(...(A.skin || def.color)).multiply(material.color).multiplyScalar(A.fromBlender ? 1 : 1.3),
+    fromBlender: !!A.fromBlender,
     setEyeGlow(v) { glowV = Math.max(0, Math.min(1, v)); applyEyes(); },
     setOpacity(v) {
       opac = Math.max(0, Math.min(1, v));

@@ -40,8 +40,15 @@ function collectMeshes(gltf) {
   gltf.scene.traverse((o) => {
     if (!o.isMesh) return;
     const geometry = dequantize(o.geometry);
-    geometry.applyMatrix4(o.matrixWorld);
-    out.set(o.name, { geometry, material: o.material });
+    if (o.isSkinnedMesh) {
+      // a skinned mesh's node transform is ignored by glTF; compression folds its position scale/offset into the
+      // inverse bind matrices instead. At rest every joint maps the stored positions to the real ones, so take it from
+      // joint 0: bone world x inverse bind x bind matrix.
+      const sk = o.skeleton;
+      geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(sk.bones[0].matrixWorld, sk.boneInverses[0]).multiply(o.bindMatrix));
+    } else geometry.applyMatrix4(o.matrixWorld);
+    // skinned meshes (spiders) also report their joint names, so the caller can map skinIndex onto its own bones
+    out.set(o.name, { geometry, material: o.material, joints: o.isSkinnedMesh ? o.skeleton.bones.map((b) => b.name) : null });
   });
   return out;
 }

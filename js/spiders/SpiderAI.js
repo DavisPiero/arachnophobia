@@ -197,7 +197,15 @@ export class Spider {
     // smooth speed for the rig
     this.speed += (moveSpeed - this.speed) * (1 - Math.exp(-10 * dt));
     this.orient(dt);
-    this.visual.rig.update(dt, { speed: this.speed, mode, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
+    // feet on the real ground; gripping the frame while squeezing through a window
+    const onGround = this.surface === 'ground' || this.surface === 'floor';
+    const sq = this.state === 'enter' && this.path && this.path[this.seg]?.squeeze ? this.squeezeFrame : null;
+    if (sq) {
+      const mid = _d.copy(sq.center).addScaledVector(sq.normal, sq.depth / 2);
+      const body = _f.copy(this.root.position).addScaledVector(this.up, this.visual.radius * 0.6);
+      sq.narrow = Math.max(0, 1 - Math.abs(body.sub(mid).dot(sq.normal)) / (this.visual.radius * 1.6));
+    }
+    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
         : this.state === 'attackWindow' ? 'attackWindow'
@@ -217,7 +225,8 @@ export class Spider {
     const a = this.path[this.seg], b = this.path[this.seg + 1];
     const climbing = b.s !== 'ground' && b.s !== 'floor';
     let v = (climbing ? this.cfg.climbSpeed : this.cfg.speed) * (this.flinch > 0 ? 0.15 : 1);
-    v *= this.gaitFactor(dt);
+    if (a.squeeze) v = this.cfg.squeezeSpeed * (this.flinch > 0 ? 0.3 : 1);   // hauling itself through the frame
+    else v *= this.gaitFactor(dt);
     const len = Math.max(0.001, a.p.distanceTo(b.p));
     this.segT += (v * dt) / len;
     while (this.segT >= 1 && this.seg < this.path.length - 1) {
@@ -356,8 +365,12 @@ export class Spider {
     this.state = 'enter';
     const w = this.window;
     const from = this.root.position.clone();
-    const nodes = enterPath(from, this.up, w);
+    const nodes = enterPath(from, this.up, w, this.visual.radius * 2.2);
     if (this.type === 'brute') nodes[0].s = 'ground';
+    this.squeezeFrame = {
+      center: w.center.clone(), normal: w.normal.clone(), tangent: new THREE.Vector3().crossVectors(UP, w.normal).normalize(),
+      width: w.width, height: w.height, depth: CABIN.wallThickness, narrow: 0,
+    };
     this.follow(nodes, () => { this.state = 'inside'; this.surface = 'floor'; this.up.copy(UP); });
     this.mgr.events.emit('spiderInside', { spider: this });
   }
@@ -452,6 +465,11 @@ export class Spider {
     this.voice?.dispose();
     this.visual.dispose();
   }
+}
+
+/** Height under a point: the cabin floor inside, the terrain outside. */
+function groundAt(x, z) {
+  return Math.abs(x) < CABIN.halfX && Math.abs(z) < CABIN.halfZ ? 0 : terrainHeight(x, z);
 }
 
 function WINDOW_POINT(win, u, y) {

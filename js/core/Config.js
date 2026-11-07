@@ -83,11 +83,12 @@ export const Config = {
     fogDensity: 0.034,       // lower = see further (east clearing readable to ~25 m)
     fogColor: [0.011, 0.014, 0.019],  // linear RGB; near-black so the forest still darkens with distance
   },
+  // squeezeSpeed: m/s while hauling itself through a breached window frame (big ones get stuck for a while)
   spiders: {
-    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4 },  // 1.4: smallest spiders were too small to read
-    brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0 },
-    climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0 },
-    stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0 },
+    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4, squeezeSpeed: 1.4 },  // 1.4: smallest spiders were too small to read
+    brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0, squeezeSpeed: 0.45 },
+    climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0, squeezeSpeed: 0.7 },
+    stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0, squeezeSpeed: 0.55 },
   },
   waves: {
     firstDelay: 18,          // seconds of quiet before wave 1

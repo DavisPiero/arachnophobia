@@ -23,6 +23,7 @@ import { WaveSystem } from '../spiders/WaveSystem.js';
 import { PostFX } from '../fx/PostFX.js';
 import { HUD } from '../ui/HUD.js';
 import { Menu } from '../ui/Menu.js';
+import { loadSpiderModels } from '../spiders/SpiderModel.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -118,7 +119,8 @@ export class Game {
     this.menu.setLoading('Building sounds…');
     try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
     this.menu.setLoading('Carving rocks…');
-    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality), this.legs.loadAssets(Quality)]);
+    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality), this.legs.loadAssets(Quality),
+      loadSpiderModels(Quality).then((t) => { this.spiderModels = t; })]);
     // the boot and the legs stand in the room: keep the moon off them like every other interior surface
     for (const g of [this.weapon.view.boot, this.legs.root]) g.traverse((o) => { if (o.isMesh && o.material) interiorMaterial(o.material); });
     this.state = 'title';

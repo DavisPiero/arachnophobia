@@ -31,10 +31,12 @@ if (!skipBlender && toGenerate.length) {
 fs.mkdirSync('assets/models', { recursive: true });
 let failed = false;
 for (const n of wanted) {
-  const src = fs.existsSync(`blender/source/${n}.glb`) ? `blender/source/${n}.glb` : `blender/build/${n}.glb`;
-  if (!fs.existsSync(src)) { console.log(`[assets] ${n}: no ${src}, skipped`); continue; }
-  let budget = {};
-  try { budget = JSON.parse(fs.readFileSync(`assets/params/${n}.json`, 'utf8')).budget || {}; } catch (_) {}
+  let budget = {}, outputs = [n];
+  try { const p = JSON.parse(fs.readFileSync(`assets/params/${n}.json`, 'utf8')); budget = p.budget || {}; outputs = p.outputs || [n]; } catch (_) {}
+  // a family can write several files (spiders: one per species); SPIDERS=a,b limits which ones
+  for (const o of outputs) {
+  const src = fs.existsSync(`blender/source/${o}.glb`) ? `blender/source/${o}.glb` : `blender/build/${o}.glb`;
+  if (!fs.existsSync(src)) { console.log(`[assets] ${o}: no ${src}, skipped`); continue; }
   const cli = path.join('node_modules', '.bin', 'gltf-transform');
   // geometry + resize first (textures stay PNG), then WebP with a quality we choose:
   // normal maps soften badly under lossy WebP, so they get their own (higher) quality: budget.normalQuality.
@@ -48,10 +50,11 @@ for (const n of wanted) {
     if (r.ok) r = run(cli, ['webp', out, out, '--quality', String(budget.webpQuality || 80), ...rest]);
     if (!r.ok) { console.log(r.out); failed = true; return; }
     const kb = (fs.statSync(out).size / 1024).toFixed(0);
-    console.log(`[assets] ${n}: ${src} -> ${out} (${kb} KB)${kb > (budget.maxKB || 5120) ? '  OVER budget' : ''}`);
+    console.log(`[assets] ${o}: ${src} -> ${out} (${kb} KB)${kb > (budget.maxKB || 5120) ? '  OVER budget' : ''}`);
   };
-  shrink(`assets/models/${n}.glb`, budget.gameTexture || 1024);
+  shrink(`assets/models/${o}.glb`, budget.gameTexture || 1024);
   // phones (the low quality tier) load <name>_low.glb: the same meshes, half-size textures
-  if (budget.lowTexture) shrink(`assets/models/${n}_low.glb`, budget.lowTexture);
+  if (budget.lowTexture) shrink(`assets/models/${o}_low.glb`, budget.lowTexture);
+  }
 }
 process.exit(failed ? 1 : 0);
