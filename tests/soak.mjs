@@ -47,7 +47,7 @@ const result = await page.evaluate(async (limit) => {
     await wait(60);
     if (g.table.reloading) continue;
     if (g.weapon.mag === 0 && g.table.stock > 0) {
-      g.player.position.set(-1.1, 0, 2.7);
+      { const tp = g.table.position; g.player.position.set(tp.x, 0, tp.z - 0.8); }
       g.table.tryStart();
       continue;
     }

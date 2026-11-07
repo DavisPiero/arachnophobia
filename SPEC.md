@@ -15,12 +15,14 @@ The core loop: **listen → pick a window → look and shoot → run low → cro
    You still only see one window at a time. A flashlight helps but shows only what it points at.
 2. **Sound tells you where to go.** 3D positional sound for every spider; you hear them before you see them.
 3. **Reloading is a commitment.** Only at the table, takes ~3 s, cannot move or shoot, spiders keep coming.
-4. **Spiders that look and move like real creatures.** Dark, segmented, long jointed legs, tiny red eyes, legs that plant and step.
+4. **Spiders that look and move like real creatures.** A mix: some dark with tiny red eyes, some pale and gaunt with
+   big dark eyes (see `SPECIES.md`). Segmented, long jointed legs that plant, step and grip; big ones squeeze in through
+   a broken window, gripping the frame.
 5. **Works on a phone.** Landscape touch controls are as good as mouse and keyboard.
 
 ## The world
 
-- Cabin interior 6 × 8 m (see `js/world/Layout.js`). Warm hanging lantern, an oil lamp on the west wall, a candle on the ammo table.
+- Cabin interior 9 × 12 m, 3 m to the ceiling (see `js/world/Layout.js`). Warm hanging lantern, an oil lamp on the west wall, a candle on the ammo table.
   Boarded door on the south wall.
 - Three windows, each facing a different landscape:
   - **North**: dense pines close to the wall. Short sightlines; spiders appear late.
@@ -40,6 +42,7 @@ The core loop: **listen → pick a window → look and shoot → run low → cro
 ## Windows
 
 Stages: intact → cracked → shattered → boards splintering → **breached**. After a breach, spiders climb inside and attack you.
+They grip the window frame and pull themselves through; a big one is stuck in the frame for a few seconds.
 You have health; at zero it is game over (restart at wave 1).
 
 ## Weapon and ammo
@@ -48,18 +51,22 @@ Lever-action rifle, 8 rounds in the tube, hitscan, one lever cycle (0.5 s) betwe
 40 rounds at start, ~16 added after each wave survived. Reload only at the table: ~3 s, rounds pushed into the loading
 gate one by one, cannot move or shoot, cannot be cancelled. Supplies on the table visibly run down.
 
-Axe (no ammo, ~0.6 s swing): hits a spider within reach in front of you, inside or at the window you stand at. Through
-intact glass it only cracks your own glass. Stomp: kills small spiders on the floor in front of you, shoves bigger ones back.
+Weapon switch: **1** the rifle, **2** the axe (~0.45 s to swap). The axe is held in the right hand and swung with the
+fire button (no ammo, ~0.7 s swing): it hits a spider within reach in front of you, inside or at the window you stand at.
+Through intact glass it only cracks your own glass. Reloading at the table brings the rifle back up. The held axe is
+the start of chopping firewood later. Stomp: kills small spiders on the floor in front of you, shoves bigger ones back.
 
 Hits show on the spider: dark red spray and splats that fade after a few seconds (so they never block a window), a jolt (body hit) or a kicked leg (leg hit),
-brutes stagger every quarter of their health, a different crunch on the killing hit, a thrash before death. No hit marker.
+brutes stagger every quarter of their health, a different crunch on the killing hit. A killed spider bursts into gooey
+red chunks (flesh, bits of shell, pieces of its own legs) that fall, slide down walls and fade after a few seconds.
+No hit marker.
 
 ## Controls
 
-- Desktop: WASD move, Shift sprint, mouse look, click fire, right mouse aim down sights, F axe, V stomp, E interact, Q flashlight,
-  M mute, Esc pause.
-- Touch (landscape): left joystick (push past the edge to sprint), drag on the right half to look, Fire, Aim, Axe, Stomp, Light
-  and Use buttons.
+- Desktop: WASD move, Shift sprint, mouse look, click fire (or swing the axe), right mouse aim down sights, 1 rifle,
+  2 axe, C stomp, E interact, Q flashlight, M mute, Esc pause.
+- Touch (landscape): left joystick (push past the edge to sprint), drag on the right half to look, Fire (fires or swings),
+  Aim, Axe/Rifle (swaps, and names what you would switch to), Stomp, Light and Use buttons.
   Browser zoom gestures are blocked. Portrait shows "rotate your phone".
 
 ## Sound
@@ -88,8 +95,9 @@ Every loaded model has a code-made fallback.
 
 2. Blender pipeline, lighting and darkness fixes, flashlight, sprint, aim down sights, phone zoom fix. *(done)*
 3. First-person hands and arms, lever-action rifle and axe from Blender, axe on F, stomp on V, recoil, sway, directional
-   shake, muzzle flash, blood by hit location, new combat sounds. *(this one)*
-4. Nine spider species (details will live in `SPECIES.md`), Blender spider generator, locomotion upgrade, species behaviours,
+   shake, muzzle flash, blood by hit location, new combat sounds. *(done)*
+4. *(started: weapon switch, bigger cabin, burst deaths, four species from Blender, squeezing through windows)*
+   Nine spider species (details will live in `SPECIES.md`), Blender spider generator, locomotion upgrade, species behaviours,
    climbing in through the window frame instead of clipping, spiders on the inside ceiling.
 5. Horror: attack sequences, a different death per species (the jump scare), watchers in windows and tree lines,
    tapping on walls and roof, silhouettes, sudden silence, webs and cocoons spreading through the cabin.

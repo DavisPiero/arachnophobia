@@ -52,6 +52,7 @@ Delete the file in `blender/source/` to go back to the generated version.
 | Hands and sleeves | ~7 300 tris per arm | ~50 % | 4096 atlas (phones 2048) | < 5 MB |
 | Axe | ~4 300 tris | ~50 % | 2048 (phones 1024) | < 5 MB |
 | Legs, waist, stomp boot | ~3 300 tris per leg | ~50 % | 2048 (phones 1024) | < 5 MB |
+| Spiders (one file per species) | runner ~5 000, climber/stalker ~10 000, brute ~18 000 (skinned) | ~50 % | 2048 (phones 1024) | < 4 MB |
 | Whole game | | | | < 25 MB |
 
 Hands (~8.5 MB) and rifle (~5.2 MB) are allowed over the 5 MB per-file mark (`budget.maxKB`): they fill the screen. Phones (the `low` quality tier) load `<name>_low.glb`: the same meshes with `budget.lowTexture`-size textures.
@@ -71,6 +72,7 @@ all variants of a family with very few draw calls.
 | hands | a hand skeleton (knuckles, finger bones, thumb) and poses: `grip` wraps the fingers round what is held, `pinch` holds a round; per pose the forearm direction, which way the back of the hand faces, where the thumb rests, the held shape (`stock` = the real rifle wrist); sleeve shape; look: glove panels, guard, sleeve |
 | axe | handle length, shape and curve; head size, poll, beard, edge; look: hickory, grime, forge scale, ground edge |
 | legs | stance, hips, waist, trouser radii and folds, boot size, jacket top, how far the body stands behind the eye; look: trousers, mud, boots, soles, belt, jacket |
+| spiders | per species (`SPECIES.md`): `rig` (body and leg sizes, leg angles and lengths, stance, gait: shared with the game's leg code), `shape` (leg thickness and joints, eyes, face plate, quills), `look` (scan set, colours, mottling, speckles, bands, belly, joints). One `.glb` + `.json` (layout and rest pose) per species; `SPIDERS=runner npm run assets spiders` builds just one |
 
 Materials (`blender/lib/materials.py`) layer CC0 photo-scanned sets (`blender/textures.md`): projected from three sides
 along each part's long axis, re-tinted to the parameter file's colour, with bump detail (checkering, stitching, ribs),
@@ -89,4 +91,8 @@ worn edges and dirt in the creases, then baked.
 The rifle, hands and axe files share one coordinate space (GAME space: x right, y up, z towards the player, metres), so the
 game can put the hands exactly where the parameter files say. Moving a grip or pivot in the JSON moves it in both.
 
-Coming next: nine spider species (milestone 4), trees, foliage and cabin pieces (milestone 6).
+Spiders are skinned: one smooth mesh per species on 58 bones (body, abdomen, fangs, palps, 8 legs x 6), weighted
+smoothly across each joint. The game ignores the glTF's own bones and rebuilds the skeleton from
+`assets/models/spider_<species>.json`, so its leg code moves exactly the bones Blender built the mesh around.
+
+Coming next: the other five spider species, trees, foliage and cabin pieces (milestone 6).

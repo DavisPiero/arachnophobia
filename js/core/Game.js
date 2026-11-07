@@ -23,6 +23,7 @@ import { WaveSystem } from '../spiders/WaveSystem.js';
 import { PostFX } from '../fx/PostFX.js';
 import { HUD } from '../ui/HUD.js';
 import { Menu } from '../ui/Menu.js';
+import { loadSpiderModels } from '../spiders/SpiderModel.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -61,7 +62,7 @@ export class Game {
     this.eyes = new EyesSystem({ scene: this.scene, audio: this.audio });
     this.spiders = new SpiderManager({ scene: this.scene, audio: this.audio, events, quality: Quality, windows: this.windows, colliders: this.world.cabin.colliders });
     this.spiders.flashlight = this.flashlight;
-    this.gore = new Gore({ scene: this.scene, events, windows: this.windows });
+    this.gore = new Gore({ scene: this.scene, events, windows: this.windows, quality: Quality });
     this.spiders.gore = this.gore;
     this.melee = new Melee({ player: this.player, weapon: this.weapon, camera: this.camera, audio: this.audio, events, windows: this.windows, spiders: this.spiders });
     this.scene.add(this.weapon.view.boot);
@@ -118,7 +119,8 @@ export class Game {
     this.menu.setLoading('Building sounds…');
     try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
     this.menu.setLoading('Carving rocks…');
-    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality), this.legs.loadAssets(Quality)]);
+    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality), this.legs.loadAssets(Quality),
+      loadSpiderModels(Quality).then((t) => { this.spiderModels = t; })]);
     // the boot and the legs stand in the room: keep the moon off them like every other interior surface
     for (const g of [this.weapon.view.boot, this.legs.root]) g.traverse((o) => { if (o.isMesh && o.material) interiorMaterial(o.material); });
     this.state = 'title';
@@ -217,8 +219,13 @@ export class Game {
 
     if (playing) {
       if (input.consume('interact')) this.table.tryStart();
-      if (input.consume('fire')) this.weapon.tryFire();
-      if (input.consume('axe')) this.melee.tryAxe();
+      if (input.consume('rifle')) this.weapon.select('rifle');
+      if (input.consume('axe')) this.weapon.select('axe');
+      if (input.consume('swap')) this.weapon.toggle();
+      // left click / FIRE uses whatever is in your hands; holding it keeps swinging the axe
+      const fire = input.consume('fire');
+      if (this.weapon.held === 'axe') { if (fire || input.fireHeld) this.melee.tryAxe(); }
+      else if (fire) this.weapon.tryFire();
       if (input.consume('stomp')) this.melee.tryStomp();
       if (input.consume('torch')) this.flashlight.toggle();
     }
@@ -274,8 +281,9 @@ export class Game {
     this.input.touch.setInteractAvailable(!!prompt?.can, this.table.reloading ? '…' : 'USE');
     this.hud.update(dt, {
       mag: this.weapon.mag, stock: this.table.stock, health: this.player.health,
-      prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted,
+      prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted, held: this.weapon.want,
     });
+    this.input.touch.setHeld(this.weapon.want);
     input.endFrame();
   }
 

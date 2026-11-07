@@ -106,7 +106,7 @@ export class TouchControls {
     const tap = (el, fn) => el.addEventListener('pointerdown', (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); fn(); }, opts);
     tap(this.btnTorch, () => input.press('torch'));
     // melee: a short flash on press so the tap reads
-    for (const [el, action] of [[this.btnAxe, 'axe'], [this.btnStomp, 'stomp']]) {
+    for (const [el, action] of [[this.btnAxe, 'swap'], [this.btnStomp, 'stomp']]) {
       tap(el, () => { input.press(action); el.classList.add('down'); setTimeout(() => el.classList.remove('down'), 160); });
     }
     tap(this.btnAim, () => { this.aim = !this.aim; this.btnAim.classList.toggle('on', this.aim); });
@@ -114,6 +114,12 @@ export class TouchControls {
     // stop the page from scrolling / zooming / long-press menus
     ui.addEventListener('touchmove', (e) => e.preventDefault(), opts);
     ui.addEventListener('contextmenu', (e) => e.preventDefault());
+  }
+  /** The swap button names the weapon it would switch to. */
+  setHeld(held) {
+    if (this._held === held || !this.btnAxe) return;
+    this._held = held;
+    this.btnAxe.textContent = held === 'axe' ? 'RIFLE' : 'AXE';
   }
   setTorchOn(v) { this.btnTorch.classList.toggle('on', v); }
   setKnob(dx, dy) { this.knob.style.transform = `translate(${dx}px, ${dy}px)`; }

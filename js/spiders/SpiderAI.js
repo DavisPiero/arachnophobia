@@ -3,7 +3,7 @@
 // Life of a spider:
 //   approach (walk a forest route) -> [stalker: watch from the dark] -> climb to a window slot
 //   -> attackWindow (claw at the glass / boards) -> window breached -> enter -> inside (hunt the player)
-//   Any time: killed -> dying (thrashes, falls off walls, curls up) -> fades away.
+//   Any time: killed -> bursts into chunks (js/fx/Chunks.js); the spider itself is gone at once.
 // Hits: where the shot lands (body or leg) sets the spray and the jolt; brutes stagger every quarter of their health.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
@@ -120,9 +120,15 @@ export class Spider {
     this.voice?.die();
     const at = point || this.root.position;
     this.mgr.audio?.play('spiderKill', { position: at, volume: 1, exterior: !(Math.abs(at.x) < CABIN.halfX && Math.abs(at.z) < CABIN.halfZ) });
-    if (dir) this.mgr.gore?.spray(at, dir, 2.2);
-    this.splatHere(at, 0.55 * Math.max(0.7, this.cfg.scale) * (this.type === 'brute' ? 1.8 : 1));
-    this.fallV = this.surface === 'ground' || this.surface === 'floor' ? null : this.up.clone().multiplyScalar(1.2);
+    // burst: chunks of flesh, shell and its own legs, a heavy spray and a big splat; the body is gone at once
+    const big = this.type === 'brute' ? 1.8 : 1;
+    const center = this.visual.hitbox.getWorldPosition(new THREE.Vector3());
+    this.root.updateMatrixWorld(true);
+    this.mgr.gore?.burst(this.visual, center, dir, Math.max(0.7, this.cfg.scale) * (this.visual.legSpan || 1) * big);
+    this.mgr.gore?.spray(center, dir || UP, 3 * big);
+    this.splatHere(at, 0.6 * Math.max(0.7, this.cfg.scale) * big);
+    this.root.visible = false;
+    this.visual.hitbox.userData.spider = null;
     this.mgr.events.emit('spiderKilled', { spider: this, point: at, by });
   }
 
@@ -149,7 +155,6 @@ export class Spider {
       this.pause = Math.max(this.pause, this.stagger);
       this.attackT = Math.max(this.attackT, this.stagger + 0.2);
     }
-    let thrash = 0;
     let mode = 'walk';
     let moveSpeed = 0;
 
@@ -182,18 +187,25 @@ export class Spider {
         mode = this.attackAnim > 0 ? 'attack' : (moveSpeed > 0.05 ? 'walk' : 'idle');
         break;
       case 'dying':
-        this.updateDying(dt);
-        // thrash first (legs flailing), then curl up
-        thrash = Math.max(0, 1 - this.deadT / GORE.thrashTime);
-        mode = thrash > 0 ? 'idle' : 'dead';
-        break;
+        // nothing left to show: the voice finishes its death rattle, then the spider is removed
+        this.deadT += dt;
+        if (this.deadT > 2.5) this.remove();
+        return;
     }
     if (this.state === 'approach' || this.state === 'enter' || this.state === 'scuttle') mode = moveSpeed > 0.05 ? 'walk' : 'idle';
 
     // smooth speed for the rig
     this.speed += (moveSpeed - this.speed) * (1 - Math.exp(-10 * dt));
     this.orient(dt);
-    this.visual.rig.update(dt, { speed: this.speed, mode, thrash, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
+    // feet on the real ground; gripping the frame while squeezing through a window
+    const onGround = this.surface === 'ground' || this.surface === 'floor';
+    const sq = this.state === 'enter' && this.path && this.path[this.seg]?.squeeze ? this.squeezeFrame : null;
+    if (sq) {
+      const mid = _d.copy(sq.center).addScaledVector(sq.normal, sq.depth / 2);
+      const body = _f.copy(this.root.position).addScaledVector(this.up, this.visual.radius * 0.6);
+      sq.narrow = Math.max(0, 1 - Math.abs(body.sub(mid).dot(sq.normal)) / (this.visual.radius * 1.6));
+    }
+    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
         : this.state === 'attackWindow' ? 'attackWindow'
@@ -213,7 +225,8 @@ export class Spider {
     const a = this.path[this.seg], b = this.path[this.seg + 1];
     const climbing = b.s !== 'ground' && b.s !== 'floor';
     let v = (climbing ? this.cfg.climbSpeed : this.cfg.speed) * (this.flinch > 0 ? 0.15 : 1);
-    v *= this.gaitFactor(dt);
+    if (a.squeeze) v = this.cfg.squeezeSpeed * (this.flinch > 0 ? 0.3 : 1);   // hauling itself through the frame
+    else v *= this.gaitFactor(dt);
     const len = Math.max(0.001, a.p.distanceTo(b.p));
     this.segT += (v * dt) / len;
     while (this.segT >= 1 && this.seg < this.path.length - 1) {
@@ -352,8 +365,12 @@ export class Spider {
     this.state = 'enter';
     const w = this.window;
     const from = this.root.position.clone();
-    const nodes = enterPath(from, this.up, w);
+    const nodes = enterPath(from, this.up, w, this.visual.radius * 2.2);
     if (this.type === 'brute') nodes[0].s = 'ground';
+    this.squeezeFrame = {
+      center: w.center.clone(), normal: w.normal.clone(), tangent: new THREE.Vector3().crossVectors(UP, w.normal).normalize(),
+      width: w.width, height: w.height, depth: CABIN.wallThickness, narrow: 0,
+    };
     this.follow(nodes, () => { this.state = 'inside'; this.surface = 'floor'; this.up.copy(UP); });
     this.mgr.events.emit('spiderInside', { spider: this });
   }
@@ -440,30 +457,6 @@ export class Spider {
     });
   }
 
-  updateDying(dt) {
-    this.deadT += dt;
-    if (this.fallV) {
-      this.fallV.y -= 9.8 * dt;
-      this.root.position.addScaledVector(this.fallV, dt);
-      const p = this.root.position;
-      const inside = Math.abs(p.x) < CABIN.halfX && Math.abs(p.z) < CABIN.halfZ;
-      const ground = inside ? 0 : terrainHeight(p.x, p.z);
-      this.up.lerp(UP, 1 - Math.exp(-4 * dt)).normalize();
-      if (p.y <= ground) {
-        p.y = ground; this.fallV = null; this.up.copy(UP);
-        this.mgr.audio?.play('bulletImpactWood', { position: p, volume: 0.4, rate: 0.6, exterior: !inside });
-      }
-    }
-    if (this.deadT > 7) {
-      this.fade = Math.max(0, 1 - (this.deadT - 7) / 2);
-      this.visual.setOpacity(this.fade);
-      this.visual.setEyeGlow(0);
-      if (this.fade <= 0) this.remove();
-    } else {
-      this.visual.setEyeGlow(Math.max(0, 1 - this.deadT * 1.5));
-    }
-  }
-
   remove() {
     if (this.removed) return;
     this.removed = true;
@@ -472,6 +465,11 @@ export class Spider {
     this.voice?.dispose();
     this.visual.dispose();
   }
+}
+
+/** Height under a point: the cabin floor inside, the terrain outside. */
+function groundAt(x, z) {
+  return Math.abs(x) < CABIN.halfX && Math.abs(z) < CABIN.halfZ ? 0 : terrainHeight(x, z);
 }
 
 function WINDOW_POINT(win, u, y) {

@@ -42,7 +42,7 @@ for (const device of ['desktop', 'phone']) {
   const r = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    g.player.position.set(0, 0, -3.2); g.player.yaw = 0; g.player.pitch = -0.05;
+    g.player.position.set(0, 0, -5.2); g.player.yaw = 0; g.player.pitch = -0.05;
     for (const t of ['runner', 'brute', 'climber', 'stalker']) g.spiders.spawn(t, 'north');
     // headless rendering is slow, so wait on simulated time, not wall time
     const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
@@ -99,8 +99,12 @@ for (const device of ['desktop', 'phone']) {
     g.weapon.tryFire(); r.blocked = g.weapon.mag === m0 - 1;
     await simWait(0.5);
     // axe: a full swing comes back to the rifle
+    // weapon switch: 2 brings the axe up, a click swings it, 1 brings the rifle back
+    g.weapon.select('axe'); await simWait(0.6);
+    r.axeHeld = g.weapon.ready('axe') && view.axe.visible && !view.rifle.visible;
     r.axeStarted = g.melee.tryAxe(); await simWait(0.3); r.axeVisible = view.axe.visible;
-    await simWait(0.6); r.axeDone = !g.melee.busy;
+    await simWait(0.7); r.axeDone = !g.melee.busy;
+    g.weapon.select('rifle'); await simWait(0.6); r.rifleBack = g.weapon.ready('rifle') && !view.axe.visible;
     // a runner inside, in front: the stomp kills it, with gore
     const s = g.spiders.spawn('runner', 'north');
     s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(0, 0, 0.75);
@@ -108,22 +112,28 @@ for (const device of ['desktop', 'phone']) {
     r.stompStarted = g.melee.tryStomp(); await simWait(0.7);
     r.stompKilled = !s.alive; r.killedBy = killed;
     r.splats = g.gore.splats.filter((x) => x.mesh.visible).length;
+    r.chunks = g.gore.chunks.lumps.list.length + g.gore.chunks.legs.list.length;
+    r.models = (g.spiderModels || []).length;
     off?.();
     return r;
   });
   check(m3.viewAssets && m3.hasBoot, 'Blender hands, rifle and axe loaded');
   check(m3.leverOpen > 0.3, `lever opens after a shot (${m3.leverOpen.toFixed(2)} rad)`);
   check(m3.blocked, 'a second shot waits for the lever');
-  check(m3.axeStarted && m3.axeVisible && m3.axeDone, 'axe swings and returns to the rifle');
+  check(m3.axeHeld, 'pressing 2 puts the axe in your hands');
+  check(m3.axeStarted && m3.axeVisible && m3.axeDone, 'the held axe swings');
+  check(m3.rifleBack, 'pressing 1 brings the rifle back');
   check(m3.stompStarted && m3.stompKilled && m3.killedBy === 'stomp', `stomp kills a runner on the floor (${m3.killedBy})`);
-  check(m3.splats > 0, `kills leave ichor splats (${m3.splats})`);
+  check(m3.splats > 0, `kills leave splats (${m3.splats})`);
+  check(m3.chunks > 5, `a killed spider bursts into chunks (${m3.chunks})`);
+  check(m3.models === 4, `Blender spider models loaded (${m3.models} of 4)`);
 
   // reload at the table
   const rl = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
     const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
-    g.player.position.set(-1.1, 0, 2.5); g.player.yaw = Math.PI; g.player.pitch = -0.4;
+    const tp = g.table.position; g.player.position.set(tp.x, 0, tp.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.4;
     await wait(300);
     const stockBefore = g.table.stock;
     const started = g.table.tryStart();
@@ -158,10 +168,15 @@ for (const device of ['desktop', 'phone']) {
     check(await page.evaluate(() => window.game.input.aim), 'AIM button toggles aiming');
     await page.locator('#btn-aim').tap();
     await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
+    // the AXE button swaps to the axe (and then reads RIFLE); FIRE swings it
     await page.locator('#btn-axe').tap();
+    await page.waitForFunction(() => window.game.weapon.ready('axe'), null, { timeout: 5000 }).catch(() => {});
+    const label = await page.locator('#btn-axe').textContent();
+    check(await page.evaluate(() => window.game.weapon.ready('axe')) && label === 'RIFLE', `AXE button swaps to the axe (button now reads ${label})`);
+    await page.locator('#btn-fire').tap();
     await page.waitForFunction(() => window.game.melee.axeT >= 0, null, { timeout: 3000 }).catch(() => {});
     const ax = await page.evaluate(() => { const g = window.game; return { t: g.melee.axeT, st: g.state, dead: g.player.dead, rel: g.weapon.reloading, en: g.input.enabled }; });
-    check(ax.t >= 0, `AXE button swings the axe (${JSON.stringify(ax)})`);
+    check(ax.t >= 0, `FIRE swings the held axe (${JSON.stringify(ax)})`);
     // game time runs slower than real time in a headless browser: wait for the swing to end, not a fixed time
     await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
     await page.locator('#btn-stomp').tap();

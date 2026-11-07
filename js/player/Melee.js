@@ -1,6 +1,6 @@
-// Melee: the axe (F / AXE) and the stomp (V / STOMP).
+// Melee: the axe (2 to hold it, left click / FIRE to swing) and the stomp (C / STOMP).
 //
-// Axe: the rifle drops, the axe swings across the view (~0.6 s, no ammo). It hits the nearest spider within reach
+// Axe: held in the right hand; a swing chops across the view (~0.7 s, no ammo). It hits the nearest spider within reach
 // in front of you: inside the cabin, or at a window you are standing at. Through intact glass it only cracks the glass
 // (your own window takes the damage); once the glass is cracked or gone the axe reaches the spider.
 // Stomp: you look down and stamp. Small spiders on the floor in front of you die; bigger ones are shoved back.
@@ -36,7 +36,7 @@ export class Melee {
   canStart() { return !this.busy && !this.weapon.reloading && !this.player.dead; }
 
   tryAxe() {
-    if (!this.canStart()) return false;
+    if (!this.canStart() || !this.weapon.ready('axe')) return false;
     this.axeT = 0; this.hitDone = false;
     this.audio.play('axeSwing', { volume: 0.9, delay: 0.14 });
     return true;

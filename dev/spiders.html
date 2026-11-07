@@ -37,7 +37,7 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createSpiderVisual, SPIDER_TYPES, spiderStats } from '../js/spiders/SpiderModel.js';
+import { createSpiderVisual, SPIDER_TYPES, spiderStats, loadSpiderModels } from '../js/spiders/SpiderModel.js';
 import { Quality } from '../js/core/Quality.js';
 
 const P = new URLSearchParams(location.search);
@@ -259,7 +259,8 @@ $('hit').onchange = (e) => { state.hitbox = e.target.checked; setHitboxes(); };
 addEventListener('keydown', (e) => { if (e.key === 'h' || e.key === 'H') $('panel').classList.toggle('hidden'); });
 addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
 
-rebuild();
+// Blender models first (?assets=0 shows the code-made spiders)
+loadSpiderModels(Quality).then(rebuild, rebuild);
 
 // ------------------------------------------------------------- loop
 const clock = new THREE.Clock();

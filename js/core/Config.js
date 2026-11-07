@@ -41,10 +41,11 @@ export const Config = {
     aimLookScale: 0.8,       // mouse/touch look sensitivity x this while aimed
     fireBuffer: 0.15,        // a fire press this close to the end of the lever cycle fires as soon as it ends
     muzzleLight: 60,         // peak brightness of the room light from a shot
+    switchTime: 0.45,        // seconds to swap rifle <-> axe (1 / 2): half lowering, half raising
   },
-  // Axe (F) and stomp (V). Reach is measured from the eye to the spider's body.
+  // Axe (held with 2, swung with left click) and stomp (C). Reach is measured from the eye to the spider's body.
   melee: {
-    axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.62, hitAt: 0.3, windowDamage: 9, knockback: 0.35 },
+    axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.72, hitAt: 0.33, windowDamage: 9, knockback: 0.35 },
     stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'] },
   },
   // Hit and kill feedback on the spiders.
@@ -52,7 +53,10 @@ export const Config = {
     knockback: 0.18,         // metres a body hit pushes a spider on the ground (x its size factor)
     staggerEvery: 0.25,      // brutes stagger each time they lose this fraction of their health
     staggerTime: 0.7,        // seconds a stagger stops a brute
-    thrashTime: 1.4,         // seconds a dying spider thrashes before curling up
+    chunks: 160,             // a killed spider bursts into chunks: most alive at once (oldest go first)
+    chunksLow: 90,           // the same on phones (and fewer per burst)
+    chunkHold: 4,            // seconds a chunk stays fully visible once it has landed
+    chunkFade: 2,            // seconds it then takes to fade away
     splats: 60,              // blood splats kept in the world at once (oldest reused first)
     splatHold: 3,            // seconds a splat stays fully visible
     splatFade: 2,            // seconds it then takes to fade away (so splats never block a window for long)
@@ -79,11 +83,12 @@ export const Config = {
     fogDensity: 0.034,       // lower = see further (east clearing readable to ~25 m)
     fogColor: [0.011, 0.014, 0.019],  // linear RGB; near-black so the forest still darkens with distance
   },
+  // squeezeSpeed: m/s while hauling itself through a breached window frame (big ones get stuck for a while)
   spiders: {
-    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4 },  // 1.4: smallest spiders were too small to read
-    brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0 },
-    climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0 },
-    stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0 },
+    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4, squeezeSpeed: 1.4 },  // 1.4: smallest spiders were too small to read
+    brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0, squeezeSpeed: 0.45 },
+    climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0, squeezeSpeed: 0.7 },
+    stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0, squeezeSpeed: 0.55 },
   },
   waves: {
     firstDelay: 18,          // seconds of quiet before wave 1

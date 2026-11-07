@@ -23,6 +23,9 @@ export class Weapon {
     this.reloadT = 0;          // 0..1 progress, set by the ammo table
     this.reloadRounds = 0;     // rounds being loaded (the hand animation repeats this many times)
     this.busy = false;         // the axe or stomp is in use (set by Melee)
+    this.held = 'rifle';       // what is in your hands: 'rifle' (1) or 'axe' (2)
+    this.want = 'rifle';       // what you asked for; the switch lowers one and raises the other
+    this.drawK = 1;            // 0 = lowered out of view, 1 = up and ready
     this.kick = 0;
     this.flashT = 0;
     this.swayX = 0; this.swayY = 0;
@@ -73,12 +76,24 @@ export class Weapon {
   reset() {
     this.mag = W.magSize; this.cooldown = 0; this.reloading = false; this.reloadT = 0; this.aimK = 0; this.sprintK = 0;
     this.sinceShot = 9; this.leverDone = true; this.queued = false; this.busy = false;
+    this.held = this.want = 'rifle'; this.drawK = 1;
     for (const h of this.holes) h.visible = false;
   }
 
+  /** Ask for the rifle or the axe. The current one goes down, then the other comes up (Config.weapon.switchTime). */
+  select(name) {
+    if (this.reloading || this.player.dead) return;
+    this.want = name;
+  }
+  toggle() { this.select(this.want === 'rifle' ? 'axe' : 'rifle'); }
+  /** Up and ready to use (not mid-switch). */
+  ready(name) { return this.held === name && this.want === name && this.drawK > 0.9; }
+  /** Put the rifle straight into the hands (the ammo table does this when a reload starts). */
+  forceRifle() { this.held = this.want = 'rifle'; }
+
   /** Try to fire. Returns true if a round was fired. */
   tryFire() {
-    if (this.reloading || this.busy || this.player.dead || this.sprintK > 0.5) return false;
+    if (this.reloading || this.busy || this.player.dead || this.sprintK > 0.5 || !this.ready('rifle')) return false;
     if (this.cooldown > 0) {
       // pressed while the lever is still moving: fire as soon as it is done (touch players tap early)
       if (this.cooldown <= W.fireBuffer) this.queued = true;
@@ -145,6 +160,15 @@ export class Weapon {
   update(dt, input, moving) {
     this.cooldown = Math.max(0, this.cooldown - dt);
     this.sinceShot += dt;
+    // weapon switch: lower what you hold, swap, raise the other
+    const half = W.switchTime / 2;
+    if (this.want !== this.held) {
+      this.drawK -= dt / half;
+      if (this.drawK <= 0) {
+        this.drawK = 0; this.held = this.want;
+        this.audio.play(this.held === 'axe' ? 'axeSwing' : 'leverCycle', { volume: 0.25 });
+      }
+    } else this.drawK = Math.min(1, this.drawK + dt / half);
     // the lever: thrown after each shot (sound + spent case), unless the tube is empty
     if (!this.leverDone && this.sinceShot >= W.leverAt) {
       this.leverDone = true;
@@ -162,7 +186,7 @@ export class Weapon {
     this.swayY = THREE.MathUtils.lerp(this.swayY, THREE.MathUtils.clamp(-input.lookDY * 4, -0.05, 0.05), 1 - Math.exp(-10 * dt));
     const t = performance.now() / 1000;
     // aim and sprint poses ease in and out
-    const wantAim = input.aim && !this.reloading && !this.busy && !this.player.dead && !this.player.sprinting;
+    const wantAim = input.aim && this.ready('rifle') && !this.reloading && !this.busy && !this.player.dead && !this.player.sprinting;
     this.aimK += ((wantAim ? 1 : 0) - this.aimK) * (1 - Math.exp(-W.aimSpeed * dt));
     this.sprintK += ((this.player.sprinting ? 1 : 0) - this.sprintK) * (1 - Math.exp(-9 * dt));
     this.player.aiming = this.aimK > 0.5;
@@ -173,7 +197,7 @@ export class Weapon {
       aimK: this.aimK, sprintK: this.sprintK, kick: this.kick, swayX: this.swayX, swayY: this.swayY, bob,
       reloading: this.reloading, reloadT: this.reloadT, rounds: this.reloadRounds,
       leverT: this.mag <= 0 && this.sinceShot > 0.05 ? 9 : this.sinceShot,
-      axeT: this.axeT ?? -1, stompT: this.stompT ?? -1,
+      axeT: this.axeT ?? -1, stompT: this.stompT ?? -1, held: this.held, drawK: this.drawK,
     });
 
     this.flashSprite.material.opacity = this.flashT > 0.5 ? 1 : this.flashT * 2;

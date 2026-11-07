@@ -4,14 +4,16 @@
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight } from '../world/Layout.js';
+import { Chunks } from './Chunks.js';
 
 const G = Config.gore;
 const DROP_COLOR = 0x7a0d0a;
 const SPLAT_COLOR = 0x640a08;
 
 export class Gore {
-  constructor({ scene, events, windows }) {
+  constructor({ scene, events, windows, quality }) {
     this.scene = scene;
+    this.chunks = new Chunks({ scene, gore: this, quality });
     this.windows = windows;
     // --- droplets
     const n = G.droplets;
@@ -46,7 +48,11 @@ export class Gore {
   clear() {
     for (const s of this.splats) { s.mesh.visible = false; s.window = null; }
     this.live = 0; this.drops.count = 0;
+    this.chunks.clear();
   }
+
+  /** A killed spider bursts into chunks (js/fx/Chunks.js). */
+  burst(visual, center, dir, size = 1) { this.chunks.burst(visual, center, dir, size); }
 
   /** Spray from a hit. dir: the bullet's direction (most ichor carries on through), amount ~0.3 (leg) .. 1 (body) .. 2 (kill). */
   spray(point, dir, amount = 1) {
@@ -91,6 +97,7 @@ export class Gore {
   }
 
   update(dt) {
+    this.chunks.update(dt);
     // droplets fly, fall and land
     const D = this.d;
     let i = 0;
