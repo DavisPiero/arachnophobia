@@ -48,6 +48,9 @@
 - **Legs:** the cargo pockets are plain bevelled boxes, and the legs only swing at the hip (no knee bend).
 - **Loading hand:** the pinch pose was not checked in the reload against the rifle.
 - **Spent cases:** the cartridge model is new, but the ejection was not re-checked.
+- **Screenshots:** `node tools/shot.mjs` at high quality times out headless (also with `assets=0`, so not the new
+  models): the free-running loop is too slow in software WebGL. Use `&quality=low` with it, or `tools/poses.mjs`, which
+  steps the game frame by frame.
 
 ## What comes next
 Milestone 4 (see `STATE.md`). Ask the user first about the open questions in `STATE.md`.
