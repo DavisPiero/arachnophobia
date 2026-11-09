@@ -1,9 +1,10 @@
 // Picks a quality tier once at start. Phones and tablets get 'low'; desktops get 'high'.
-// Override with ?quality=low or ?quality=high in the URL.
+// Override with ?quality=low or ?quality=high in the URL, or in Settings → Graphics (applies on reload).
+import { Settings } from './Settings.js';
 const params = new URLSearchParams(location.search);
 
 export const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
-const forced = params.get('quality');
+const forced = params.get('quality') || Settings.quality; // URL wins over the Graphics setting
 const tier = forced === 'low' || forced === 'high' ? forced : (isTouch ? 'low' : 'high');
 
 export const Quality = tier === 'high'

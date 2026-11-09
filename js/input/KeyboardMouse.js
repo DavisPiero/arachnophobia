@@ -1,6 +1,7 @@
 // Desktop controls: WASD / arrows move, mouse looks (pointer lock), click fires,
-// E interacts, 1 rifle, 2 axe, C stomp, Q flashlight, Shift sprint, right mouse aims, M mutes, Esc pauses (the browser releases pointer lock, which we treat as pause).
+// keys come from Settings.keys (defaults: E use, 1 rifle, 2 axe, C stomp, Q flashlight, Shift sprint, M mute, P pause); right mouse aims, Esc pauses (the browser releases pointer lock, which we treat as pause).
 import { Config } from '../core/Config.js';
+import { Settings } from '../core/Settings.js';
 
 export class KeyboardMouse {
   constructor(input, canvas) {
@@ -14,14 +15,12 @@ export class KeyboardMouse {
 
     addEventListener('keydown', (e) => {
       if (e.repeat) return;
+      if (this.capture) { e.preventDefault(); this.capture(e.code); return; } // Settings → Controls is listening for a key
       this.keys.add(e.code);
-      if (e.code === 'KeyE') input.press('interact');
-      if (e.code === 'Digit1' || e.code === 'Numpad1') input.press('rifle');
-      if (e.code === 'Digit2' || e.code === 'Numpad2') input.press('axe');
-      if (e.code === 'KeyC') input.press('stomp');
-      if (e.code === 'KeyM') input.press('mute');
-      if (e.code === 'KeyQ') input.press('torch');
-      if (e.code === 'KeyP') input.press('pause');
+      const K = Settings.keys;
+      for (const a of ['interact', 'rifle', 'axe', 'stomp', 'mute', 'torch', 'pause']) if (e.code === K[a]) input.press(a);
+      if (e.code === 'Numpad1') input.press('rifle');
+      if (e.code === 'Numpad2') input.press('axe');
       if (e.code === 'Enter' || e.code === 'Space') input.press('start');
       this.update();
     });
@@ -42,10 +41,10 @@ export class KeyboardMouse {
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     addEventListener('mousemove', (e) => {
       if (!this.locked || !this.enabled) return;
-      const s = Config.player.lookSensitivityMouse;
+      const s = Config.player.lookSensitivityMouse * Settings.look;
       // ignore absurd spikes some browsers send when locking
       if (Math.abs(e.movementX) > 400 || Math.abs(e.movementY) > 400) return;
-      input.addLook(-e.movementX * s, -e.movementY * s);
+      input.addLook(-e.movementX * s, -e.movementY * s * (Settings.invertY ? -1 : 1));
     });
     document.addEventListener('pointerlockchange', () => {
       this.locked = document.pointerLockElement === canvas;
@@ -61,9 +60,10 @@ export class KeyboardMouse {
   exitLock() { if (document.pointerLockElement) document.exitPointerLock(); }
   setEnabled(v) { this.enabled = v; if (!v) { this.keys.clear(); this.update(); } }
   update() {
-    const k = this.keys;
-    this.moveX = (k.has('KeyD') || k.has('ArrowRight') ? 1 : 0) - (k.has('KeyA') || k.has('ArrowLeft') ? 1 : 0);
-    this.moveY = (k.has('KeyW') || k.has('ArrowUp') ? 1 : 0) - (k.has('KeyS') || k.has('ArrowDown') ? 1 : 0);
-    this.sprint = k.has('ShiftLeft') || k.has('ShiftRight');
+    const k = this.keys, K = Settings.keys;
+    this.moveX = (k.has(K.right) || k.has('ArrowRight') ? 1 : 0) - (k.has(K.left) || k.has('ArrowLeft') ? 1 : 0);
+    this.moveY = (k.has(K.forward) || k.has('ArrowUp') ? 1 : 0) - (k.has(K.back) || k.has('ArrowDown') ? 1 : 0);
+    // Shift works from either side when sprint is on a Shift key
+    this.sprint = k.has(K.sprint) || (K.sprint.startsWith('Shift') && (k.has('ShiftLeft') || k.has('ShiftRight')));
   }
 }

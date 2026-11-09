@@ -624,24 +624,49 @@ export const RECIPES = {
       k.src(a, 0);
     },
   },
-  // the killing hit: a deep wet crunch on top of the normal impact, so a kill always sounds different from a hit
+  // the killing hit (user: make kills sound better). Three layers so a kill never sounds like a hit:
+  // the body bursting (deep thump, shell splitting, a wet blast), a strangled dying screech, then the chunks
+  // pattering down and sliding for a second.
   spiderKill: {
-    variants: 4, lowVariants: 2, dur: 0.9, gain: 1.0, reverb: 0.08, peak: 0.95,
+    variants: 5, lowVariants: 3, dur: 1.7, gain: 1.0, reverb: 0.1, peak: 0.95,
     render(k) {
       const a = k.arr(); const t0 = 0.004;
-      k.drive(1.6);
-      k.mode(a, t0, k.rr(60, 80), 1, 0.12);                    // body thump
-      k.burst(a, t0, 0.9, 0.002, 0.4);
-      for (let i = 0, nn = k.ri(18, 30); i < nn; i++) {          // carapace splitting
-        const t = t0 + Math.pow(k.r(), 1.4) * 0.12; const amp = k.rr(0.3, 1) * Math.exp(-(t - t0) / 0.07);
-        k.burst(a, t, amp, k.rr(0.0002, 0.0008)); k.mode(a, t, k.rr(900, 3200), amp * 0.4, k.rr(0.004, 0.012));
+      k.drive(1.8);
+      // burst: a low gut thump with a pitch drop, and the shell splitting
+      const o = k.osc('sine', 90, 0, 0.5); const og = k.g(0);
+      k.env(o.frequency, [[0, k.rr(85, 110)], [0.12, 38, 'x']]);
+      k.env(og.gain, [[0, 0], [t0 + 0.002, 1.2], [0.06, 0.5, 'x'], [0.45, 0.0001, 'x']]);
+      k.chain(o, og, k.mix);
+      k.burst(a, t0, 1, 0.003, 0.3);
+      for (let i = 0, nn = k.ri(24, 36); i < nn; i++) {
+        const t = t0 + Math.pow(k.r(), 1.5) * 0.1; const amp = k.rr(0.3, 1) * Math.exp(-(t - t0) / 0.06);
+        k.burst(a, t, amp, k.rr(0.0002, 0.0008)); k.mode(a, t, k.rr(900, 3600), amp * 0.45, k.rr(0.004, 0.012));
       }
+      // the wet blast: pink noise through a lowpass that closes, like something full giving way
+      const n = k.noise('pink', 0, 0.7); const lp = k.f('lowpass', 4500, 0.9); const ng = k.g(0);
+      k.env(lp.frequency, [[0, 5000], [0.05, 1600, 'x'], [0.5, 300, 'x']]);
+      k.env(ng.gain, [[0, 0], [t0 + 0.003, 1.1], [0.04, 0.45, 'x'], [0.6, 0.0001, 'x']]);
+      k.chain(n, lp, ng, k.mix);
+      // the screech: a short rasping cry that chokes off and falls in pitch
+      const sc0 = k.rr(0.015, 0.05), scLen = k.rr(0.28, 0.5), f0 = k.rr(700, 1300);
+      const v = k.osc('sawtooth', f0, sc0, sc0 + scLen + 0.05); const vg = k.g(0);
+      k.env(v.frequency, [[0, f0], [sc0, f0 * k.rr(1.1, 1.35)], [sc0 + scLen * 0.4, f0, 'x'], [sc0 + scLen, f0 * 0.35, 'x']]);
+      const rasp = k.noise('white', sc0, sc0 + scLen + 0.05); const rb = k.f('bandpass', f0 * 2.2, 2.5); const rg = k.g(0.5);
+      k.chain(rasp, rb, rg);
+      const form = k.f('bandpass', k.rr(1800, 2600), 3); const form2 = k.f('bandpass', k.rr(700, 1000), 2.5);
+      v.connect(form); v.connect(form2); rg.connect(form);
+      form.connect(vg); form2.connect(vg);
+      k.env(vg.gain, [[0, 0], [sc0, 0], [sc0 + 0.02, 0.55], [sc0 + scLen * 0.6, 0.35, 'x'], [sc0 + scLen, 0.0001, 'x']]);
+      k.chain(vg, k.ws(3), k.g(0.6), k.mix);
+      // chunks landing and sliding: wet patters spread over a second, thinning out
       const w = k.arr();
-      for (let i = 0, nn = k.ri(12, 20); i < nn; i++) k.bubble(w, t0 + k.rr(0.03, 0.55), k.rr(110, 380), k.rr(0.3, 0.9), k.rr(0.015, 0.04), k.rr(0.6, 2));
-      k.add(a, k.norm(w, 0.8));
+      for (let i = 0, nn = k.ri(16, 26); i < nn; i++) {
+        const t = t0 + 0.08 + Math.pow(k.r(), 1.8) * 1.2; const amp = k.rr(0.25, 0.9) * Math.exp(-(t - 0.08) / 0.5);
+        k.bubble(w, t, k.rr(110, 420), amp, k.rr(0.012, 0.04), k.rr(0.6, 2));
+        k.burst(w, t, amp * 0.25, k.rr(0.0004, 0.0015), 0.5);
+      }
+      k.add(a, k.norm(k.filt(w, 'lowpass', 2600), 0.7));
       k.src(a, 0);
-      const n = k.noise('brown', 0, 0.6); const lp = k.f('lowpass', 500, 0.8); const g = k.g(0);
-      k.env(g.gain, [[0, 0], [0.01, 0.8], [0.5, 0.0001, 'x']]); k.chain(n, lp, g, k.mix);
     },
   },
   ammoPickup: {

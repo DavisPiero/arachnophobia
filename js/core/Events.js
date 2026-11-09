@@ -14,6 +14,7 @@
 //   'waveStart'      { wave }
 //   'waveEnd'        { wave }
 //   'reloadStart' / 'reloadEnd'
+//   'dryFire'                                  the trigger clicked on an empty tube
 //   'gameOver'       { wave, kills }
 export class Events {
   constructor() { this.handlers = new Map(); }

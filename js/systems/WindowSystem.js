@@ -38,8 +38,8 @@ export class WindowSystem {
     this.scene.add(group);
     const w = def.width, h = def.height;
 
-    // glass: faint, glossy so the lantern glints on it
-    const glassMat = new THREE.MeshStandardMaterial({ color: 0x1a2426, roughness: 0.06, metalness: 0.2, transparent: true, opacity: 0.18, depthWrite: false, side: THREE.DoubleSide });
+    // glass: a faint tint only, unlit, so the flashlight never glares back off it (user's call)
+    const glassMat = new THREE.MeshBasicMaterial({ color: 0x1a2426, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat);
     glass.position.z = GLASS_Z;
     glass.renderOrder = 11;

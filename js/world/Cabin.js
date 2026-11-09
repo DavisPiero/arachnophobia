@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CABIN, WINDOWS, DOOR, AMMO_TABLE, LANTERN, FURNITURE, terrainHeight, roofHeight } from './Layout.js';
 import * as T from './Textures.js';
-import { interiorMaterial, limitShadow, CANDLE_COLOR } from './Lighting.js';
+import { interiorMaterial, limitShadow, CANDLE_COLOR, buildLanternModel } from './Lighting.js';
 
 const HX = CABIN.halfX, HZ = CABIN.halfZ, WH = CABIN.wallHeight, WT = CABIN.wallThickness;
 const LINING = 0.03;        // interior board lining thickness (inside face of every wall)
@@ -492,25 +492,6 @@ export function buildCabin(quality) {
     colliders.push({ minX: HX - 1.25, maxX: HX, minZ: HZ - 0.65, maxZ: HZ });
   }
 
-  // overturned chair
-  {
-    const parts = [];
-    const add = (sx, sy, sz, x, y, z, grain = 'h') => parts.push([sx, sy, sz, x, y, z, grain]);
-    for (const dx of [-1, 1]) for (const dz of [-1, 1]) add(0.04, 0.45, 0.04, dx * 0.18, 0.225, dz * 0.17, 'y');
-    add(0.42, 0.04, 0.4, 0, 0.47, 0);
-    for (const dx of [-1, 1]) add(0.04, 0.5, 0.04, dx * 0.18, 0.74, 0.17, 'y');
-    for (const y of [0.68, 0.82, 0.94]) add(0.36, 0.06, 0.02, 0, y, 0.17);
-    for (const dx of [-1, 1]) add(0.025, 0.025, 0.36, dx * 0.18, 0.15, 0);
-    const rot = new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(Math.PI / 2 + 0.12, 0.6, 0.05));
-    // find the lowest point after rotation, then rest it on the floor
-    const bb = new THREE.Box3();
-    for (const q of parts) { const g = new THREE.BoxGeometry(q[0], q[1], q[2]).translate(q[3], q[4], q[5]).applyMatrix4(rot); g.computeBoundingBox(); bb.union(g.boundingBox); }
-    const pos = new THREE.Vector3(FURNITURE.chair.x, -bb.min.y, FURNITURE.chair.z);
-    const m = new THREE.Matrix4().makeTranslation(pos.x, pos.y, pos.z).multiply(rot);
-    for (const q of parts) b.box('furn', q[0], q[1], q[2], q[3], q[4], q[5], { m, grain: q[6] });
-    colliders.push({ minX: pos.x + bb.min.x, maxX: pos.x + bb.max.x, minZ: pos.z + bb.min.z, maxZ: pos.z + bb.max.z });
-  }
-
   // rug
   const RUG = FURNITURE.rug;
   b.boxMM('rug', RUG.minX, RUG.maxX, 0.0, 0.012, RUG.minZ, RUG.maxZ, { off: [-RUG.minX, -RUG.minZ], seamless: true });
@@ -530,7 +511,7 @@ export function buildCabin(quality) {
     b.geo('rope', bag, {});
   }
 
-  // ---------------- ammo table (own group) with supplies and a candle
+  // ---------------- ammo table (own group) with supplies and a lantern
   const ammoTable = buildAmmoTable(M, shadows);
   group.add(ammoTable.group);
   colliders.push({
@@ -666,26 +647,18 @@ function buildAmmoTable(M, shadows) {
     supplies.push(place(o, x0 + 0.38, z0 + 0.18, 0.15));
   }
 
-  // candle in a tin holder (not a supply)
+  // a hurricane lantern standing on the table (like the wall lamp, so points of interest share one look)
   const candle = {};
   {
-    const cx = x0 + 0.13, cz = z1 - 0.13;
-    const holder = new THREE.Group();
-    const dish = mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.012, 20), M.iron); dish.position.y = 0.006; holder.add(dish);
-    const wax = new THREE.MeshStandardMaterial({ color: 0xd8cdb0, roughness: 0.6, emissive: new THREE.Color(0.35, 0.18, 0.06), emissiveIntensity: 0.6 });
-    interiorMaterial(wax);
-    const c = mesh(new THREE.CylinderGeometry(0.018, 0.02, 0.09, 12), wax); c.position.y = 0.057; holder.add(c);
-    const drip = mesh(new THREE.SphereGeometry(0.02, 8, 6).scale(1, 0.3, 1), wax); drip.position.y = 0.014; holder.add(drip);
-    const flame = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6).scale(1, 2.4, 1), new THREE.MeshBasicMaterial({ color: new THREE.Color(4, 2.2, 0.8), fog: false }));
-    flame.position.y = 0.115; holder.add(flame);
-    const spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: T.glow(), color: new THREE.Color(1, 0.55, 0.22), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-    spr.scale.setScalar(0.22); spr.position.y = 0.115; holder.add(spr);
-    holder.position.set(cx, top, cz);
-    group.add(holder);
-    const light = new THREE.PointLight(CANDLE_COLOR, 0.55, 3.5, 2);
-    light.position.set(cx, top + 0.16, cz);
+    const cx = x0 + 0.14, cz = z1 - 0.14;
+    const model = buildLanternModel({ standing: true });
+    model.scale.setScalar(0.85);
+    model.position.set(cx, top + 0.13 * 0.85, cz);
+    group.add(model);
+    const light = new THREE.PointLight(CANDLE_COLOR, 1.1, 4.5, 2);
+    light.position.set(cx, top + 0.13 * 0.85, cz);
     group.add(light);
-    candle.light = light; candle.sprite = spr; candle.model = holder;
+    candle.light = light; candle.sprite = model.userData.glow; candle.model = model;
   }
 
   return { group, supplies, candle };

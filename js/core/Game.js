@@ -1,4 +1,5 @@
-// Owns every system and runs the game states: loading -> title -> playing <-> paused -> gameover.
+// Owns every system and runs the game states: boot -> loading -> title -> playing <-> paused -> gameover.
+// boot waits for the first click/tap/key (it unlocks sound), loading shows the boot log, title is the main menu.
 import * as THREE from 'three';
 import { Config } from './Config.js';
 import { Quality, isTouch } from './Quality.js';
@@ -22,13 +23,15 @@ import { PostFX } from '../fx/PostFX.js';
 import { HUD } from '../ui/HUD.js';
 import { Menu } from '../ui/Menu.js';
 import { loadSpiderModels } from '../spiders/SpiderModel.js';
+import { Music } from '../audio/Music.js';
+import { Settings } from './Settings.js';
 
 const params = new URLSearchParams(location.search);
 
 export class Game {
   constructor(canvas) {
     this.canvas = canvas;
-    this.state = 'loading';
+    this.state = 'boot';
     this.debug = params.has('debug');
     this.events = events;
 
@@ -67,7 +70,11 @@ export class Game {
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
     this.hud = new HUD(isTouch);
-    this.menu = new Menu(this.audio);
+    this.music = new Music(this.audio);
+    this.menu = new Menu(this.audio, this.input.keyboard);
+    this.menu.onOptions = () => this.postfx.setOptions(Settings);
+    this.postfx.setOptions(Settings);
+    this.heartT = 0;
 
     // meshes that stop bullets: the cabin itself and the window boards
     this.cabinMeshes = [];
@@ -94,7 +101,7 @@ export class Game {
     $('btn-resume').addEventListener('click', () => this.resume());
     $('btn-restart').addEventListener('click', () => { this.restart(); this.resume(); });
     $('btn-again').addEventListener('click', () => { this.restart(); this.resume(); });
-    $('btn-pause').addEventListener('pointerdown', (e) => { e.stopPropagation(); this.pause(); });
+    $('btn-pause').addEventListener('pointerdown', (e) => { e.stopPropagation(); e.preventDefault(); this.pause(); });
     $('btn-mute').addEventListener('pointerdown', (e) => { e.stopPropagation(); this.toggleMute(); });
     this.input.keyboard.onLockChange = (locked) => {
       // Esc releases the mouse: treat that as pause on desktop
@@ -102,8 +109,16 @@ export class Game {
     };
 
     events.on('spiderKilled', () => { this.kills++; });
-    events.on('waveStart', ({ wave }) => this.hud.flash(`Wave ${wave}`, wave === 1 ? 'Listen.' : '', 3));
-    events.on('waveEnd', ({ wave }) => this.hud.flash('Silence', `Wave ${wave} survived · supplies on the table`, 4));
+    events.on('waveStart', ({ wave }) => {
+      this.hud.flash(`Wave ${wave}`, wave === 1 ? 'They are coming. Listen for where.' : '', 3);
+      if (wave === 1) this.hud.hint('windows', 'Watch the windows. Shoot them before they break the glass.');
+    });
+    events.on('waveEnd', ({ wave }) => this.hud.flash(`Wave ${wave} survived`, 'Fresh rounds are on the ammo table', 4));
+    events.on('dryFire', () => {
+      this.hud.notice('NO AMMO', 'Reload at the ammo table');
+      this.hud.hint('reload', `Your rounds are on the ammo table. Stand at it and press ${this.hud.key('interact', 'USE')} to reload.`, 6);
+    });
+    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', 'A window is cracking. Get there before it breaks.'); });
     events.on('windowBreached', ({ id }) => {
       const w = WINDOWS.find((x) => x.id === id);
       this.hud.flash(`The ${w.label.toLowerCase()} window is broken`, '', 3);
@@ -111,22 +126,46 @@ export class Game {
   }
 
   async init() {
-    this.menu.setLoading('Building sounds…');
-    try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
-    this.menu.setLoading('Carving rocks…');
-    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality),
-      loadSpiderModels(Quality).then((t) => { this.spiderModels = t; })]);
+    // loading starts at once, behind the boot gate
+    const loaded = (async () => {
+      this.menu.setLoading('building sounds');
+      try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
+      this.menu.setLoading('loading models');
+      await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality),
+        loadSpiderModels(Quality).then((t) => { this.spiderModels = t; })]);
+      this.menu.setLoading('models ok');
+    })();
+    if (params.has('autostart')) {
+      // tests and quick looks: no gate, no loading screen, no music
+      document.getElementById('screen-boot').classList.add('hidden');
+      await loaded;
+      this.state = 'title';
+      this.menu.ready();
+      this.loop();
+      this.start(false);
+      return;
+    }
+    await this.menu.waitForWake();
+    this.audio.unlock();          // inside the gesture: sound may start from here on
+    this.music.start();
+    this.state = 'loading';
+    await this.menu.runLoading(loaded);
+    this.music.kickIn();
     this.state = 'title';
     this.menu.ready();
+    this.menu.showMain();
     this.loop();
-    if (params.has('autostart')) this.start(false);
   }
 
   start(fromGesture = true) {
     if (this.state !== 'title') return;
     this.audio.unlock();
+    this.music.stop();
     this.director.start();
     this.menu.showStart(false);
+    this.hud.hint('start', isTouch
+      ? 'Your ammo is on the table by the door. Reload there with USE.'
+      : `Your ammo is on the table by the door. Reload there with ${this.hud.key('interact')}. Esc pauses; settings are in the pause menu.`, 7);
     this.resume(fromGesture);
   }
 
@@ -194,7 +233,7 @@ export class Game {
     const dt = Math.min(0.05, this.lastT ? now - this.lastT : 0.016);
     this.lastT = now;
     this.update(dt);
-    this.postfx.render(dt, { hurt: this.player.hurtFlash, lowHealth: this.player.health < 35 ? 1 - this.player.health / 35 : 0 });
+    this.postfx.render(dt, { hurt: this.player.hurtFlash, hurtDir: this.player.hurtDir, lowHealth: this.player.health < 35 ? 1 - this.player.health / 35 : 0 });
     if (this.debug) this.updateDebug(dt);
   };
 
@@ -245,6 +284,11 @@ export class Game {
         betweenWaves: this.waves.betweenWaves,
         spiders: this.spiders.summary(),
       });
+      // low health: a heartbeat you can feel
+      if (this.player.health < 35 && !this.player.dead) {
+        this.heartT -= dt;
+        if (this.heartT <= 0) { this.audio.play('heartbeat', { volume: 0.5 + 0.5 * (1 - this.player.health / 35), exterior: false }); this.heartT = 0.7 + this.player.health / 35 * 0.5; }
+      }
       if (this.player.dead && this.state === 'playing') {
         this.overTimer += dt;
         if (this.overTimer > 2.5) this.gameOver();
@@ -264,7 +308,7 @@ export class Game {
     this.input.touch.setTorchOn(this.flashlight.on);
     // the gun picks up the lantern's warmth depending on how close you are to it
     const dl = this.camera.position.distanceTo(LANTERN.position);
-    this.weapon.viewKey.intensity = 0.5 + 2.6 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
+    this.weapon.viewKey.intensity = Config.render.viewKeyMin + 2.0 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
       + this.flashlight.level * 1.2;
     this.audio.update(dt);
 

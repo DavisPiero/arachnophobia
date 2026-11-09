@@ -7,6 +7,7 @@
 // Spaces: "rifle space" = the params' GAME space (x right, y up, z towards the player, origin = receiver).
 // The root follows the camera, so everything under it is in camera space.
 import * as THREE from 'three';
+import { Config } from '../core/Config.js';
 import { loadModel, loadParams } from '../core/Assets.js';
 
 // Defaults match assets/params/rifle.json, used if the file cannot be read.
@@ -54,6 +55,10 @@ const AXE_KEYS = [
 export class ViewModel {
   constructor() {
     this.P = RIFLE_DEFAULTS;
+    // bounce: a springy offset on whatever is held [y, z, pitch, roll], kicked by switching, firing and swinging.
+    // Under-damped on purpose, so it overshoots and settles (user: "little things that make it feel responsive").
+    this.bounce = { p: [0, 0, 0, 0], v: [0, 0, 0, 0] };
+    this._lastDraw = 1; this._lastAxeT = -1; this._lastHeld = 'rifle';
     this.root = new THREE.Group();          // follows the camera (in the weapon scene)
     this.rifle = new THREE.Group();         // the posed rifle, with the arms that hold it
     this.root.add(this.rifle);
@@ -129,6 +134,9 @@ export class ViewModel {
       // the glTF metallicRoughness texture holds both; MeshStandard reads roughness from G and metalness from B
       if (mat.roughnessMap && !mat.metalnessMap) mat.metalnessMap = mat.roughnessMap;
       mat.envMapIntensity = 0.6;
+      // the baked colours are very dark (gloves ~3% reflectance): lift them so the hands and gun never render as
+      // black shapes in lantern light (user: pitch black on phones). See Config.render.viewAlbedo.
+      if (!mat.userData.lifted) { mat.color.multiplyScalar(Config.render.viewAlbedo); mat.userData.lifted = true; }
       return mat;
     };
     const mk = (m, name) => { const e = pick(m, name); if (!e) return null; const o = new THREE.Mesh(e.geometry, fix(e.material)); o.frustumCulled = false; return o; };
@@ -198,7 +206,30 @@ export class ViewModel {
    * s: { aimK, sprintK, kick, swayX, swayY, bob, reloading, reloadT, rounds, leverT, axeT, stompT }
    * leverT: seconds since the last shot (large when idle). axeT/stompT: 0..1 progress, or <0 when idle.
    */
+  /** Kick the bounce spring (velocities: metres/s and radians/s, camera space). */
+  bump(y = 0, z = 0, pitch = 0, roll = 0) {
+    const v = this.bounce.v; v[0] += y; v[1] += z; v[2] += pitch; v[3] += roll;
+  }
+
+  updateBounce(dt, s) {
+    const held = s.held || 'rifle', draw = s.drawK ?? 1;
+    // switching: the new weapon comes up, overshoots and settles; the old one drops with a small jolt
+    if (held !== this._lastHeld) { this.bump(-0.25, 0, -1.2, 0.6); this._lastHeld = held; }
+    if (draw >= 0.999 && this._lastDraw < 0.999) this.bump(0.22, -0.08, 1.2, -0.4);
+    this._lastDraw = draw;
+    // axe: a lurch as the swing starts, a heavy jolt at the bottom of the chop, a settle on the way back
+    const at = s.axeT ?? -1;
+    if (at >= 0 && this._lastAxeT < 0) this.bump(0.12, 0.1, 0.8, 0.4);
+    if (at >= 0.5 && this._lastAxeT < 0.5) this.bump(-0.3, 0.15, -1.8, -0.8);
+    if (at >= 0.78 && this._lastAxeT < 0.78) this.bump(0.15, 0, 0.9, 0.3);
+    this._lastAxeT = at >= 1 ? -1 : at;
+    const { p, v } = this.bounce, k = 190, c = 13, n = Math.max(1, Math.ceil(dt / 0.008)), h = dt / n;
+    for (let j = 0; j < n; j++) for (let i = 0; i < 4; i++) { v[i] += (-k * p[i] - c * v[i]) * h; p[i] += v[i] * h; }
+  }
+
   update(dt, camera, s) {
+    this.updateBounce(dt, s);
+    const B = this.bounce.p;
     this.root.position.copy(camera.position);
     this.root.quaternion.copy(camera.quaternion);
     const a = smooth(s.aimK), sp = smooth(s.sprintK);
@@ -224,12 +255,14 @@ export class ViewModel {
       hy + s.bob + sy + r * 0.05 - s.kick * 0.014 * (1 - a * 0.5) - sp * 0.07 - lv * 0.008 - down * 0.4,
       hz + s.kick * 0.06 + r * 0.08 + sp * 0.04,
     );
+    g.position.y += B[0]; g.position.z += B[1];
     // reload: rifle turned so the loading gate on its right side faces up towards the eye
     g.rotation.set(
       lerp(H.rot[0], 0.005, a) + s.kick * 0.1 * (1 - a * 0.4) + r * 0.18 - sp * 0.35 - lv * 0.05 - down * 0.7,
       lerp(H.rot[1], 0, a) + r * 0.3 + sp * 0.6,
       r * 0.95 + sp * 0.25,
     );
+    g.rotation.x += B[2]; g.rotation.z += B[3];
     // lever and hammer
     const P = this.P;
     const leverAng = THREE.MathUtils.degToRad(P.lever.openAngle) * Math.max(lv, s.reloading ? leverReload(s.reloadT) : 0);
@@ -249,6 +282,8 @@ export class ViewModel {
       this.axe.position.x += sx * 0.6 + ad * 0.08;
       this.axe.position.y += s.bob + sy * 0.6 - ad * 0.55 - sp * 0.06;
       if (ad > 0) this.axe.rotateX(-ad * 0.6);
+      this.axe.position.y += B[0]; this.axe.position.z += B[1];
+      this.axe.rotateX(B[2]); this.axe.rotateZ(B[3]);
     }
 
     // spent cases

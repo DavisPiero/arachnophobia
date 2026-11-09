@@ -10,7 +10,7 @@
 <title>ARACHNOPHOBIA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=VT323&family=Reenie+Beanie&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./css/style.css">
 <script type="importmap">
 { "imports": {
@@ -27,12 +27,12 @@
   <div id="prompt"></div>
   <svg id="reload-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="track"/><circle cx="20" cy="20" r="16" class="bar"/></svg>
   <div id="ammo"><span id="ammo-mag">8</span><span class="sep">|</span><span id="ammo-stock">40</span><div class="label">loaded · on table</div></div>
-  <div id="health"><div id="health-fill"></div></div>
+  <div id="health"><div class="label">health</div><div class="bar"><div id="health-trail"></div><div id="health-fill"></div></div></div>
   <div id="message"></div>
-  <div id="corner-buttons">
-    <button id="btn-mute" aria-label="Mute">🔊</button>
-    <button id="btn-pause" aria-label="Pause">❚❚</button>
-  </div>
+  <div id="notice"></div>
+  <div id="hint"></div>
+  <button id="btn-pause" aria-label="Pause">❚❚</button>
+  <button id="btn-mute" class="desktop-only" aria-label="Mute">🔊</button>
 </div>
 
 <div id="touch-ui">
@@ -47,41 +47,111 @@
   <button id="btn-stomp">STOMP</button>
 </div>
 
-<div id="screen-start" class="screen">
-  <div class="panel">
-    <h1>ARACHNOPHOBIA</h1>
-    <p class="sub">You are not alone in the woods.</p>
-    <p id="loading-text">Loading…</p>
-    <button id="btn-start" class="big" disabled>Begin</button>
-    <div class="controls desktop-only">
-      <div><b>WASD</b> move · <b>Shift</b> sprint · <b>Mouse</b> look · <b>Click</b> fire · <b>Right-click</b> aim</div>
-      <div><b>F</b> axe · <b>V</b> stomp · <b>E</b> reload at the ammo table · <b>Q</b> flashlight · <b>M</b> mute · <b>Esc</b> pause</div>
+<!-- 1. boot gate: the first tap/click also unlocks sound (browsers need a gesture before audio can play) -->
+<div id="screen-boot" class="screen term-screen">
+  <div class="boot-gate"><span id="boot-text">ARACHNE FIELD TERMINAL</span><br><span class="blink-line">press any key to wake the terminal<span class="cursor">█</span></span></div>
+</div>
+
+<!-- 2. loading: a black screen, a boot log typing itself out -->
+<div id="screen-loading" class="screen term-screen hidden">
+  <div class="scan"></div>
+  <pre id="boot-log"></pre>
+  <div id="boot-progress"></div>
+</div>
+
+<!-- 3. main menu: an old terminal on a lab bench, a notebook, webs -->
+<div id="screen-start" class="screen hidden">
+  <div class="lab">
+    <div class="notebook" aria-hidden="true">
+      <div class="page">
+        <p class="date">Oct 29</p>
+        <p>Specimen 7 is bigger again. It watched me through the glass the whole time I fed the others.</p>
+        <p>They <u>hate</u> the light.</p>
+        <p class="date">Oct 30</p>
+        <p>The big one smiled. I am sure of it. Teeth like ours.</p>
+        <p class="date">Oct 31</p>
+        <p>Seal 7 is gone. Taking the rifle to the cabin. Keep the fire going. Never stand at a window too long.</p>
+      </div>
     </div>
-    <div class="controls touch-only">
-      <div>Left thumb: move (push to the edge to sprint) · Right thumb: look · <b>FIRE</b> (drag it to aim)</div>
-      <div><b>AIM</b> zooms in · <b>AXE</b> · <b>STOMP</b> · <b>LIGHT</b> flashlight · reload only at the ammo table: <b>USE</b></div>
+    <div class="crt">
+      <div class="crt-screen">
+        <div class="crt-text">
+          <div class="dimline">ARACHNE-LAB 4.3BSD (tty0)</div>
+          <div class="dimline">WARNING: enclosure 7 reports a breach</div>
+          <h1 class="term-title">ARACHNOPHOBIA</h1>
+          <div class="dimline">$ cd /field-station/cabin</div>
+          <ul id="menu-list" class="term-menu">
+            <li><button id="btn-start" data-cmd="begin">./begin</button><span class="desc">survive the night</span></li>
+            <li><button id="btn-settings-menu" data-cmd="settings">settings</button><span class="desc">gameplay · graphics · audio · controls</span></li>
+          </ul>
+          <div id="loading-text" class="dimline"></div>
+          <div class="dimline hint-line">headphones recommended. listen for where they are.</div>
+        </div>
+      </div>
+      <div class="crt-led"></div>
     </div>
-    <p class="hint">Headphones recommended. Listen for where they are.</p>
   </div>
 </div>
 
-<div id="screen-pause" class="screen hidden">
-  <div class="panel">
-    <h2>Paused</h2>
-    <label>Master <input type="range" id="vol-master" min="0" max="1" step="0.01"></label>
-    <label>Effects <input type="range" id="vol-sfx" min="0" max="1" step="0.01"></label>
-    <label>Ambience <input type="range" id="vol-ambience" min="0" max="1" step="0.01"></label>
-    <label class="check"><input type="checkbox" id="chk-mute"> Mute all sound</label>
-    <button id="btn-resume" class="big">Resume</button>
-    <button id="btn-restart">Restart</button>
+<div id="screen-pause" class="screen term-screen overlay hidden">
+  <div class="term-panel">
+    <div class="dimline">[1]+ Stopped    ./begin</div>
+    <h2>PAUSED</h2>
+    <ul class="term-menu">
+      <li><button id="btn-resume">resume</button></li>
+      <li><button id="btn-settings-pause">settings</button></li>
+      <li><button id="btn-restart">restart</button><span class="desc">back to wave 1</span></li>
+    </ul>
   </div>
 </div>
 
-<div id="screen-over" class="screen hidden">
-  <div class="panel">
+<div id="screen-over" class="screen term-screen overlay hidden">
+  <div class="term-panel">
+    <div class="dimline">SIGNAL LOST</div>
     <h2>They got in.</h2>
-    <p id="over-stats"></p>
-    <button id="btn-again" class="big">Try again</button>
+    <p id="over-stats" class="dimline"></p>
+    <ul class="term-menu"><li><button id="btn-again">try again</button></li></ul>
+  </div>
+</div>
+
+<!-- settings: four tabs, from the main menu and the pause screen -->
+<div id="screen-settings" class="screen term-screen overlay hidden">
+  <div class="term-panel wide">
+    <div class="tabs" role="tablist">
+      <button data-tab="gameplay" class="on">gameplay</button><button data-tab="graphics">graphics</button><button data-tab="audio">audio</button><button data-tab="controls">controls</button>
+    </div>
+    <div class="tab" data-tab="gameplay">
+      <label>look speed <input type="range" id="set-look" min="0.3" max="2.5" step="0.05"></label>
+      <label class="check"><input type="checkbox" id="set-invert"> invert look up/down</label>
+      <label class="check"><input type="checkbox" id="set-hints"> show hints</label>
+    </div>
+    <div class="tab hidden" data-tab="graphics">
+      <label>quality <select id="set-quality"><option value="auto">auto</option><option value="low">low (phones)</option><option value="high">high</option></select></label>
+      <div id="quality-note" class="dimline small"></div>
+      <label class="check"><input type="checkbox" id="set-effects"> film effects (grain, colour fringe, vignette)</label>
+      <label>brightness <input type="range" id="set-brightness" min="0.7" max="1.6" step="0.05"></label>
+    </div>
+    <div class="tab hidden" data-tab="audio">
+      <label>master <input type="range" id="vol-master" min="0" max="1" step="0.01"></label>
+      <label>effects <input type="range" id="vol-sfx" min="0" max="1" step="0.01"></label>
+      <label>ambience <input type="range" id="vol-ambience" min="0" max="1" step="0.01"></label>
+      <label>music (menu) <input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
+      <label class="check"><input type="checkbox" id="chk-mute"> mute all sound</label>
+    </div>
+    <div class="tab hidden" data-tab="controls">
+      <div class="desktop-only">
+        <div id="keybinds"></div>
+        <div class="dimline small">mouse: look · left click fire / swing · right click aim · Esc pause</div>
+        <button id="btn-keys-reset" class="small-btn">reset keys</button>
+      </div>
+      <div class="touch-only dimline touch-help">
+        <div>left thumb: move (push to the edge to sprint)</div>
+        <div>right thumb: look · FIRE fires or swings (drag it to aim)</div>
+        <div>AIM zooms · AXE swaps weapons · STOMP · LIGHT flashlight</div>
+        <div>USE reloads at the ammo table</div>
+      </div>
+    </div>
+    <ul class="term-menu"><li><button id="btn-settings-back">back</button></li></ul>
   </div>
 </div>
 
