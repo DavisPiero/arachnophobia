@@ -11,9 +11,7 @@ import { Input } from '../input/Input.js';
 import { Player } from '../player/Player.js';
 import { Weapon } from '../player/Weapon.js';
 import { Melee } from '../player/Melee.js';
-import { Legs } from '../player/Legs.js';
 import { Gore } from '../fx/Gore.js';
-import { interiorMaterial } from '../world/Lighting.js';
 import { AmmoTable } from '../player/AmmoTable.js';
 import { Flashlight } from '../player/Flashlight.js';
 import { WindowSystem } from '../systems/WindowSystem.js';
@@ -65,9 +63,6 @@ export class Game {
     this.gore = new Gore({ scene: this.scene, events, windows: this.windows, quality: Quality });
     this.spiders.gore = this.gore;
     this.melee = new Melee({ player: this.player, weapon: this.weapon, camera: this.camera, audio: this.audio, events, windows: this.windows, spiders: this.spiders });
-    this.scene.add(this.weapon.view.boot);
-    this.legs = new Legs();
-    this.scene.add(this.legs.root);
     this.waves = new WaveSystem({ spiders: this.spiders, events, quality: Quality, player: this.player });
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
@@ -119,10 +114,8 @@ export class Game {
     this.menu.setLoading('Building sounds…');
     try { await this.audio.init(); } catch (err) { console.error('audio init failed', err); }
     this.menu.setLoading('Carving rocks…');
-    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality), this.legs.loadAssets(Quality),
+    await Promise.all([this.world.loadAssets(), this.weapon.loadAssets(Quality),
       loadSpiderModels(Quality).then((t) => { this.spiderModels = t; })]);
-    // the boot and the legs stand in the room: keep the moon off them like every other interior surface
-    for (const g of [this.weapon.view.boot, this.legs.root]) g.traverse((o) => { if (o.isMesh && o.material) interiorMaterial(o.material); });
     this.state = 'title';
     this.menu.ready();
     this.loop();
@@ -234,7 +227,6 @@ export class Game {
     if (simulate) {
       this.table.update(dt);
       this.melee.update(dt);
-      this.legs.update(dt, this.player, this.melee.stompT >= 0);
       const calmBefore = this.waves.phase === 'calm' ? this.waves.timer : null;
       this.waves.update(dt);
       // deliberate silence in the seconds before a wave arrives
@@ -295,7 +287,7 @@ export class Game {
     this.debugEl = el;
     this.fpsAcc = 0; this.fpsN = 0; this.fps = 0;
     addEventListener('keydown', (e) => {
-      const types = { Digit1: 'runner', Digit2: 'brute', Digit3: 'climber', Digit4: 'stalker' };
+      const types = { Digit1: 'runner', Digit2: 'brute', Digit3: 'climber', Digit4: 'stalker', Digit5: 'weeper' };
       if (types[e.code]) this.spiders.spawn(types[e.code], WINDOWS[Math.floor(Math.random() * 3)].id);
       if (e.code === 'KeyK') for (const s of this.spiders.spiders) if (s.alive) s.die();
       if (e.code === 'KeyI') { // a runner right in front of you, inside (to try the stomp and the axe)
@@ -310,7 +302,7 @@ export class Game {
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const i = this.renderer.info;
-    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  I runner inside  K kill  B damage windows  J lightning`;
+    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-5 spawn  I runner inside  K kill  B damage windows  J lightning`;
   }
 }
 

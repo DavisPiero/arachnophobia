@@ -146,6 +146,9 @@ export class Player {
       this.push.x += -side * 0.07 * k;       // yaw away (side < 0 = hit from the right)
       this.push.y += front * 0.05 * k;       // hit from the front snaps the head up
       this.push.z += -side * 0.09 * k;       // roll away
+      // and the body is shoved back, away from the hit (walking and collisions take over from there)
+      const d = Math.hypot(dx, dz) || 1;
+      this.velocity.x -= (dx / d) * 2.6 * k; this.velocity.z -= (dz / d) * 2.6 * k;
     }
     this.hurtFlash = Math.min(1, this.hurtFlash + amount / 30);
     this.audio.play('playerHurt', { volume: 0.9 });

@@ -47,10 +47,10 @@ export class WindowSystem {
 
     // cracks, drawn on a canvas as damage builds up
     const crackCanvas = document.createElement('canvas');
-    crackCanvas.width = crackCanvas.height = 256;
+    crackCanvas.width = crackCanvas.height = 512;
     const crackTex = new THREE.CanvasTexture(crackCanvas);
     crackTex.colorSpace = THREE.SRGBColorSpace;
-    const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, color: 0xbfc8c8 }));
+    const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
     crack.position.z = GLASS_Z - 0.002;
     crack.renderOrder = 12;
     group.add(crack);
@@ -197,24 +197,45 @@ export class WindowSystem {
   }
 
   addCrack(w, u, v, size) {
-    // one crack = a few jagged lines radiating from (u, v) plus a ring
+    // impact glass: long radial cracks that split and split again as they run (a fractal tree), joined near the
+    // impact by short jagged web lines. Stored as polylines with a width so a redraw gives the same picture.
     const lines = [];
-    const n = 4 + Math.floor(Math.random() * 4);
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
-      let x = u, y = v;
+    const branch = (x, y, ang, len, width, depth) => {
       const pts = [[x, y]];
-      const len = (0.15 + Math.random() * 0.35) * size;
-      const segs = 4 + Math.floor(Math.random() * 4);
-      let ang = a;
+      const segs = 5 + Math.floor(Math.random() * 5);
       for (let s = 0; s < segs; s++) {
-        ang += (Math.random() - 0.5) * 0.7;
+        ang += (Math.random() - 0.5) * 0.45;
         x += Math.cos(ang) * len / segs; y += Math.sin(ang) * len / segs;
         pts.push([x, y]);
+        // fork: a thinner, shorter crack splits off to one side
+        if (depth > 0 && s > 0 && Math.random() < 0.32) {
+          const side = Math.random() < 0.5 ? -1 : 1;
+          branch(x, y, ang + side * (0.35 + Math.random() * 0.55), len * (0.35 + Math.random() * 0.3), width * 0.62, depth - 1);
+        }
+        if (x < -0.02 || x > 1.02 || y < -0.02 || y > 1.02) break;
       }
-      lines.push(pts);
+      lines.push({ pts, width });
+      return pts;
+    };
+    const n = 5 + Math.floor(Math.random() * 5);
+    const radials = [];
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+      radials.push(branch(u, v, a, (0.2 + Math.random() * 0.45) * size, 1.6 + Math.random() * 0.8, 3));
     }
-    w.cracks.push({ u, v, lines, ring: 0.03 * size });
+    // web: two or three rings of short jagged lines joining neighbouring radials
+    const rings = 1 + Math.floor(Math.random() * 3 * Math.min(1, size));
+    for (let k = 1; k <= rings; k++) {
+      for (let i = 0; i < n; i++) {
+        if (Math.random() < 0.25) continue;
+        const A = radials[i], B = radials[(i + 1) % n];
+        const ia = Math.min(A.length - 1, k * 2), ib = Math.min(B.length - 1, k * 2 + (Math.random() < 0.5 ? 0 : 1));
+        const [x0, y0] = A[ia], [x1, y1] = B[ib];
+        const mx = (x0 + x1) / 2 + (Math.random() - 0.5) * 0.02, my = (y0 + y1) / 2 + (Math.random() - 0.5) * 0.02;
+        lines.push({ pts: [[x0, y0], [mx, my], [x1, y1]], width: 0.7 + Math.random() * 0.4 });
+      }
+    }
+    w.cracks.push({ u, v, lines, ring: 0.012 * size });
     this.drawCracks(w);
   }
 
@@ -224,8 +245,8 @@ export class WindowSystem {
     const S = c.width;
     if (shattered) {
       // jagged shards left in the frame edges
-      g.fillStyle = 'rgba(190,205,205,0.28)';
-      g.strokeStyle = 'rgba(230,240,240,0.7)';
+      g.fillStyle = 'rgba(170,210,240,0.2)';
+      g.strokeStyle = 'rgba(200,232,255,0.75)';
       g.lineWidth = 1.2;
       const edge = (x0, y0, x1, y1, inward) => {
         g.beginPath(); g.moveTo(x0 * S, y0 * S);
@@ -239,18 +260,26 @@ export class WindowSystem {
       };
       edge(0, 0, 1, 0, [0, 1]); edge(1, 0, 1, 1, [-1, 0]); edge(1, 1, 0, 1, [0, -1]); edge(0, 1, 0, 0, [1, 0]);
     } else {
-      g.strokeStyle = 'rgba(235,245,245,0.85)';
-      g.lineCap = 'round';
-      for (const cr of w.cracks) {
-        for (const pts of cr.lines) {
-          g.lineWidth = 0.6 + Math.random() * 0.8;
-          g.beginPath();
-          pts.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
-          g.stroke();
+      // thin light-blue lines: a soft glow pass under a sharp core, so they read but the glass stays clear
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const k = S / 512;
+      for (const pass of [0, 1]) {
+        g.strokeStyle = pass ? 'rgba(200,232,255,0.7)' : 'rgba(120,180,235,0.14)';
+        for (const cr of w.cracks) {
+          for (const ln of cr.lines) {
+            g.lineWidth = (pass ? ln.width * 0.45 : ln.width * 2.2) * k;
+            g.beginPath();
+            ln.pts.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
+            g.stroke();
+          }
         }
-        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S, 0, Math.PI * 2); g.stroke();
-        g.fillStyle = 'rgba(220,230,230,0.25)';
-        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S * 0.6, 0, Math.PI * 2); g.fill();
+      }
+      // the crushed point of each impact: a small frosted spot
+      for (const cr of w.cracks) {
+        const gr = g.createRadialGradient(cr.u * S, cr.v * S, 0, cr.u * S, cr.v * S, cr.ring * S * 2.2);
+        gr.addColorStop(0, 'rgba(215,238,255,0.55)'); gr.addColorStop(1, 'rgba(160,205,245,0)');
+        g.fillStyle = gr;
+        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S * 2.2, 0, Math.PI * 2); g.fill();
       }
     }
     w.crackTex.needsUpdate = true;

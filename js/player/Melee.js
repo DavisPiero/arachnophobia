@@ -19,7 +19,6 @@ export class Melee {
     this.events = events;
     this.windows = windows;
     this.spiders = spiders;
-    this.boot = weapon.view.boot;      // the Game adds it to the world scene
     this.ray = new THREE.Raycaster();
     this.reset();
   }
@@ -28,7 +27,6 @@ export class Melee {
     this.axeT = -1; this.stompT = -1; this.hitDone = false;
     this.weapon.axeT = -1; this.weapon.stompT = -1; this.weapon.busy = false;
     this.player.dip = 0;
-    this.boot.visible = false;
   }
 
   get busy() { return this.axeT >= 0 || this.stompT >= 0; }
@@ -161,7 +159,7 @@ export class Melee {
       const d = to.length() - s.visual.radius * 0.4;
       if (d > S.reach) continue;
       if (to.normalize().dot(fwd) < Math.cos(S.cone)) continue;
-      if (S.kills.includes(s.type)) {
+      if (S.kills.includes(s.type) || S.killsSize.includes(s.size)) {
         s.takeHit(9999, _c.copy(sp).setY(0.05), _b.set(0, -1, 0).addScaledVector(fwd, 0.3).normalize(), { by: 'stomp' });
       } else {
         // too big to crush: shove it back and make it reel
@@ -175,19 +173,12 @@ export class Melee {
     }
   }
 
-  /** The boot in the world, and the head dipping to look at it. */
+  /** The head dips to look at the stomp. No boot or legs are drawn (user's call: lighter, nothing to see below). */
   poseBoot() {
     const t = this.stompT;
-    if (t < 0) { this.boot.visible = false; this.player.dip *= 0.8; return; }
+    if (t < 0) { this.player.dip *= 0.8; return; }
     const ramp = (x, a, b) => { const k = Math.min(1, Math.max(0, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
-    const hit = M.stomp.hitAt / M.stomp.time;
     this.player.dip = 0.75 * ramp(t, 0, 0.3) * (1 - ramp(t, 0.65, 1));
-    const lift = ramp(t, 0.05, hit - 0.12) * (1 - ramp(t, hit - 0.08, hit));
-    const reach = 0.35 + 0.42 * ramp(t, 0, hit) - 0.6 * ramp(t, 0.7, 1);
-    const p = this.player.position, fwd = this.player.forward(_fwd);
-    this.boot.position.set(p.x + fwd.x * reach - fwd.z * 0.1, lift * 0.34 + 0.002, p.z + fwd.z * reach + fwd.x * 0.1);
-    this.boot.rotation.set(-lift * 0.35, this.player.yaw, 0);
-    this.boot.visible = t < 0.97;
   }
 }
 

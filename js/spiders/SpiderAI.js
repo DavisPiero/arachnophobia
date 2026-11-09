@@ -10,22 +10,31 @@ import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight, WINDOWS } from '../world/Layout.js';
 import { createSpiderVisual } from './SpiderModel.js';
 import { SpiderVoice } from '../audio/SpiderVoice.js';
+import { Behaviour } from './Behaviour.js';
+import { SpiderCollision } from './SpiderCollision.js';
 import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const GORE = Config.gore;
-const SLOTS = [ { u: 0, y: 1.42 }, { u: -0.32, y: 1.2 }, { u: 0.34, y: 1.62 } ]; // attack spots on a window
+// attack spots on a window: across the glass, as offsets from its middle (dy in metres); the Weeper waits under the sill
+const SLOTS = [ { u: 0, dy: -0.03 }, { u: -0.38, dy: -0.28 }, { u: 0.4, dy: 0.2 } ];
+const slotY = (w, s) => w.center.y + s.dy;
 
 let nextId = 1;
 
 export class Spider {
-  constructor(type, mgr) {
+  constructor(type, mgr, { size = 'medium' } = {}) {
     this.id = nextId++;
     this.type = type;
     this.mgr = mgr;
-    this.cfg = Config.spiders[type];
+    this.size = size;
+    const sz = Config.sizes[size] || Config.sizes.medium;
+    // a sized copy of the species' numbers: health, speeds and damage scale with size
+    const c = Config.spiders[type];
+    this.cfg = { ...c, health: c.health * sz.health, speed: c.speed * sz.speed, climbSpeed: c.climbSpeed * sz.speed,
+      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage, playerDamage: c.playerDamage * sz.damage };
     this.health = this.cfg.health;
-    this.visual = createSpiderVisual(type, mgr.quality);
+    this.visual = createSpiderVisual(type, mgr.quality, { collision: mgr.collision, size });
     this.root = this.visual.root;
     this.visual.hitbox.userData.spider = this;
     // forgiving hitbox: players aim at the whole creature, not only its body
@@ -45,12 +54,13 @@ export class Spider {
     this.flinch = 0;
     this.stagger = 0;         // seconds a heavy hit stops the spider (brutes)
     this.attackT = 1 + Math.random();
-    this.attackAnim = 0;
     this.window = null; this.slot = -1;
     this.watchT = 0; this.vanishes = 0; this.fade = 1;
     this.deadT = 0; this.fallV = null;
     this.alive = true; this.removed = false;
     this.distToPlayer = 99;
+    this.beh = new Behaviour(type);   // personality: freezes, bursts, face, attacks (js/spiders/Behaviour.js)
+    this.sense = { looked: false, lit: false, near: 99, moving: false, atWindow: false, reach: null };
     this.visual.setOpacity(1);
   }
 
@@ -148,13 +158,13 @@ export class Spider {
   update(dt, player) {
     this.distToPlayer = this.root.position.distanceTo(player.position);
     this.flinch = Math.max(0, this.flinch - dt);
-    this.attackAnim = Math.max(0, this.attackAnim - dt * 2.5);
     if (this.stagger > 0) {
       // reeling from a heavy hit: no moving, no attacking
       this.stagger -= dt;
       this.pause = Math.max(this.pause, this.stagger);
       this.attackT = Math.max(this.attackT, this.stagger + 0.2);
     }
+    this.senseUpdate(player, dt);
     let mode = 'walk';
     let moveSpeed = 0;
 
@@ -180,11 +190,11 @@ export class Spider {
         break;
       case 'attackWindow':
         this.updateAttackWindow(dt);
-        mode = this.attackAnim > 0 ? 'attack' : 'idle';
+        mode = 'idle';
         break;
       case 'inside':
         moveSpeed = this.updateInside(dt, player);
-        mode = this.attackAnim > 0 ? 'attack' : (moveSpeed > 0.05 ? 'walk' : 'idle');
+        mode = moveSpeed > 0.05 ? 'walk' : 'idle';
         break;
       case 'dying':
         // nothing left to show: the voice finishes its death rattle, then the spider is removed
@@ -205,7 +215,7 @@ export class Spider {
       const body = _f.copy(this.root.position).addScaledVector(this.up, this.visual.radius * 0.6);
       sq.narrow = Math.max(0, 1 - Math.abs(body.sub(mid).dot(sq.normal)) / (this.visual.radius * 1.6));
     }
-    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, attack: Math.sin(Math.min(1, this.attackAnim) * Math.PI) });
+    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, pose: this.beh.pose });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
         : this.state === 'attackWindow' ? 'attackWindow'
@@ -226,7 +236,7 @@ export class Spider {
     const climbing = b.s !== 'ground' && b.s !== 'floor';
     let v = (climbing ? this.cfg.climbSpeed : this.cfg.speed) * (this.flinch > 0 ? 0.15 : 1);
     if (a.squeeze) v = this.cfg.squeezeSpeed * (this.flinch > 0 ? 0.3 : 1);   // hauling itself through the frame
-    else v *= this.gaitFactor(dt);
+    else v *= this.beh.speedK;
     const len = Math.max(0.001, a.p.distanceTo(b.p));
     this.segT += (v * dt) / len;
     while (this.segT >= 1 && this.seg < this.path.length - 1) {
@@ -254,29 +264,23 @@ export class Spider {
     return v;
   }
 
-  /** Speed multiplier that gives each type its own rhythm. */
-  gaitFactor(dt) {
-    const t = performance.now() / 1000 + this.id * 1.7;
-    switch (this.type) {
-      case 'runner': {
-        // twitchy bursts and sudden freezes
-        this.burst -= dt;
-        if (this.burst <= 0) {
-          if (Math.random() < 0.28) { this.pause = 0.15 + Math.random() * 0.7; }
-          this.burst = 0.4 + Math.random() * 1.4;
-        }
-        return 0.75 + 0.35 * Math.sin(t * 7);
-      }
-      case 'brute': return 0.75 + 0.3 * Math.max(0, Math.sin(t * 1.6)); // heavy lurching
-      case 'stalker': {
-        if (Math.random() < dt * 0.25) this.pause = 1 + Math.random() * 2.5;
-        return 0.8;
-      }
-      default: {
-        if (Math.random() < dt * 0.12) this.pause = 0.3 + Math.random();
-        return 1;
-      }
-    }
+  /** What it notices about the player this frame (Behaviour reacts to it). */
+  senseUpdate(player, dt) {
+    const s = this.sense, p = this.root.position;
+    s.near = this.distToPlayer;
+    const cam = player.camera;
+    if (cam) {
+      const eye = cam.getWorldPosition(_h), dir = _d.subVectors(p, eye);
+      const d = dir.length();
+      const fwd = cam.getWorldDirection(_x);
+      s.looked = this.root.visible && d < 26 && fwd.dot(dir.multiplyScalar(1 / Math.max(d, 1e-3))) > Math.cos(0.32);
+    } else s.looked = false;
+    s.lit = !!this.mgr.flashlight?.lights?.(p);
+    s.atWindow = this.state === 'attackWindow' || this.state === 'wait' || this.surface === 'glass';
+    if (this.state === 'attackWindow' && this.window) s.reach = (this._reach || (this._reach = new THREE.Vector3())).copy(this.window.center).addScaledVector(this.window.normal, WALL_OUT);
+    else if (this.state === 'inside' && cam) s.reach = (this._reach || (this._reach = new THREE.Vector3())).copy(cam.position);
+    else s.reach = null;
+    this.beh.update(dt, s);
   }
 
   finishPath() {
@@ -321,15 +325,17 @@ export class Spider {
       this.follow(bruteSlot(from, w), () => this.beginAttack());
     } else if (this.surface === 'wall' || this.surface === 'glass') {
       const s = SLOTS[idx];
-      const target = WINDOW_POINT(w, s.u, s.y);
+      const target = WINDOW_POINT(w, s.u, slotY(w, s));
       this.follow([{ p: from, n: this.up.clone(), s: 'wall' }, { p: target, n: w.normal.clone(), s: 'glass' }], () => this.beginAttack());
     } else {
-      this.follow(climbToSlot(from, w, SLOTS[idx]), () => this.beginAttack());
+      const sl = this.type === 'weeper' ? { u: SLOTS[idx].u * 0.5, y: w.center.y - w.height / 2 - 0.32 } : { u: SLOTS[idx].u, y: slotY(w, SLOTS[idx]) };
+      this.follow(climbToSlot(from, w, sl), () => this.beginAttack());
     }
   }
 
   beginAttack() {
     this.state = 'attackWindow';
+    this.slotBaseY = this.root.position.y;
     this.attackT = 0.6 + Math.random() * 0.8;
     if (this.type === 'brute') this.fwd.copy(this.window.normal).negate();
     else if (this.type === 'climber') this.fwd.set(0, -1, 0);           // head down
@@ -339,22 +345,28 @@ export class Spider {
   updateAttackWindow(dt) {
     const w = this.window;
     if (w.stage >= 4) { this.goInside(); return; }
+    // the Weeper hides under the sill and rises slowly into view when you come close; sinks back when you look away
+    if (this.type === 'weeper') this.root.position.y = this.slotBaseY + (this.beh.riseK || 0) * 0.55;
     this.attackT -= dt;
-    if (this.attackT <= 0) {
-      this.attackT = this.cfg.attackInterval * (0.75 + Math.random() * 0.5);
-      this.attackAnim = 1;
+    if (this.attackT <= 0 && !this.beh.attacking) {
+      // uneven rhythm: sometimes straight again, sometimes a long silence
+      this.attackT = this.cfg.attackInterval * (Math.random() < 0.25 ? 2.5 + Math.random() * 2 : 0.5 + Math.random() * 0.7);
+      this.beh.startAttack();
       this.voice?.attack();
-      this.mgr.windows.damage(w.id, this.cfg.windowDamage * (0.8 + Math.random() * 0.4), this.root.position);
+    }
+    if (this.beh.strike) {
+      this.mgr.windows.damage(w.id, this.cfg.windowDamage * this.beh.strike * (0.8 + Math.random() * 0.4), this.root.position);
+      this.visual.rig.kick?.({ y: -0.05, z: -0.4 });
     }
     // runners dart sideways across the wall and back
-    if (this.type === 'runner' && Math.random() < dt * 0.25) {
+    if (this.type === 'runner' && !this.beh.attacking && Math.random() < dt * 0.25) {
       const s = SLOTS[this.slot];
       const side = (Math.random() < 0.5 ? -1 : 1) * (0.9 + Math.random() * 0.8);
       const here = this.root.position.clone();
       this.state = 'scuttle';
       this.follow([
         { p: here, n: w.normal.clone(), s: 'glass' },
-        { p: WINDOW_POINT(w, s.u + side, s.y + (Math.random() - 0.5) * 0.6), n: w.normal.clone(), s: 'wall' },
+        { p: WINDOW_POINT(w, s.u + side, slotY(w, s) + (Math.random() - 0.5) * 0.6), n: w.normal.clone(), s: 'wall' },
         { p: here.clone(), n: w.normal.clone(), s: 'glass' },
       ], () => this.beginAttack());
     }
@@ -383,20 +395,25 @@ export class Spider {
     this.surface = 'floor';
     this.up.copy(UP);
     if (dist > 0.01) this.fwd.copy(to).normalize();
+    // it does not run straight at you: it circles in from the side, and the further away the wider the arc
+    const arc = Math.sin(this.beh.t * 0.6 + this.id * 2.3) * 0.9 * THREE.MathUtils.smoothstep(dist, 1.5, 5);
+    const move = _f.copy(this.fwd).applyAxisAngle(UP, arc);
     let v = 0;
-    if (dist > reach && this.attackAnim <= 0.3) {
-      v = this.cfg.speed * (this.type === 'runner' ? 0.8 : 1) * (this.flinch > 0 ? 0.2 : 1) * (this.pause > 0 ? 0 : 1);
+    if (dist > reach && !this.beh.attacking) {
+      v = this.cfg.speed * (this.type === 'runner' ? 0.8 : 1) * (this.flinch > 0 ? 0.2 : 1) * (this.pause > 0 ? 0 : 1) * this.beh.speedK;
       if (this.pause > 0) this.pause -= dt;
-      p.addScaledVector(this.fwd, Math.min(v * dt, dist - reach));
+      p.addScaledVector(move, Math.min(v * dt, dist - reach));
       this.collide();
     } else {
       this.attackT -= dt;
-      if (this.attackT <= 0 && !player.dead) {
-        this.attackT = this.cfg.attackInterval * (0.8 + Math.random() * 0.4);
-        this.attackAnim = 1;
+      if (this.attackT <= 0 && !player.dead && !this.beh.attacking) {
+        this.attackT = this.cfg.attackInterval * (0.6 + Math.random() * 0.8);
+        this.beh.startAttack();
         this.voice?.attack();
-        player.damage(this.cfg.playerDamage, this.root.position);
       }
+    }
+    if (this.beh.strike && !player.dead && dist < reach + 0.5) {
+      player.damage(this.cfg.playerDamage * this.beh.strike, this.root.position);
     }
     p.y = 0;
     return v;
@@ -467,6 +484,13 @@ export class Spider {
   }
 }
 
+/** A size for a new spider: mostly medium, small ones in numbers, large ones rarer (a large sac is rarer still). */
+function pickSize(type) {
+  const r = Math.random();
+  const large = type === 'brute' ? 0.12 : 0.2, small = type === 'brute' ? 0.15 : 0.32;
+  return r < small ? 'small' : r < small + large ? 'large' : 'medium';
+}
+
 /** Height under a point: the cabin floor inside, the terrain outside. */
 function groundAt(x, z) {
   return Math.abs(x) < CABIN.halfX && Math.abs(z) < CABIN.halfZ ? 0 : terrainHeight(x, z);
@@ -486,6 +510,7 @@ export class SpiderManager {
     this.quality = quality;
     this.windows = windows;
     this.colliders = colliders || [];
+    this.collision = new SpiderCollision(this.colliders);   // what feet stand on and bodies bump into
     this.spiders = [];
     this.slots = Object.fromEntries(WINDOWS.map((w) => [w.id, [null, null, null]]));
     this.timers = [];
@@ -511,8 +536,8 @@ export class SpiderManager {
   }
 
   /** Spawn a spider of a type heading for a window. */
-  spawn(type, windowId) {
-    const s = new Spider(type, this);
+  spawn(type, windowId, size = pickSize(type)) {
+    const s = new Spider(type, this, { size });
     s.window = this.windows.byId[windowId];
     s.routeIndex = Math.floor(Math.random() * 3);
     if (type === 'stalker') {

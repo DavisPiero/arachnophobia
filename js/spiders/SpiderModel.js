@@ -15,7 +15,15 @@ import { getChitinTextures, getGlowTexture } from './SpiderTextures.js';
 import { Config } from '../core/Config.js';
 import { loadModel, assetsEnabled } from '../core/Assets.js';
 
-export const SPIDER_TYPES = ['runner', 'brute', 'climber', 'stalker'];
+// SPECIES (how it behaves, Config.spiders) and MODELS (what it looks like, assets/models/spider_<model>.glb) are separate:
+// a species names its model in Config.spiders.<species>.model, so a model can be reused or swapped.
+export const SPIDER_TYPES = ['runner', 'brute', 'climber', 'stalker', 'weeper'];
+export const MODELS = ['knot', 'sac', 'flayed', 'grinner', 'weeper'];
+const modelOf = (type) => Config.spiders[type]?.model || type;
+
+// Three sizes of every model. One mesh per model; a size changes the scale and how heavy the body moves (mass),
+// and the AI scales health, speed and damage (Config.sizes).
+export const SIZES = { small: { scale: 0.62, mass: 0.55 }, medium: { scale: 1, mass: 1 }, large: { scale: 1.45, mass: 1.9 } };
 
 const D2R = Math.PI / 180;
 const SEG = ['coxa', 'femur', 'patella', 'tibia', 'metatarsus', 'tarsus'];
@@ -420,7 +428,7 @@ const v3a = (a) => new THREE.Vector3(a[0], a[1], a[2]);
 export async function loadSpiderModels(quality) {
   if (!assetsEnabled) return [];
   const base = new URL('../../assets/models/', import.meta.url);
-  const loaded = await Promise.all(SPIDER_TYPES.map(async (type) => {
+  const loaded = await Promise.all(MODELS.map(async (type) => {
     if (glb[type]) return type;
     try {
       const [side, model] = await Promise.all([
@@ -435,6 +443,8 @@ export async function loadSpiderModels(quality) {
         legs: L.legs.map((l) => ({ ...l, dir: v3a(l.dir), attach: v3a(l.attach), rest: v3a(l.rest) })),
         palps: L.palps.map((p) => ({ ...p, attach: v3a(p.attach) })),
         chel: L.chel.map((c) => ({ ...c, attach: v3a(c.attach) })),
+        mouth: L.mouth ? { ...L.mouth, attach: v3a(L.mouth.attach) } : null,
+        lids: L.lids ? { ...L.lids, attach: v3a(L.lids.attach) } : null,
       };
       glb[type] = { side, lay, rest: side.rest.map((m) => new THREE.Matrix4().fromArray(m)),
         mesh: remapJoints(mesh), lod: model.get(`spider_${type}_lod1`) ? remapJoints(model.get(`spider_${type}_lod1`)) : null };
@@ -460,14 +470,30 @@ function remapJoints(m) {
 }
 
 function buildGlbAssets(type, detail) {
-  const G = glb[type];
+  const G = glb[modelOf(type)];
   const key = type + ':glb:' + detail;
   if (assetCache.has(key)) return assetCache.get(key);
-  const def = { ...DEFS[type], ...G.side.def };
+  const def = { ...(DEFS[type] || DEFS.stalker), ...G.side.def };
   const lay = G.lay;
   const src = (!detail && G.lod) ? G.lod : G.mesh;
   const material = src.material.clone();
   material.envMapIntensity = 0.5;
+  // subsurface, faked: thin flesh lets light through, so lit skin glows warm at the edges and where light is behind it
+  const sss = G.side.look?.sss || 0;
+  if (sss > 0) {
+    const col = new THREE.Color(...(G.side.look.sssColor || [0.8, 0.25, 0.15]));
+    material.onBeforeCompile = (sh) => {
+      sh.uniforms.uSss = { value: sss }; sh.uniforms.uSssColor = { value: col };
+      sh.fragmentShader = sh.fragmentShader
+        .replace('#include <common>', '#include <common>\nuniform float uSss;\nuniform vec3 uSssColor;')
+        .replace('#include <opaque_fragment>', `
+          { float rim = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 2.5);
+            vec3 lit = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
+            outgoingLight += uSssColor * uSss * (lit * 0.55 + lit * rim * 1.6); }
+          #include <opaque_fragment>`);
+    };
+    material.customProgramCacheKey = () => 'spider-sss';
+  }
   // the red eye glow (glowing species): points in body-bone space from the generator
   const glowGeometry = new THREE.BufferGeometry();
   glowGeometry.setAttribute('position', new THREE.Float32BufferAttribute(G.side.glow.flat(), 3));
@@ -489,10 +515,10 @@ function buildGlbAssets(type, detail) {
 const assetCache = new Map();
 
 function buildAssets(type, detail) {
-  if (glb[type]) return buildGlbAssets(type, detail);
+  if (glb[modelOf(type)]) return buildGlbAssets(type, detail);
   const key = type + ':' + detail;
   if (assetCache.has(key)) return assetCache.get(key);
-  const def = DEFS[type];
+  const def = DEFS[type] || DEFS.stalker;
   const lay = makeLayout(def);
   const parts = [];
   const base = def.color;
@@ -640,7 +666,7 @@ const hitMat = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true })
  * Optional third argument { seed } for deterministic per-instance variation.
  */
 export function createSpiderVisual(type, quality, opts = {}) {
-  if (!DEFS[type]) type = 'runner';
+  if (!Config.spiders[type]) type = 'runner';
   const detail = quality && quality.spiderDetail ? 1 : 0;
   const A = buildAssets(type, detail);
   const def = A.def;
@@ -650,7 +676,8 @@ export function createSpiderVisual(type, quality, opts = {}) {
   const root = new THREE.Group();
   root.name = 'spider-' + type;
   const space = new THREE.Group();
-  const scale = (Config.spiders[type]?.scale ?? 1) * (1 + (r() - 0.5) * 0.16);
+  const sz = SIZES[opts.size] || SIZES.medium;
+  const scale = (Config.spiders[type]?.scale ?? 1) * sz.scale * (1 + (r() - 0.5) * 0.12);
   space.scale.setScalar(scale);
   root.add(space);
 
@@ -660,7 +687,9 @@ export function createSpiderVisual(type, quality, opts = {}) {
   material.color.setRGB(tint * (1 + (r() - 0.5) * 0.12), tint * (1 + (r() - 0.5) * 0.08), tint * (1 + (r() - 0.5) * 0.12));
 
   const bones = [];
-  for (let i = 0; i < BONE_COUNT; i++) { const b = new THREE.Bone(); space.add(b); bones.push(b); }
+  // 58 body and leg bones, plus the face bones (mouth, lids) when the Blender model has them
+  const nBones = A.boneInverses ? A.boneInverses.length : BONE_COUNT;
+  for (let i = 0; i < nBones; i++) { const b = new THREE.Bone(); space.add(b); bones.push(b); }
   // code-made geometry is stored in each bone's own space (identity inverses); a Blender mesh is in its rest pose
   const skeleton = new THREE.Skeleton(bones, A.boneInverses ? A.boneInverses.map((m) => m.clone()) : bones.map(() => new THREE.Matrix4()));
   const mesh = new THREE.SkinnedMesh(A.geometry, material);
@@ -693,7 +722,7 @@ export function createSpiderVisual(type, quality, opts = {}) {
   hitbox.name = 'spider-hitbox';
   root.add(hitbox);
 
-  const rig = new SpiderRig({ space, bones, def, layout: A.lay, seed, type });
+  const rig = new SpiderRig({ space, bones, def, layout: A.lay, seed, collision: opts.collision || null, mass: (def.mass ?? 1) * sz.mass });
 
   let glowV = 1, opac = 1;
   const applyEyes = () => {

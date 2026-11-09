@@ -78,3 +78,14 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-07 — Brute gait: one leg at a time (wave); the rest alternate sets of four. Feet land on the real terrain; the body lifts and tilts with its feet.
 - 2026-11-07 — Window entry: every leg grips the frame on the side of the wall it reaches for, re-gripping one at a time, the body narrows as it passes the wall. Squeeze speeds: runner 1.4, climber 0.7, stalker 0.55, brute 0.45 m/s (a brute takes about 5 s). Guess.
 - 2026-11-07 — Five more species written up in SPECIES.md as guesses (stilt, swarmling, weaver, burrower, mother); not built.
+- 2026-11-09 — Death chunks: no leg pieces (user's call); torn marbled meat, pale gristle and shell bits, high-res (three instanced meshes).
+- 2026-11-09 — Windows 1.2× (1.32 × 1.2 m) and raised 15 cm (centre 1.60 m, sill 1.0 m) (user's call; height a guess the user agreed to).
+- 2026-11-09 — Cracked glass redrawn: branching (fractal) radial cracks with web rings, thin light-blue lines, mostly clear (user: too hard to see out).
+- 2026-11-09 — First-person legs and stomp boot removed (user's call: lighter, not wanted). Stomp still kills; small spiders of any species die to it.
+- 2026-11-09 — Horror everywhere, not only at death (user's call): "the only jump scare is your death" is gone from the spec. No cheap stings.
+- 2026-11-09 — Species and models are separate (user's call): a species names its model. Five of each for now: runner/Knot, brute/Sac, climber/Flayed, stalker/Grinner, weeper/Weeper. Replaces the nine-species plan; the old four models are gone.
+- 2026-11-09 — Faces: human smiles with teeth and black human eyes, no noses (user's call). Made by the generator, not hand-sculpted.
+- 2026-11-09 — Three sizes per model from one mesh (scale + body weight + health/speed/damage), not three meshes.
+- 2026-11-09 — Locomotion rebuilt in modules: LegIK (soft reach, knee splay, no flips), Gait (neighbour rules, demand-driven feet in the air), BodyDynamics (springs), SpiderCollision (analytic shapes from Layout.js). Causes of the old twitching: ankle snap at full reach, leg plane flips, last-frame stretch feedback, urgent steps breaking the gait.
+- 2026-11-09 — Squeeze: legs grip the frame, the body drops and rolls to fit; nothing shrinks except a soft abdomen (the Sac).
+- 2026-11-09 — Behaviour layer (Behaviour.js): per-species personality, reacts to being looked at, light and distance; attacks in four beats with lunge, flurry, slam and feint, never the same twice in a row. Hits shove the player.

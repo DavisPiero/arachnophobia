@@ -33,10 +33,12 @@ export class WaveSystem {
     if (n >= 1) list.push('climber');
     if (n >= 2) list.push('brute');
     if (n >= 4) list.push('brute');
+    if (n >= 2) list.push('weeper');
     while (list.length < count) {
       const r = Math.random();
       if (n >= 3 && r < 0.12) list.push('brute');
       else if (n >= 2 && r < 0.27) list.push('stalker');
+      else if (n >= 2 && r < 0.36) list.push('weeper');
       else if (r < 0.48) list.push('climber');
       else list.push('runner');
     }

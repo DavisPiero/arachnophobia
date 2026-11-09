@@ -149,7 +149,7 @@ function build() {
   }
   const types = state.type === 'all' ? SPIDER_TYPES : [state.type];
   types.forEach((type, i) => {
-    const vis = createSpiderVisual(type, { spiderDetail: state.detail }, { seed: 1234 + i * 77 });
+    const vis = createSpiderVisual(type, { spiderDetail: state.detail }, { seed: 1234 + i * 77, size: P.get('size') || 'medium' });
     stage.add(vis.root);
     vis.setEyeGlow(state.glow);
     vis.setOpacity(state.opacity);

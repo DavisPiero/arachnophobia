@@ -46,7 +46,7 @@ export const Config = {
   // Axe (held with 2, swung with left click) and stomp (C). Reach is measured from the eye to the spider's body.
   melee: {
     axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.72, hitAt: 0.33, windowDamage: 9, knockback: 0.35 },
-    stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'] },
+    stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'], killsSize: ['small'] },
   },
   // Hit and kill feedback on the spiders.
   gore: {
@@ -85,10 +85,18 @@ export const Config = {
   },
   // squeezeSpeed: m/s while hauling itself through a breached window frame (big ones get stuck for a while)
   spiders: {
-    runner:  { health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4, squeezeSpeed: 1.4 },  // 1.4: smallest spiders were too small to read
-    brute:   { health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0, squeezeSpeed: 0.45 },
-    climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0, squeezeSpeed: 0.7 },
-    stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0, squeezeSpeed: 0.55 },
+    // model: which body it wears (assets/models/spider_<model>.glb, see SPECIES.md)
+    runner:  { model: 'knot', health: 30,  speed: 5.5, climbSpeed: 3.5, windowDamage: 4,  attackInterval: 0.7, playerDamage: 6,  scale: 1.4, squeezeSpeed: 1.4 },  // 1.4: smallest spiders were too small to read
+    brute:   { model: 'sac', health: 190, speed: 1.2, climbSpeed: 0.8, windowDamage: 22, attackInterval: 2.0, playerDamage: 28, scale: 1.0, squeezeSpeed: 0.45 },
+    climber: { model: 'flayed', health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0, squeezeSpeed: 0.7 },
+    stalker: { model: 'grinner', health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0, squeezeSpeed: 0.55 },
+    weeper:  { model: 'weeper', health: 55, speed: 1.6, climbSpeed: 1.0, windowDamage: 9, attackInterval: 1.1, playerDamage: 14, scale: 1.0, squeezeSpeed: 0.6 },
+  },
+  // three sizes of every spider (js/spiders/SpiderModel.js SIZES sets scale and body weight)
+  sizes: {
+    small:  { health: 0.45, speed: 1.2,  squeeze: 1.6, damage: 0.5 },   // small ones die to a stomp
+    medium: { health: 1,    speed: 1,    squeeze: 1,   damage: 1 },
+    large:  { health: 1.9,  speed: 0.8,  squeeze: 0.6, damage: 1.7 },
   },
   waves: {
     firstDelay: 18,          // seconds of quiet before wave 1
