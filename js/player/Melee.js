@@ -159,7 +159,7 @@ export class Melee {
       const d = to.length() - s.visual.radius * 0.4;
       if (d > S.reach) continue;
       if (to.normalize().dot(fwd) < Math.cos(S.cone)) continue;
-      if (S.kills.includes(s.type)) {
+      if (S.kills.includes(s.type) || S.killsSize.includes(s.size)) {
         s.takeHit(9999, _c.copy(sp).setY(0.05), _b.set(0, -1, 0).addScaledVector(fwd, 0.3).normalize(), { by: 'stomp' });
       } else {
         // too big to crush: shove it back and make it reel

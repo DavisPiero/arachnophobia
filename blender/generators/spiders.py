@@ -1,4 +1,4 @@
-"""Spider species generator (milestone 4). See SPECIES.md.
+"""Spider model generator (milestone 4). See SPECIES.md. A MODEL is a body; a species (game behaviour) picks a model.
 
 Parameters: assets/params/spiders.json. For each species writes blender/build/spider_<species>.glb (shrunk by
 tools/assets.mjs into assets/models/) and assets/models/spider_<species>.json (leg layout + rest pose for the game).
@@ -32,7 +32,8 @@ from lib import materials as M
 D2R = math.pi / 180
 UP = Vector((0, 1, 0))
 BODY, ABD, CHEL, PALP, LEG = 0, 1, 2, 4, 10
-BONES = 10 + 8 * 6
+MOUTH, LID = 58, 59          # face bones: the jaw (lower lip and teeth) and the eyelids
+BONES = 10 + 8 * 6 + 2
 MODELS_DIR = os.path.join(C.ROOT, 'assets', 'models')
 
 
@@ -79,7 +80,8 @@ def layout(R):
             d = Vector((side * math.sin(ang), 0, math.cos(ang)))
             a_att = ang * 0.75 + (math.pi / 2) * 0.25
             attach = Vector((side * math.sin(a_att) * c['rx'] * 0.8, -c['ry'] * 0.12, math.cos(a_att) * c['rz'] * 0.62))
-            L = R['restR'] * R['legFactor'] * R['pairLen'][pair]
+            # sideLen: a lopsided model has longer legs on one side than the other ([right, left])
+            L = R['restR'] * R['legFactor'] * R['pairLen'][pair] * R.get('sideLen', [1, 1])[0 if side > 0 else 1]
             lens = [f * L for f in R['segFrac']]
             rr = R['restR'] * R['pairRest'][pair]
             rest = Vector((0, 0, body_z0)) + d * rr
@@ -221,7 +223,7 @@ def tube(m, stations, sides, mat, keel=0.0, flat=1.0, tip=False):
             m.face((last[i], last[(i + 1) % sides], t), mat)
 
 
-def chain_stations(frames_k, lens, bones, radii, rings_per, knob, hook, first_blend=None, tip=True):
+def chain_stations(frames_k, lens, bones, radii, rings_per, knob, hook, first_blend=None, tip=True, folds=0.0, swell=0.0):
     """Stations for a jointed limb along its rest frames. frames_k: [(X, Y, Z, p)] per segment."""
     st = []
     n = len(frames_k)
@@ -242,6 +244,12 @@ def chain_stations(frames_k, lens, bones, radii, rings_per, knob, hook, first_bl
             if not last:
                 r *= 1 + knob * 0.7 * math.exp(-(((1 - t) / 0.08) ** 2))
             r *= (1 + 0.1 * math.sin(math.pi * t ** 0.8)) * (1 - 0.12 * math.exp(-(((t - 0.14) / 0.05) ** 2)))
+            # soft flesh: wrinkled folds bunched at each joint, and a swollen belly in the long segments
+            if folds:
+                near = math.exp(-((t / 0.2) ** 2)) * (1 if k > 0 else 0) + math.exp(-(((1 - t) / 0.16) ** 2)) * (0 if last else 1)
+                r *= 1 + folds * 0.16 * near * math.sin(t * math.pi * 22 + k) ** 2
+            if swell and k in (1, 3):
+                r *= 1 + swell * math.sin(math.pi * t) ** 2
             c = P + X * (t * L)
             Xc, Yc = X, Y
             if i == 0 and k > 0:
@@ -314,30 +322,56 @@ def build_ceph(m, R, S, body, q, mat):
             m.face((r0[j], r0[(j + 1) % sides], r1[(j + 1) % sides], r1[j]), mat)
 
 
+def abd_point(a, S, s, th):
+    """A point on the abdomen surface (abdomen space) at s (0 front .. 1 back) and angle th (0 = top), and its normal.
+    abdShape: 'normal', 'sac' (swollen, sagging towards the ground, stretched thin), 'lumpy' (lopsided, tumorous),
+    'flat' (wide, flat, wrinkled like flayed hide), 'hunch' (short and round, hanging under a raised body)."""
+    shape = S.get('abdShape', 'normal')
+    ribs, rib_d = S.get('abdRibs', 0), S.get('abdRibDepth', 0)
+    r = a['r'] * math.sin(math.pi * s ** 0.78) ** 0.55
+    r = max(r, a['r'] * 0.3 * (1 - smooth(0, 0.08, s)))
+    if ribs:
+        r *= 1 - rib_d * (0.5 + 0.5 * math.cos((s * ribs + 0.5) * math.pi * 2)) ** 6 * smooth(0.08, 0.2, s) * smooth(0.95, 0.8, s)
+    cy, sx = math.cos(th), math.sin(th)
+    sag = 0.0
+    if shape == 'sac':
+        # swollen to the back, the bottom bulging down like a full bladder; tight skin with shallow creases
+        r *= 0.55 + 0.75 * smooth(0.0, 0.6, s)
+        sag = -a['r'] * 0.55 * math.sin(math.pi * s) ** 1.5 * (1 if cy < 0 else 0.4)
+        r *= 1 + 0.03 * bumpy(sx * 3, cy * 3, s * 5)
+    elif shape == 'lumpy':
+        # one side swollen, tumours along the other
+        r *= 1 + 0.22 * smooth(-0.2, 0.9, sx) * math.sin(math.pi * s)
+        r *= 1 + 0.18 * max(0.0, bumpy(sx * 1.7 + 3, cy * 1.7, s * 2.6)) ** 1.5
+    elif shape == 'flat':
+        # wide and flat, the hide in loose wrinkles running across
+        r *= 1 + 0.06 * math.sin(s * math.pi * 17) * smooth(0.1, 0.3, s) * (0.5 + 0.5 * cy)
+    elif shape == 'hunch':
+        r *= 0.85 + 0.25 * math.sin(math.pi * s)
+        sag = -a['r'] * 0.35 * smooth(0.2, 1.0, s)
+    hump = (0.07 * math.exp(-(((abs(th - math.pi) - math.pi + 0.55) / 0.3) ** 2))
+            * (0.4 + 0.6 * (0.5 + 0.5 * math.cos(s * (ribs or 5) * math.pi * 2)) ** 2) * smooth(0.15, 0.4, s) * smooth(0.95, 0.6, s))
+    bb = 1 + hump + 0.03 * bumpy(sx * 2, cy * 2, s * 4)
+    p = Vector((sx * r * a['sx'] * bb, cy * r * a['sy'] * bb * (0.82 if cy < 0 else 1) + a['r'] * 0.18 * math.sin(math.pi * s) + sag, -s * a['len']))
+    n = Vector((sx * a['sy'], cy * a['sx'], 0)).normalized() if r > 1e-6 else Vector((0, 0, -1))
+    return p, n
+
+
 def build_abdomen(m, R, S, F, q, mat):
     a = R['abd']
     rings, sides = int(8 + 16 * q), int(12 + 14 * q)
-    ribs, rib_d = S['abdRibs'], S['abdRibDepth']
     rows = []
     for i in range(rings + 1):
         s = i / rings
-        r = a['r'] * math.sin(math.pi * s ** 0.78) ** 0.55
-        r = max(r, a['r'] * 0.3 * (1 - smooth(0, 0.08, s)))
-        if ribs:
-            r *= 1 - rib_d * (0.5 + 0.5 * math.cos((s * ribs + 0.5) * math.pi * 2)) ** 6 * smooth(0.08, 0.2, s) * smooth(0.95, 0.8, s)
         # the front blends into the body (the waist bends with both)
         w = blend_w(BODY, ABD, 0.5 + 0.5 * smooth(0, 0.12, s)) if s < 0.12 else bone_w(ABD)
         row = []
         for j in range(sides):
             th = 2 * math.pi * j / sides
-            cy, sx = math.cos(th), math.sin(th)
-            hump = (0.07 * math.exp(-(((abs(th - math.pi) - math.pi + 0.55) / 0.3) ** 2))
-                    * (0.4 + 0.6 * (0.5 + 0.5 * math.cos(s * (ribs or 5) * math.pi * 2)) ** 2) * smooth(0.15, 0.4, s) * smooth(0.95, 0.6, s))
-            b = 1 + hump + 0.03 * bumpy(sx * 2, cy * 2, s * 4)
-            p = Vector((sx * r * a['sx'] * b, cy * r * a['sy'] * b * (0.82 if cy < 0 else 1) + a['r'] * 0.18 * math.sin(math.pi * s), -s * a['len']))
+            p, _ = abd_point(a, S, s, th)
             if i == rings:
                 p = Vector((0, a['r'] * 0.05, -a['len']))
-            row.append(m.vert(F @ p, w, (s, 0, max(0.0, -cy))))
+            row.append(m.vert(F @ p, w, (s, 0, max(0.0, -math.cos(th)))))
             if i == rings:
                 break
         rows.append(row)
@@ -345,6 +379,147 @@ def build_abdomen(m, R, S, F, q, mat):
     last = rows[-2]
     for j in range(sides):
         m.face((last[j], last[(j + 1) % sides], rows[-1][0]), mat)
+
+
+def build_growths(m, R, S, frames, rnd, q, mats):
+    """Things that should not be there: blisters, tumours and soft lumps on the abdomen and the carapace."""
+    G = S.get('growths')
+    if not G:
+        return
+    a, c = R['abd'], R['ceph']
+    for i in range(int(G['n'])):
+        on_abd = rnd.random() < G.get('abd', 0.7)
+        size = lerp(G['r'][0], G['r'][1], rnd.random() ** 2)
+        if on_abd:
+            s = 0.15 + rnd.random() * 0.75
+            th = (rnd.random() - 0.5) * math.pi * 1.6 + (G.get('side', 0) * 0.9)
+            p, n = abd_point(a, S, s, th)
+            F, w = frames[ABD], bone_w(ABD)
+        else:
+            v = Vector(((rnd.random() - 0.5) * 1.4, 0.6 + rnd.random() * 0.4, (rnd.random() - 0.7) * 1.2)).normalized()
+            p = ceph_point(c, v.x, v.y, v.z, S['cephFurrows'])
+            n, F, w = v, frames[BODY], bone_w(BODY)
+        r = size * (a['r'] if on_abd else c['ry'])
+        mat = mats['abd'] if rnd.random() > G.get('blister', 0.3) else mats['gum']
+        sphere(m, F @ (p + n * r * 0.35), r, w, mat, rings=int(4 + 3 * q), sides=int(6 + 4 * q),
+               squash=(1, 1, 0.7 + rnd.random() * 0.5), reg=(0, 1, 0), axis=F.to_3x3() @ n)
+
+
+def build_bristles(m, pts, rnd, mat, length, radius, count):
+    """Real hairs: thin tapered spikes standing off the skin (pts: list of (position, normal, weights))."""
+    if not pts or count <= 0:
+        return
+    for i in range(int(count)):
+        p, n, w = pts[int(rnd.random() * len(pts))]
+        jit = Vector((rnd.random() - 0.5, rnd.random() - 0.5, rnd.random() - 0.5)) * 0.9
+        d = (n + jit).normalized()
+        L = length * (0.5 + rnd.random())
+        Z = d.cross(UP).normalized() if abs(d.y) < 0.95 else Vector((1, 0, 0))
+        Y = Z.cross(d).normalized()
+        st = [(p - d * radius, d, Y, Z, radius, w, (0, 0, 0)), (p + d * (L * 0.5), d, Y, Z, radius * 0.55, w, (0, 0, 0)),
+              (p + d * L + Y * (-0.15 * L), d, Y, Z, radius * 0.12, w, (0, 0, 0))]
+        tube(m, st, 3, mat, tip=True)
+
+
+def build_mouth(m, R, S, body, q, mats):
+    """A human mouth grown into the front of the head: no nose, no lips to speak of, a too-wide smile with small human
+    teeth. Lower lip and lower teeth are weighted to the MOUTH bone (it opens and widens); the rest to the body.
+    Returns the mouth bone's attach point (body space)."""
+    M_ = S.get('mouth')
+    if not M_:
+        return None
+    c = R['ceph']
+    W = c['rx'] * M_['w']
+    n = int(16 + 12 * q)
+    off = M_.get('offset', 0.0) * c['rx']
+    corner_up = M_.get('smile', 0.4)
+    y0, zf = c['ry'] * M_.get('y', -0.15), M_.get('z', 0.97)
+
+    def surf(u, dy):
+        # a point on the front of the carapace for mouth coordinate u (-1 .. 1) and height dy
+        x = off + u * W
+        y = y0 + dy + corner_up * W * 0.55 * u * u
+        v = Vector((x / c['rx'], y / c['ry'], zf)).normalized()
+        return ceph_point(c, v.x, v.y, v.z, 0.0) + v * (c['rz'] * 0.015), v
+
+    gap = c['ry'] * M_.get('gap', 0.05)
+    lip_r = c['ry'] * M_.get('lip', 0.035)
+    attach = surf(0, 0)[0] + Vector((0, 0, -c['rz'] * 0.2))
+    for upper in (True, False):
+        st, wv = [], (bone_w(BODY) if upper else bone_w(MOUTH))
+        for i in range(n + 1):
+            u = -1.05 + 2.1 * i / n
+            dy = (gap if upper else -gap) * max(0.0, 1 - u * u) ** 0.6
+            p, v = surf(u, dy)
+            X = (surf(u + 0.01, dy)[0] - p).normalized()
+            Z = v
+            Y = Z.cross(X).normalized()
+            st.append((body @ p, X, Y, Z, lip_r * (0.55 + 0.45 * max(0.0, 1 - u * u)), wv, (0, 1, 0)))
+        tube(m, st, max(5, int(6 + 2 * q)), mats['gum'])
+        # teeth: small, square-edged human teeth crowding the gap
+        nt = int(M_.get('teeth', 18) * (0.7 + 0.3 * q))
+        for i in range(nt):
+            u = -0.9 + 1.8 * (i + 0.5) / nt
+            dy = (gap * 0.5 if upper else -gap * 0.5) * max(0.0, 1 - u * u) ** 0.6
+            p, v = surf(u, dy)
+            p = p - v * (c['rz'] * 0.02)
+            tw = W * 1.8 / nt * 0.45 * (1.15 if abs(u) < 0.25 else 1)
+            th = gap * (1.25 if abs(u) < 0.3 else 0.95) * (0.85 + 0.3 * (i * 7919 % 13) / 13)
+            sphere(m, body @ (p + Vector((0, -th * 0.35 if upper else th * 0.35, 0))), tw, wv, mats['tooth'], rings=4, sides=6,
+                   squash=(1.0, th / tw * 0.9, 0.55), reg=(0, 0, 0))
+    # the dark inside of the mouth: a recessed slab behind the teeth
+    p, v = surf(0, 0)
+    sphere(m, body @ (p - v * (c['rz'] * 0.06)), W * 0.95, bone_w(BODY), mats['mouthIn'], rings=5, sides=12,
+           squash=(1.0, gap * 2.2 / W, 0.35), axis=v)
+    return attach
+
+
+def build_human_eyes(m, R, S, body, q, mats):
+    """Human eyes, completely black and wet, set in soft sockets with heavy lids. When `blink` is on, every eye sits on
+    one horizontal line and its upper lid is weighted to the LID bone (it rotates down to close them all).
+    Returns (lid bone attach or None, glow points)."""
+    E = S.get('humanEyes')
+    if not E:
+        return None, []
+    c = R['ceph']
+    eyes = E['eyes']        # [[x, y, z (fractions of rx, ry, rz), radius (fraction of ry)], ...]
+    lid_pts = []
+    for (ex, ey, ez, er) in eyes:
+        r = er * c['ry']
+        v = Vector((ex, ey, ez)).normalized()
+        surf = ceph_point(c, v.x, v.y, v.z, 0.0)
+        ctr = surf - v * (r * 0.35)
+        # socket: a soft rim of skin around the eye
+        rim = []
+        for k in range(int(10 + 6 * q) + 1):
+            a = 2 * math.pi * k / int(10 + 6 * q)
+            X = v.cross(UP).normalized()
+            Y = X.cross(v).normalized()
+            rim.append((body @ (ctr + (X * math.cos(a) * 1.15 + Y * math.sin(a) * 0.85) * r + v * (r * 0.25)), X, Y, v, r * 0.22, bone_w(BODY), (0, 1, 0)))
+        tube(m, rim, 6, mats['shell'])
+        # the eye: black, glossy, faintly human in shape (wider than tall)
+        sphere(m, body @ ctr, r, bone_w(BODY), mats['eye'], rings=int(8 + 4 * q), sides=int(12 + 6 * q), squash=(1.15, 0.85, 1), axis=v)
+        # upper lid: a shell over the top of the eye, drooping half-closed; it rotates down to blink
+        lw = bone_w(LID) if E.get('blink') else bone_w(BODY)
+        rows, lr = [], r * 1.12
+        X = v.cross(UP).normalized(); Y = X.cross(v).normalized()
+        for i in range(5):
+            pol = (i / 4) * 1.35       # from the top of the eye forward and down
+            row = []
+            for j in range(9):
+                ph = -1.4 + 2.8 * j / 8
+                d = (Y * math.cos(pol) + v * math.sin(pol) * math.cos(ph) + X * math.sin(ph) * math.sin(pol) * 1.1)
+                rot = Matrix.Rotation(-E.get('droop', 0.25), 3, X)
+                row.append(m.vert(body @ (ctr + (rot @ d) * lr * (1.15 if j in (0, 8) else 1)), lw, (0, 1, 0)))
+            rows.append(row)
+        for r0, r1 in zip(rows, rows[1:]):
+            for j in range(8):
+                m.face((r0[j], r0[j + 1], r1[j + 1], r1[j]), mats['shell'])
+        lid_pts.append(ctr)
+    attach = None
+    if E.get('blink') and lid_pts:
+        attach = sum(lid_pts, Vector()) / len(lid_pts)
+    return attach, []
 
 
 def build_chelicera(m, R, S, F, side, bone, q, mats):
@@ -505,7 +680,7 @@ def build_spines(m, R, S, F, rnd, q, mat):
 def build(P):
     only = [s for s in os.environ.get('SPIDERS', '').split(',') if s]
     report = []
-    for name, sp in P['species'].items():
+    for name, sp in P['models'].items():
         if only and name not in only:
             continue
         report += build_species(name, sp, P['budget'])
@@ -521,7 +696,7 @@ def build_species(name, sp, budget):
     frames = rest_pose(R, lay)
     body = frames[BODY]
     mats = materials(name, L)
-    order = ['shell', 'abd', 'leg', 'plate', 'eye', 'fang']
+    order = ['shell', 'abd', 'leg', 'plate', 'eye', 'fang', 'tooth', 'gum', 'mouthIn']
     mi = {k: i for i, k in enumerate(order)}
     m = Mesh()
     build_ceph(m, R, S, body, q, mi['shell'])
@@ -533,6 +708,19 @@ def build_species(name, sp, budget):
         glow += build_face_plate(m, R, S, body, q, mi)
     if S.get('spines'):
         build_spines(m, R, S, frames[ABD], rnd, q, mi['plate'])
+    build_growths(m, R, S, frames, rnd, q, mi)
+    mouth_at = build_mouth(m, R, S, body, q, mi)
+    lid_at, _ = build_human_eyes(m, R, S, body, q, mi)
+    # face bones rest where they act (body orientation): the mouth under the smile, the lids on the eyes' line
+    frames[MOUTH] = body @ Matrix.Translation(mouth_at if mouth_at is not None else Vector((0, 0, R['ceph']['rz'])))
+    frames[LID] = body @ Matrix.Translation(lid_at if lid_at is not None else Vector((0, R['ceph']['ry'], R['ceph']['rz'] * 0.5)))
+    hair_pts = []
+    B = S.get('bristles', {})
+    if B.get('abd'):
+        for i in range(160):
+            sa, th = 0.1 + 0.85 * rnd.random(), (rnd.random() - 0.5) * math.pi * 1.7
+            p, n = abd_point(R['abd'], S, sa, th)
+            hair_pts.append((frames[ABD] @ p, (frames[ABD].to_3x3() @ n).normalized(), bone_w(ABD)))
     # palps
     for s in range(2):
         fk = [(frames[PALP + s * 3 + k].col[0].xyz, frames[PALP + s * 3 + k].col[1].xyz, frames[PALP + s * 3 + k].col[2].xyz,
@@ -552,9 +740,15 @@ def build_species(name, sp, budget):
         X0 = fk[0][0]
         fk[0] = (fk[0][0], fk[0][1], fk[0][2], fk[0][3] - X0 * r0)
         lens = list(l['lens']); lens[0] += r0
-        st = chain_stations(fk, lens, [LEG + li * 6 + k for k in range(6)], radii, S['ringsPerSeg'], S['knob'], S['hook'], first_blend=BODY)
+        st = chain_stations(fk, lens, [LEG + li * 6 + k for k in range(6)], radii, S['ringsPerSeg'], S['knob'], S['hook'], first_blend=BODY,
+                            folds=S.get('folds', 0.0), swell=S.get('swell', 0.0))
         tube(m, st, S['legSides'], mi['leg'], keel=S['keel'], flat=S['flat'], tip=True)
+        if B.get('legs'):
+            leg_pts = [(c + Y * r, Y, w) for (c, X, Y, Z, r, w, reg) in st[: int(len(st) * 0.85)]]
+            build_bristles(m, leg_pts, rnd, mi['leg'], B['len'] * R['restR'], S['legR'] * 0.05, B['legs'] * (0.6 + 0.4 * q))
 
+    if B.get('abd'):
+        build_bristles(m, hair_pts, rnd, mi['abd'], B['len'] * R['restR'] * 1.3, S['legR'] * 0.06, B['abd'] * (0.6 + 0.4 * q))
     lo = to_blender(m, 'spider_' + name, [mats[k] for k in order])
     C.shade_low(lo, 180)
     hi = C.high_from(lo, lo.name + '_high', bevel=0, subdiv=1)
@@ -568,9 +762,9 @@ def build_species(name, sp, budget):
     objs, rep = C.finish_family([lo], mat, lod_ratio=0.5, lod_min=600)
     arm = add_armature(objs, frames, 'spider_' + name + '_rig')
     head = body @ Vector((0, 0, R['ceph']['rz']))
-    preview(objs[0], name, span, face=(head, max(R['ceph']['rz'] * 7, R['restR'] * 0.7)))
+    preview(objs[0], name, span, face=(head, R['ceph']['rz'] * 5.5))
     C.export_glb(objs + [arm], 'spider_' + name)
-    write_sidecar(name, R, lay, frames, glow, S, L)
+    write_sidecar(name, R, lay, frames, glow, S, L, mouth_at, lid_at)
     return [f'{name}: ' + r for r in rep]
 
 
@@ -626,7 +820,7 @@ def add_armature(objs, frames, name):
     return arm
 
 
-def write_sidecar(name, R, lay, frames, glow, S, L):
+def write_sidecar(name, R, lay, frames, glow, S, L, mouth_at=None, lid_at=None):
     """What the game needs to drive this mesh: rig numbers, layout, rest frames (column-major 4x4, GAME space)."""
     v = lambda x: [round(c, 6) for c in x]
     out = {
@@ -638,7 +832,10 @@ def write_sidecar(name, R, lay, frames, glow, S, L):
                           lens=[round(x, 6) for x in l['lens']], rest=v(l['rest']), R=l['R']) for l in lay['legs']],
             'palps': [dict(side=p['side'], attach=v(p['attach']), lens=[round(x, 6) for x in p['lens']]) for p in lay['palps']],
             'chel': [dict(side=c['side'], attach=v(c['attach'])) for c in lay['chel']],
+            'mouth': dict(attach=v(mouth_at), open=S['mouth'].get('open', 0.5), widen=S['mouth'].get('widen', 0.2)) if mouth_at is not None else None,
+            'lids': dict(attach=v(lid_at), angle=S['humanEyes'].get('lidAngle', 1.1)) if lid_at is not None else None,
         },
+        'look': {'sss': L.get('sss', 0.0), 'sssColor': L.get('sssColor', [0.8, 0.25, 0.15])},
         'rest': [[round(F[r][c], 6) for c in range(4) for r in range(4)] for F in frames],
         'glow': [v(g) for g in glow],
         'eyes': S['eyes'],
@@ -682,6 +879,15 @@ def materials(name, L):
             # belly and joints
             col = T.mix(T.math('MULTIPLY', T.maprange(belly, 0.2, 0.8), 0.8), col, tuple(L['belly']))
             col = T.mix(T.math('MULTIPLY', joint, 0.85), col, tuple(L['joint']))
+            # raw patches: skin worn through to pink flesh
+            if L.get('raw', 0):
+                rp = T.maprange(T.noise(5.0, 6.0), 0.58, 0.68)
+                col = T.mix(T.math('MULTIPLY', rp, L['raw']), col, tuple(L.get('rawColor', [0.45, 0.16, 0.14])))
+            # veins: thin dark lines under stretched, see-through skin
+            if L.get('veins', 0):
+                vn = T.math('ABSOLUTE', T.math('SUBTRACT', T.noise(6.0, 3.0), 0.5))
+                vl = T.maprange(vn, 0.025, 0.0)
+                col = T.mix(T.math('MULTIPLY', vl, L['veins']), col, tuple(L.get('veinColor', [0.18, 0.04, 0.08])))
             if extra_bands:
                 b = T.maprange(band, 0.55, 0.85)
                 col = T.mix(T.math('MULTIPLY', b, extra_bands), col, tuple(c * 0.35 for c in color))
@@ -705,6 +911,9 @@ def materials(name, L):
     leg = layered(name + '_leg', L.get('legColor', L['color']), extra_bands=L.get('bands', 0.0))
     plate = M.scanned(name + '_plate', 'Leather026', 14.0, 'Y', color=L.get('plate', [0.5, 0.47, 0.42]), rough=(0.55, 0.85),
                       bump=1.6, bump_dist=0.0006, cavity=0.25)
-    eye = M.flat(name + '_eye', tuple(L['eyeColor']), rough=0.06)
+    eye = M.flat(name + '_eye', tuple(L['eyeColor']), rough=0.03)
+    tooth = M.flat(name + '_tooth', tuple(L.get('toothColor', [0.62, 0.56, 0.42])), rough=0.35)
+    gum = M.flat(name + '_gum', tuple(L.get('gumColor', [0.32, 0.06, 0.06])), rough=0.18)
+    mouth_in = M.flat(name + '_mouthIn', (0.02, 0.004, 0.004), rough=0.3)
     fang = M.flat(name + '_fang', (0.03, 0.022, 0.018), rough=0.25)
-    return {'shell': shell, 'abd': abd, 'leg': leg, 'plate': plate, 'eye': eye, 'fang': fang}
+    return {'shell': shell, 'abd': abd, 'leg': leg, 'plate': plate, 'eye': eye, 'fang': fang, 'tooth': tooth, 'gum': gum, 'mouthIn': mouth_in}

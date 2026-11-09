@@ -5,7 +5,8 @@
 You are alone in a cabin at night. You can only watch one window at a time, and the moment you do,
 you are not watching the other two. Your ammo is on a table across the room, and every trip there is a gamble.
 The fear comes from **not knowing**: sounds that move around the cabin, eyes in the dark that may or may not be attached
-to anything, silence that lasts too long. It should feel unsettling, not jumpy. The only jump scare is your death.
+to anything, silence that lasts too long. Everything should be genuinely horrifying (user's call, 2026-11-09): the
+creatures themselves, how they move, sudden lunges, freezes and faces. Not cheap: no loud stings over nothing.
 
 The core loop: **listen → pick a window → look and shoot → run low → cross the room to reload → listen again.**
 
@@ -15,9 +16,10 @@ The core loop: **listen → pick a window → look and shoot → run low → cro
    You still only see one window at a time. A flashlight helps but shows only what it points at.
 2. **Sound tells you where to go.** 3D positional sound for every spider; you hear them before you see them.
 3. **Reloading is a commitment.** Only at the table, takes ~3 s, cannot move or shoot, spiders keep coming.
-4. **Spiders that look and move like real creatures.** A mix: some dark with tiny red eyes, some pale and gaunt with
-   big dark eyes (see `SPECIES.md`). Segmented, long jointed legs that plant, step and grip; big ones squeeze in through
-   a broken window, gripping the frame.
+4. **Spiders that are biological mistakes.** Recognisably spiders, believable anatomy, but grown wrong: swollen sacs,
+   lopsided bodies, growths, soft fleshy legs, and now and then a human smile or black human eyes grown into the head
+   (no noses). Never bony, skeletal or mechanical. Each has its own silhouette and its own unsettling way of moving
+   (see `SPECIES.md`). Legs plant, step and grip; they squeeze in through a broken window, folding their legs in.
 5. **Works on a phone.** Landscape touch controls are as good as mouse and keyboard.
 
 ## The world
@@ -32,16 +34,18 @@ The core loop: **listen → pick a window → look and shoot → run low → cro
 
 ## Spiders
 
-| Type | Look | Behaviour | Sound |
-|---|---|---|---|
-| Runner | small (~1 m leg span), thin | very fast, zig-zags, darts across walls and glass | quick high clicks, skittering |
-| Brute | huge (~3 m), bulky, bristly | slow, many hits, heavy window damage | low breathing, heavy thuds |
-| Climber | gaunt, very long legs | climbs walls and roof, drops onto a window from above | footsteps on the roof, scraping |
-| Stalker | dark, mostly eyes | watches from the dark; vanishes when you come close or light hits it | almost silent, slow breathing |
+Five species, each wearing its own model (the Knot, the Sac, the Flayed, the Grinner, the Weeper), each in three sizes
+(small, medium, large). Details and personalities in `SPECIES.md`. Small ones die to a stomp.
+
+Attacks have four beats: a wind-up you cannot time (rearing, trembling, the mouth opening), the strike (lunge, a flurry
+of rakes, a slam with the whole weight, or a feint that never comes), the impact (damage, the view knocked, the player
+shoved) and a recovery. Spiders react to the player: some freeze when looked at, the Grinner only moves while unseen,
+the Weeper rises into view under a window when you come close. Inside they circle in rather than run straight at you.
 
 ## Windows
 
-Stages: intact → cracked → shattered → boards splintering → **breached**. After a breach, spiders climb inside and attack you.
+Windows are 1.32 × 1.2 m, sill at 1.0 m. Cracks are thin, light-blue and branching (impact glass), so you can still
+see out. Stages: intact → cracked → shattered → boards splintering → **breached**. After a breach, spiders climb inside and attack you.
 They grip the window frame and pull themselves through; a big one is stuck in the frame for a few seconds.
 You have health; at zero it is game over (restart at wave 1).
 
@@ -58,7 +62,7 @@ the start of chopping firewood later. Stomp: kills small spiders on the floor in
 
 Hits show on the spider: dark red spray and splats that fade after a few seconds (so they never block a window), a jolt (body hit) or a kicked leg (leg hit),
 brutes stagger every quarter of their health, a different crunch on the killing hit. A killed spider bursts into gooey
-red chunks (flesh, bits of shell, pieces of its own legs) that fall, slide down walls and fade after a few seconds.
+chunks (torn marbled meat, pale gristle, bits of shell; no legs) that fall, slide down walls and fade after a few seconds.
 No hit marker.
 
 ## Controls
@@ -79,8 +83,8 @@ Volume sliders: master, effects, ambience. Mute with M, the on-screen button, or
 
 Gloved hands (full fingers, hard knuckle guard, dark olive-black) and dark jacket sleeves. The trigger hand hangs off
 the stock wrist: thumb on the right side, fingers wrapped onto the left, wrist bent (reference/m4-rifle-hold.png). The
-support hand is under the barrel: thumb up the left side, fingers up the right. Looking down shows the belly, muddy
-cargo trousers and lace-up boots; the legs swing when walking.
+support hand is under the barrel: thumb up the left side, fingers up the right. No legs or boots are drawn (user's call,
+2026-11-09): looking down or stomping shows nothing below the hands.
 
 ## Flashlight
 
@@ -111,4 +115,4 @@ Barricade repair, more weapons, crouch, score and saves, story/intro, recorded a
 
 ## Not building
 
-Constant music, jump scares outside of death, pixelated/retro filters.
+Constant music, cheap stings (a loud noise over nothing), pixelated/retro filters.

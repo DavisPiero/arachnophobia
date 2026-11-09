@@ -347,9 +347,10 @@ export class SpiderRig {
     const lb = this.bones[BONE.LID];
     if (lb && lay.lids) {
       lb.position.copy(lay.lids.attach).applyMatrix4(this.bodyMat);
-      lb.quaternion.copy(this.bodyQ);
+      // the upper lids rotate down over the eyes (all eyes sit on one line through the bone)
       const lids = clamp(pose.lids ?? 0, 0, 1);
-      lb.scale.set(1, Math.max(0.02, 1 - lids), 1);
+      _q.setFromEuler(_e.set(lids * (lay.lids.angle ?? 1.1), 0, 0, 'YXZ'));
+      lb.quaternion.copy(this.bodyQ).multiply(_q);
     }
 
     // ---- pedipalps: rubbing, tapping, flaring on attack

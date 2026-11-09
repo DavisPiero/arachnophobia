@@ -1,37 +1,46 @@
-# Spider species
+# Spiders: species and models
 
-Nine species, from the spec (milestone 4). **Built** means it has a Blender model and runs in the game; the rest are
-written up so the generator and the rig leave room for them. Names and behaviours of the planned five are **guesses**
-until the user confirms them.
+A **model** is a body (a Blender-made mesh, `assets/models/spider_<model>.glb`). A **species** is how a spider behaves
+in the game (`js/core/Config.js` → `spiders`, `js/spiders/Behaviour.js`). Each species names the model it wears
+(`Config.spiders.<species>.model`), so later a species can get a second model, or two species can share one.
 
-The look is a mix (user's call): some dark with tiny red eyes, some pale and gaunt with big dark eyes, after the
-references in `reference/m4-spider-*.jpg` (private). We borrow traits from them, never copy a creature.
+For now there are five species, each with its own model, each in three sizes (small, medium, large).
 
-Shape, colour and leg numbers live in `assets/params/spiders.json`; game numbers (health, speed, damage) in
-`js/core/Config.js` → `spiders`.
+Art direction (user, 2026-11-09): realistic biological horror. Recognisably spiders, believable anatomy, grown in
+completely wrong directions. Soft, fleshy, folded; never bony, skeletal, mechanical or angular. Now and then a human
+feature grown in: an unnatural smile with human teeth, black human eyes. **No noses.**
 
-| # | Species | Size (leg span) | Look | Behaviour | Gait | State |
-|---|---|---|---|---|---|---|
-| 1 | **Runner** | ~1.3 m | dark brown, hairy, low and flat; eight tiny red eyes (a wolf spider grown wrong) | very fast, zig-zags, darts over walls and glass | fast alternating tetrapod | **built** |
-| 2 | **Brute** | ~3 m | heavy; a bony, skull-like plate over the face; a crest of long quills on the back; pale bony legs ending in hooks (from `m4-spider-skullface`) | slow, many hits, heavy window damage; squeezes in through a breached window | slow wave gait: one leg at a time | **built** |
-| 3 | **Climber** | ~2.6 m | dark, flat huntsman body, very long thin banded legs that bend sideways (from `m4-spider-ceiling`) | climbs walls and roof, drops onto a window from above; later walks on the inside ceiling | long reaching steps | **built** |
-| 4 | **Stalker** | ~2.2 m | pale and mottled, two huge black front eyes, broad hairy fangs, long speckled legs (from `m4-spider-ogreface`, a real net-casting spider) | watches from the dark; slips away from light | slow, deliberate | **built** |
-| 5 | Stilt *(guess)* | ~4 m, body 2.5 m up | pale, gaunt, wrinkled hide hanging off the body, a sagging face under the carapace, legs like bent poles (from `m4-spider-pale`) | walks slowly upright past the windows; you see its legs before its body | very slow, high-stepping | planned |
-| 6 | Swarmling *(guess)* | ~0.3 m | tiny, black, glossy | comes in groups of 6–10; through gaps in the boards; the stomp's main target | skittering | planned |
-| 7 | Weaver *(guess)* | ~1.8 m | grey, round abdomen, spinnerets | spins webs over a window (blocks the view) and cocoons inside (milestone 5) | careful | planned |
-| 8 | Burrower *(guess)* | ~1.6 m | earth-coloured, thick front legs | digs under the cabin and comes up through the floorboards | crawling, body low | planned |
-| 9 | Mother *(guess)* | ~3.5 m | swollen abdomen covered in clinging young | rare; shot, the young scatter as swarmlings | heavy, slow | planned |
+| Species (id) | Model | Role in the game | What is wrong with it | How it moves and behaves |
+|---|---|---|---|---|
+| runner | **Knot** | fast, many | lopsided: the right legs overgrown, the left stunted; a lumpy, tumorous abdomen swollen on one side; blisters; raw pink patches worn through dark skin; dense hair; tiny red eyes | bursts and dead stops; fits of trembling; goes still when you look, or darts aside; rakes and lunges |
+| brute | **Sac** | slow, heavy window damage | a huge swollen abdomen that sags like a full bladder, pale see-through skin with dark veins; thick soft legs with folds at every joint; four black human eyes; a wide human smile with small teeth | drags itself slowly, then lurches two strides without warning; its smile opens as it gets close; slams with its whole weight |
+| climber | **Flayed** | climbs walls and the roof, drops onto windows | flat and wide like flayed hide, raw red-grey and wet; very long legs with a soft swelling in the middle of each; long sparse hairs | skitters fast, then freezes splayed flat; repositions suddenly; claws in flurries |
+| stalker | **Grinner** | watches from the dark, comes when you look away | pale, damp, sagging; a too-wide, off-centre lipless smile full of human teeth; three uneven black human eyes; no nose | moves only while you are not looking at it; when you look it is perfectly still, its head tilts and its smile slowly widens; slips away from light |
+| weeper | **Weeper** | ambusher at the windows | a hunched body under a raised head; two big black human eyes under heavy drooping lids that blink, slowly; a small smile | creeps low, hides under the sill; when you come close it rises slowly into view and stares; sinks away when you turn; fakes attacks |
 
-## How a species is made
+Sizes (`js/spiders/SpiderModel.js` `SIZES`, `Config.sizes`): small ×0.62 (light, twitchy; dies to a stomp), medium,
+large ×1.45 (heavy, slow, more health and damage). One mesh per model; size changes scale and how heavy the body moves.
 
-- `blender/generators/spiders.py` builds every species from `assets/params/spiders.json`:
-  - one smooth mesh, skinned to the same 58 bones the game's leg code drives (body, abdomen, fangs, palps, 8 legs × 6);
-  - joints are weighted smoothly, so legs bend instead of being stiff tubes;
-  - scanned CC0 materials, re-tinted per species, baked into its own textures.
-- It writes `assets/models/spider_<species>.glb` and `assets/models/spider_<species>.json`:
-  - the `.json` holds the leg layout and the rest pose the mesh was built in, so the game drives the bones exactly
-    where Blender put them.
-- Each build also renders the species studio-lit (the game is too dark to judge a model):
-  `blender/build/spider_<species>_preview.png` (three-quarter), `_side.png` and `_face.png` (close on the face).
-- `dev/spiders.html?type=<species>` shows it walking in the game engine.
-- Without the files (or with `?assets=0`) the game uses its old code-made spiders.
+Later (wanted, not scheduled): more species reusing these models, a second model per species, swarms of small ones,
+a web-spinner, one that comes up through the floor, a mother whose young scatter.
+
+## How a model is made
+
+- `blender/generators/spiders.py` builds every model from `assets/params/spiders.json` (`models`):
+  - one smooth mesh on 60 bones: body, abdomen, fangs, palps, 8 legs × 6, plus a mouth (jaw) and the eyelids;
+  - abdomen shapes (`abdShape`: sac, lumpy, flat, hunch), growths, real hairs (thin spikes), fleshy folds at joints
+    (`folds`, `swell`), lopsided legs (`sideLen`), a human mouth (`mouth`), human eyes (`humanEyes`);
+  - scanned CC0 materials with mottling, raw patches, veins; baked into its own textures.
+- It writes `assets/models/spider_<model>.glb` and `.json` (leg layout, rest pose, face bones, translucency).
+- Each build renders `blender/build/spider_<model>_{preview,side,face}.png` (the game is too dark to judge a model).
+- `dev/spiders.html?type=<species>` shows one walking. Without the files (or `?assets=0`) the old code-made spiders
+  stand in.
+
+## How it moves (milestone 4, part 2)
+
+- `LegIK.js` stable leg solver (smooth at full stretch, knees splay up and out, never flips).
+- `Gait.js` which foot steps when: neighbours never lift together, as many feet up as the speed needs.
+- `BodyDynamics.js` the body as a weight on springs: sags, lags, leans, wobbles (soft abdomens jiggle).
+- `SpiderCollision.js` feet land on real surfaces (terrain, walls, window frame, roof, floor, furniture); knees fold
+  away from walls; the body is pushed out of geometry.
+- `tests/locomotion.mjs` scores it (pops, reach errors, clipping) for every model and size.

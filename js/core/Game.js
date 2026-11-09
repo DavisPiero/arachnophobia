@@ -287,7 +287,7 @@ export class Game {
     this.debugEl = el;
     this.fpsAcc = 0; this.fpsN = 0; this.fps = 0;
     addEventListener('keydown', (e) => {
-      const types = { Digit1: 'runner', Digit2: 'brute', Digit3: 'climber', Digit4: 'stalker' };
+      const types = { Digit1: 'runner', Digit2: 'brute', Digit3: 'climber', Digit4: 'stalker', Digit5: 'weeper' };
       if (types[e.code]) this.spiders.spawn(types[e.code], WINDOWS[Math.floor(Math.random() * 3)].id);
       if (e.code === 'KeyK') for (const s of this.spiders.spiders) if (s.alive) s.die();
       if (e.code === 'KeyI') { // a runner right in front of you, inside (to try the stomp and the axe)
@@ -302,7 +302,7 @@ export class Game {
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const i = this.renderer.info;
-    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-4 spawn  I runner inside  K kill  B damage windows  J lightning`;
+    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-5 spawn  I runner inside  K kill  B damage windows  J lightning`;
   }
 }
 

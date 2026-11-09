@@ -1,660 +1,1073 @@
 {
-  "_about": "Spider species (see SPECIES.md). Read by blender/generators/spiders.py, which writes assets/models/spider_<species>.glb and spider_<species>.json (leg layout + rest pose, read by js/spiders/SpiderModel.js). GAME space, metres, +Y up, +Z forward, origin on the ground under the body; the game scales each spider by Config.spiders.<type>.scale. 'rig' = numbers the leg code uses too (same names as the old code-made spiders); 'shape' = the model only; 'look' = colours and materials. Change, then run: npm run assets spiders (SPIDERS=runner,brute for some only).",
-  "outputs": [
-    "spider_runner",
-    "spider_brute",
-    "spider_climber",
-    "spider_stalker"
-  ],
-  "species": {
-    "runner": {
-      "rig": {
-        "restR": 0.55,
-        "bodyH": 0.09,
-        "legFactor": 1.25,
-        "pairAngles": [
-          30,
-          66,
-          108,
-          146
-        ],
-        "pairLen": [
-          1.0,
-          0.9,
-          0.82,
-          1.0
-        ],
-        "pairRest": [
-          1.0,
-          0.92,
-          0.88,
-          1.05
-        ],
-        "segFrac": [
-          0.05,
-          0.29,
-          0.08,
-          0.24,
-          0.23,
-          0.11
-        ],
-        "alpha": 0.9,
-        "coxaElev": 0.35,
-        "ceph": {
-          "rx": 0.065,
-          "ry": 0.042,
-          "rz": 0.08,
-          "head": 0.9
-        },
-        "abd": {
-          "len": 0.17,
-          "r": 0.06,
-          "sx": 0.95,
-          "sy": 0.85,
-          "tilt": 0.12,
-          "y": 0.006
-        },
-        "chel": {
-          "len": 0.034,
-          "r": 0.015
-        },
-        "palp": {
-          "len": 0.065,
-          "r": 0.006
-        },
-        "strideK": 0.055,
-        "stepMin": 0.045,
-        "stepMax": 0.16,
-        "arc": 0.16,
-        "gait": "tetrapod"
-      },
-      "shape": {
-        "tris": 3200,
-        "legR": 0.011,
-        "legSides": 6,
-        "ringsPerSeg": [
-          2,
-          5,
-          2,
-          5,
-          4,
-          3
-        ],
-        "segRad": [
-          [
-            1.25,
-            1.2
-          ],
-          [
-            1.2,
-            0.98
-          ],
-          [
-            1.02,
-            0.94
-          ],
-          [
-            0.94,
-            0.74
-          ],
-          [
-            0.62,
-            0.5
-          ],
-          [
-            0.47,
-            0.0
-          ]
-        ],
-        "knob": 0.22,
-        "keel": 0.15,
-        "hook": 0.25,
-        "flat": 0.88,
-        "abdRibs": 0,
-        "abdRibDepth": 0,
-        "cephFurrows": 0.07,
-        "eyes": {
-          "kind": "glow",
-          "r": 0.004,
-          "extra": 0,
-          "color": [
-            0.9,
-            0.05,
-            0.02
-          ]
-        },
-        "spines": 0,
-        "facePlate": false,
-        "fangCurl": 0.9
-      },
-      "look": {
-        "set": "Leather032",
-        "scale": 60,
-        "color": [
-          0.06,
-          0.04,
-          0.025
-        ],
-        "belly": [
-          0.11,
-          0.08,
-          0.055
-        ],
-        "joint": [
-          0.1,
-          0.07,
-          0.045
-        ],
-        "rough": [
-          0.45,
-          0.75
-        ],
-        "bump": 0.8,
-        "mottle": 0.2,
-        "speckle": 0.0,
-        "bands": 0.5,
-        "hair": 1.0,
-        "chevrons": 0.45,
-        "eyeColor": [
-          0.6,
-          0.02,
-          0.01
-        ]
-      }
+ "_about": "Spider MODELS (see SPECIES.md: a species picks a model). Read by blender/generators/spiders.py, which writes assets/models/spider_<model>.glb and spider_<model>.json (leg layout + rest pose, read by js/spiders/SpiderModel.js). GAME space, metres, +Y up, +Z forward, origin on the ground under the body; the game scales each spider by Config.spiders.<type>.scale. 'rig' = numbers the leg code uses too (same names as the old code-made spiders); 'shape' = the model only; 'look' = colours and materials. Change, then run: npm run assets spiders (SPIDERS=knot,sac for some only).",
+ "outputs": [
+  "spider_knot",
+  "spider_sac",
+  "spider_flayed",
+  "spider_grinner",
+  "spider_weeper"
+ ],
+ "models": {
+  "knot": {
+   "rig": {
+    "restR": 0.55,
+    "bodyH": 0.09,
+    "legFactor": 1.25,
+    "pairAngles": [
+     30,
+     66,
+     108,
+     146
+    ],
+    "pairLen": [
+     1.0,
+     0.9,
+     0.82,
+     1.0
+    ],
+    "pairRest": [
+     1.0,
+     0.92,
+     0.88,
+     1.05
+    ],
+    "segFrac": [
+     0.05,
+     0.29,
+     0.08,
+     0.24,
+     0.23,
+     0.11
+    ],
+    "alpha": 0.9,
+    "coxaElev": 0.35,
+    "ceph": {
+     "rx": 0.065,
+     "ry": 0.042,
+     "rz": 0.08,
+     "head": 0.9
     },
-    "brute": {
-      "rig": {
-        "restR": 1.6,
-        "bodyH": 0.52,
-        "legFactor": 1.3,
-        "pairAngles": [
-          34,
-          70,
-          110,
-          148
-        ],
-        "pairLen": [
-          1.0,
-          0.92,
-          0.84,
-          0.98
-        ],
-        "pairRest": [
-          0.95,
-          0.92,
-          0.86,
-          0.98
-        ],
-        "segFrac": [
-          0.06,
-          0.3,
-          0.09,
-          0.24,
-          0.21,
-          0.1
-        ],
-        "alpha": 1.0,
-        "coxaElev": 0.3,
-        "ceph": {
-          "rx": 0.27,
-          "ry": 0.19,
-          "rz": 0.31,
-          "head": 1.0
-        },
-        "abd": {
-          "len": 0.82,
-          "r": 0.38,
-          "sx": 1.05,
-          "sy": 0.92,
-          "tilt": 0.2,
-          "y": 0.03
-        },
-        "chel": {
-          "len": 0.2,
-          "r": 0.085
-        },
-        "palp": {
-          "len": 0.34,
-          "r": 0.04
-        },
-        "strideK": 0.07,
-        "stepMin": 0.22,
-        "stepMax": 0.5,
-        "arc": 0.12,
-        "gait": "wave"
-      },
-      "shape": {
-        "tris": 12000,
-        "legR": 0.06,
-        "legSides": 10,
-        "ringsPerSeg": [
-          3,
-          12,
-          5,
-          11,
-          9,
-          7
-        ],
-        "segRad": [
-          [
-            1.3,
-            1.25
-          ],
-          [
-            1.25,
-            0.9
-          ],
-          [
-            1.05,
-            0.95
-          ],
-          [
-            0.9,
-            0.62
-          ],
-          [
-            0.58,
-            0.42
-          ],
-          [
-            0.42,
-            0.0
-          ]
-        ],
-        "knob": 0.34,
-        "keel": 0.18,
-        "hook": 0.75,
-        "flat": 0.9,
-        "abdRibs": 6,
-        "abdRibDepth": 0.04,
-        "cephFurrows": 0.05,
-        "eyes": {
-          "kind": "socket",
-          "r": 0.012,
-          "extra": 0,
-          "color": [
-            0.75,
-            0.04,
-            0.02
-          ]
-        },
-        "spines": 70,
-        "spineLen": [
-          0.18,
-          0.62
-        ],
-        "spineR": 0.012,
-        "facePlate": true,
-        "fangCurl": 0.6
-      },
-      "look": {
-        "set": "Leather026",
-        "scale": 9,
-        "color": [
-          0.05,
-          0.045,
-          0.04
-        ],
-        "belly": [
-          0.08,
-          0.07,
-          0.06
-        ],
-        "legColor": [
-          0.42,
-          0.39,
-          0.34
-        ],
-        "plate": [
-          0.62,
-          0.58,
-          0.5
-        ],
-        "joint": [
-          0.2,
-          0.18,
-          0.15
-        ],
-        "rough": [
-          0.5,
-          0.85
-        ],
-        "bump": 1.4,
-        "mottle": 0.35,
-        "speckle": 0.15,
-        "bands": 0.0,
-        "hair": 0.3,
-        "chevrons": 0.2,
-        "eyeColor": [
-          0.5,
-          0.02,
-          0.01
-        ]
-      }
+    "abd": {
+     "len": 0.2,
+     "r": 0.075,
+     "sx": 1.0,
+     "sy": 0.9,
+     "tilt": 0.12,
+     "y": 0.006
     },
-    "climber": {
-      "rig": {
-        "restR": 1.4,
-        "bodyH": 0.16,
-        "legFactor": 1.38,
-        "pairAngles": [
-          38,
-          72,
-          108,
-          142
-        ],
-        "pairLen": [
-          1.0,
-          0.94,
-          0.88,
-          0.92
-        ],
-        "pairRest": [
-          1.0,
-          0.95,
-          0.9,
-          0.95
-        ],
-        "segFrac": [
-          0.04,
-          0.3,
-          0.06,
-          0.25,
-          0.24,
-          0.11
-        ],
-        "alpha": 0.75,
-        "coxaElev": 0.2,
-        "ceph": {
-          "rx": 0.13,
-          "ry": 0.06,
-          "rz": 0.15,
-          "head": 0.8
-        },
-        "abd": {
-          "len": 0.32,
-          "r": 0.11,
-          "sx": 1.0,
-          "sy": 0.6,
-          "tilt": 0.08,
-          "y": 0.0
-        },
-        "chel": {
-          "len": 0.07,
-          "r": 0.026
-        },
-        "palp": {
-          "len": 0.16,
-          "r": 0.012
-        },
-        "strideK": 0.065,
-        "stepMin": 0.12,
-        "stepMax": 0.36,
-        "arc": 0.16,
-        "gait": "tetrapod"
-      },
-      "shape": {
-        "tris": 6500,
-        "legR": 0.019,
-        "legSides": 8,
-        "ringsPerSeg": [
-          2,
-          10,
-          3,
-          10,
-          9,
-          6
-        ],
-        "segRad": [
-          [
-            1.25,
-            1.2
-          ],
-          [
-            1.18,
-            0.95
-          ],
-          [
-            1.0,
-            0.92
-          ],
-          [
-            0.92,
-            0.72
-          ],
-          [
-            0.62,
-            0.5
-          ],
-          [
-            0.47,
-            0.0
-          ]
-        ],
-        "knob": 0.28,
-        "keel": 0.1,
-        "hook": 0.4,
-        "flat": 0.8,
-        "abdRibs": 0,
-        "abdRibDepth": 0,
-        "cephFurrows": 0.08,
-        "eyes": {
-          "kind": "glow",
-          "r": 0.006,
-          "extra": 0,
-          "color": [
-            0.9,
-            0.06,
-            0.02
-          ]
-        },
-        "spines": 0,
-        "facePlate": false,
-        "fangCurl": 0.9
-      },
-      "look": {
-        "set": "Leather032",
-        "scale": 30,
-        "color": [
-          0.05,
-          0.035,
-          0.025
-        ],
-        "belly": [
-          0.09,
-          0.07,
-          0.05
-        ],
-        "joint": [
-          0.18,
-          0.13,
-          0.09
-        ],
-        "rough": [
-          0.3,
-          0.6
-        ],
-        "bump": 0.8,
-        "mottle": 0.3,
-        "speckle": 0.0,
-        "bands": 0.6,
-        "hair": 0.6,
-        "chevrons": 0.3,
-        "eyeColor": [
-          0.5,
-          0.02,
-          0.01
-        ]
-      }
+    "chel": {
+     "len": 0.034,
+     "r": 0.015
     },
-    "stalker": {
-      "rig": {
-        "restR": 1.25,
-        "bodyH": 0.2,
-        "legFactor": 1.5,
-        "pairAngles": [
-          26,
-          70,
-          112,
-          156
-        ],
-        "pairLen": [
-          1.0,
-          0.86,
-          0.72,
-          0.95
-        ],
-        "pairRest": [
-          1.0,
-          0.9,
-          0.82,
-          1.0
-        ],
-        "segFrac": [
-          0.04,
-          0.31,
-          0.06,
-          0.25,
-          0.24,
-          0.1
-        ],
-        "alpha": 0.95,
-        "coxaElev": 0.3,
-        "ceph": {
-          "rx": 0.14,
-          "ry": 0.1,
-          "rz": 0.17,
-          "head": 1.35
-        },
-        "abd": {
-          "len": 0.5,
-          "r": 0.12,
-          "sx": 0.95,
-          "sy": 0.9,
-          "tilt": 0.04,
-          "y": 0.0
-        },
-        "chel": {
-          "len": 0.12,
-          "r": 0.05
-        },
-        "palp": {
-          "len": 0.16,
-          "r": 0.014
-        },
-        "strideK": 0.06,
-        "stepMin": 0.16,
-        "stepMax": 0.42,
-        "arc": 0.12,
-        "gait": "tetrapod"
-      },
-      "shape": {
-        "tris": 6500,
-        "legR": 0.021,
-        "legSides": 8,
-        "ringsPerSeg": [
-          2,
-          10,
-          3,
-          10,
-          9,
-          6
-        ],
-        "segRad": [
-          [
-            1.25,
-            1.2
-          ],
-          [
-            1.15,
-            0.95
-          ],
-          [
-            1.0,
-            0.92
-          ],
-          [
-            0.92,
-            0.75
-          ],
-          [
-            0.66,
-            0.52
-          ],
-          [
-            0.5,
-            0.0
-          ]
-        ],
-        "knob": 0.2,
-        "keel": 0.05,
-        "hook": 0.3,
-        "flat": 0.95,
-        "abdRibs": 0,
-        "abdRibDepth": 0,
-        "cephFurrows": 0.03,
-        "eyes": {
-          "kind": "big",
-          "r": 0.046,
-          "extra": 6,
-          "color": [
-            0.02,
-            0.01,
-            0.01
-          ]
-        },
-        "spines": 0,
-        "facePlate": false,
-        "fangCurl": 0.5,
-        "fangBulge": 1.35
-      },
-      "look": {
-        "set": "Leather026",
-        "scale": 22,
-        "color": [
-          0.42,
-          0.36,
-          0.3
-        ],
-        "belly": [
-          0.5,
-          0.45,
-          0.38
-        ],
-        "abdColor": [
-          0.3,
-          0.17,
-          0.09
-        ],
-        "joint": [
-          0.55,
-          0.5,
-          0.44
-        ],
-        "rough": [
-          0.55,
-          0.85
-        ],
-        "bump": 0.7,
-        "mottle": 0.45,
-        "speckle": 0.6,
-        "bands": 0.5,
-        "hair": 0.5,
-        "chevrons": 0.0,
-        "eyeColor": [
-          0.015,
-          0.008,
-          0.006
-        ]
-      }
+    "palp": {
+     "len": 0.065,
+     "r": 0.006
+    },
+    "strideK": 0.055,
+    "stepMin": 0.045,
+    "stepMax": 0.16,
+    "arc": 0.16,
+    "gait": "tetrapod",
+    "sideLen": [
+     1.16,
+     0.8
+    ],
+    "mass": 0.6,
+    "splay": 0.3
+   },
+   "shape": {
+    "tris": 4200,
+    "legR": 0.011,
+    "legSides": 6,
+    "ringsPerSeg": [
+     2,
+     5,
+     2,
+     5,
+     4,
+     3
+    ],
+    "segRad": [
+     [
+      1.3,
+      1.25
+     ],
+     [
+      1.3,
+      1.0
+     ],
+     [
+      1.1,
+      1.0
+     ],
+     [
+      1.0,
+      0.8
+     ],
+     [
+      0.7,
+      0.55
+     ],
+     [
+      0.55,
+      0.0
+     ]
+    ],
+    "knob": 0.04,
+    "keel": 0.15,
+    "hook": 0.06,
+    "flat": 0.88,
+    "abdRibs": 0,
+    "abdRibDepth": 0,
+    "cephFurrows": 0.07,
+    "eyes": {
+     "kind": "glow",
+     "r": 0.004,
+     "extra": 0,
+     "color": [
+      0.9,
+      0.05,
+      0.02
+     ]
+    },
+    "spines": 0,
+    "facePlate": false,
+    "fangCurl": 0.9,
+    "folds": 0.45,
+    "abdShape": "lumpy",
+    "growths": {
+     "n": 10,
+     "r": [
+      0.14,
+      0.42
+     ],
+     "abd": 0.65,
+     "side": 1,
+     "blister": 0.45
+    },
+    "bristles": {
+     "legs": 374,
+     "abd": 286,
+     "len": 0.034999999999999996
     }
+   },
+   "look": {
+    "set": "Leather032",
+    "scale": 60,
+    "color": [
+     0.09,
+     0.065,
+     0.05
+    ],
+    "belly": [
+     0.16,
+     0.1,
+     0.08
+    ],
+    "joint": [
+     0.3,
+     0.14,
+     0.12
+    ],
+    "rough": [
+     0.45,
+     0.75
+    ],
+    "bump": 0.8,
+    "mottle": 0.5,
+    "speckle": 0.0,
+    "bands": 0.5,
+    "hair": 1.0,
+    "chevrons": 0.45,
+    "eyeColor": [
+     0.6,
+     0.02,
+     0.01
+    ],
+    "abdColor": [
+     0.13,
+     0.08,
+     0.06
+    ],
+    "raw": 0.55,
+    "rawColor": [
+     0.42,
+     0.15,
+     0.13
+    ],
+    "sss": 0.25
+   }
   },
-  "budget": {
-    "texture": 2048,
-    "gameTexture": 2048,
-    "lowTexture": 1024,
-    "webpQuality": 85,
-    "normalQuality": 92,
-    "maxKB": 4000
+  "sac": {
+   "rig": {
+    "restR": 1.6,
+    "bodyH": 0.52,
+    "legFactor": 1.18,
+    "pairAngles": [
+     34,
+     70,
+     110,
+     148
+    ],
+    "pairLen": [
+     1.0,
+     0.92,
+     0.84,
+     0.98
+    ],
+    "pairRest": [
+     0.95,
+     0.92,
+     0.86,
+     0.98
+    ],
+    "segFrac": [
+     0.06,
+     0.3,
+     0.09,
+     0.24,
+     0.21,
+     0.1
+    ],
+    "alpha": 1.0,
+    "coxaElev": 0.3,
+    "ceph": {
+     "rx": 0.24,
+     "ry": 0.19,
+     "rz": 0.26,
+     "head": 0.95
+    },
+    "abd": {
+     "len": 1.2,
+     "r": 0.55,
+     "sx": 1.15,
+     "sy": 1.0,
+     "tilt": 0.12,
+     "y": 0.05
+    },
+    "chel": {
+     "len": 0.09000000000000001,
+     "r": 0.051000000000000004
+    },
+    "palp": {
+     "len": 0.34,
+     "r": 0.04
+    },
+    "strideK": 0.07,
+    "stepMin": 0.22,
+    "stepMax": 0.5,
+    "arc": 0.12,
+    "gait": "wave",
+    "mass": 2.2,
+    "splay": 0.2,
+    "soft": true
+   },
+   "shape": {
+    "tris": 14000,
+    "legR": 0.075,
+    "legSides": 10,
+    "ringsPerSeg": [
+     3,
+     12,
+     5,
+     11,
+     9,
+     7
+    ],
+    "segRad": [
+     [
+      1.3,
+      1.25
+     ],
+     [
+      1.3,
+      1.0
+     ],
+     [
+      1.1,
+      1.0
+     ],
+     [
+      1.0,
+      0.8
+     ],
+     [
+      0.7,
+      0.55
+     ],
+     [
+      0.55,
+      0.0
+     ]
+    ],
+    "knob": 0.0,
+    "keel": 0.18,
+    "hook": 0.08,
+    "flat": 0.9,
+    "abdRibs": 0,
+    "abdRibDepth": 0,
+    "cephFurrows": 0.05,
+    "eyes": {
+     "kind": "socket",
+     "r": 0.012,
+     "extra": 0,
+     "color": [
+      0.02,
+      0.01,
+      0.01
+     ]
+    },
+    "spines": 0,
+    "spineLen": [
+     0.18,
+     0.62
+    ],
+    "spineR": 0.012,
+    "facePlate": false,
+    "fangCurl": 0.6,
+    "folds": 0.9,
+    "swell": 0.22,
+    "abdShape": "sac",
+    "mouth": {
+     "w": 0.85,
+     "smile": 0.5,
+     "teeth": 22,
+     "y": 0.1,
+     "gap": 0.1,
+     "lip": 0.05,
+     "open": 0.55,
+     "widen": 0.25
+    },
+    "humanEyes": {
+     "eyes": [
+      [
+       0.32,
+       0.7,
+       0.6,
+       0.15
+      ],
+      [
+       -0.3,
+       0.74,
+       0.58,
+       0.12
+      ],
+      [
+       0.1,
+       0.92,
+       0.38,
+       0.09
+      ],
+      [
+       -0.12,
+       0.84,
+       0.5,
+       0.19
+      ]
+     ],
+     "blink": false,
+     "droop": 0.3
+    },
+    "growths": {
+     "n": 14,
+     "r": [
+      0.06,
+      0.2
+     ],
+     "abd": 0.9,
+     "blister": 0.55
+    },
+    "bristles": {
+     "legs": 198,
+     "abd": 154,
+     "len": 0.017499999999999998
+    }
+   },
+   "look": {
+    "set": "Leather026",
+    "scale": 9,
+    "color": [
+     0.675,
+     0.54,
+     0.4590000000000001
+    ],
+    "belly": [
+     0.783,
+     0.6210000000000001,
+     0.54
+    ],
+    "legColor": [
+     0.6210000000000001,
+     0.486,
+     0.41850000000000004
+    ],
+    "plate": [
+     0.62,
+     0.58,
+     0.5
+    ],
+    "joint": [
+     0.55,
+     0.3,
+     0.27
+    ],
+    "rough": [
+     0.25,
+     0.55
+    ],
+    "bump": 0.9,
+    "mottle": 0.3,
+    "speckle": 0.1,
+    "bands": 0.0,
+    "hair": 0.2,
+    "chevrons": 0.2,
+    "eyeColor": [
+     0.004,
+     0.004,
+     0.005
+    ],
+    "abdColor": [
+     0.8910000000000001,
+     0.675,
+     0.54
+    ],
+    "veins": 0.85,
+    "veinColor": [
+     0.2,
+     0.05,
+     0.1
+    ],
+    "sss": 0.9,
+    "sssColor": [
+     0.95,
+     0.35,
+     0.2
+    ]
+   }
+  },
+  "flayed": {
+   "rig": {
+    "restR": 1.4,
+    "bodyH": 0.16,
+    "legFactor": 1.48,
+    "pairAngles": [
+     38,
+     72,
+     108,
+     142
+    ],
+    "pairLen": [
+     1.0,
+     0.94,
+     0.88,
+     0.92
+    ],
+    "pairRest": [
+     1.0,
+     0.95,
+     0.9,
+     0.95
+    ],
+    "segFrac": [
+     0.04,
+     0.3,
+     0.06,
+     0.25,
+     0.24,
+     0.11
+    ],
+    "alpha": 0.75,
+    "coxaElev": 0.2,
+    "ceph": {
+     "rx": 0.15,
+     "ry": 0.06,
+     "rz": 0.16,
+     "head": 0.7
+    },
+    "abd": {
+     "len": 0.42,
+     "r": 0.14,
+     "sx": 1.35,
+     "sy": 0.45,
+     "tilt": 0.05,
+     "y": 0.0
+    },
+    "chel": {
+     "len": 0.07,
+     "r": 0.026
+    },
+    "palp": {
+     "len": 0.16,
+     "r": 0.012
+    },
+    "strideK": 0.065,
+    "stepMin": 0.12,
+    "stepMax": 0.36,
+    "arc": 0.16,
+    "gait": "ripple",
+    "mass": 0.9,
+    "splay": 0.45
+   },
+   "shape": {
+    "tris": 7500,
+    "legR": 0.019,
+    "legSides": 8,
+    "ringsPerSeg": [
+     2,
+     10,
+     3,
+     10,
+     9,
+     6
+    ],
+    "segRad": [
+     [
+      1.3,
+      1.25
+     ],
+     [
+      1.3,
+      1.0
+     ],
+     [
+      1.1,
+      1.0
+     ],
+     [
+      1.0,
+      0.8
+     ],
+     [
+      0.7,
+      0.55
+     ],
+     [
+      0.55,
+      0.0
+     ]
+    ],
+    "knob": 0.03,
+    "keel": 0.1,
+    "hook": 0.12,
+    "flat": 0.8,
+    "abdRibs": 0,
+    "abdRibDepth": 0,
+    "cephFurrows": 0.08,
+    "eyes": {
+     "kind": "glow",
+     "r": 0.007,
+     "extra": 0,
+     "color": [
+      0.02,
+      0.02,
+      0.02
+     ]
+    },
+    "spines": 0,
+    "facePlate": false,
+    "fangCurl": 0.9,
+    "folds": 0.55,
+    "swell": 0.35,
+    "abdShape": "flat",
+    "growths": {
+     "n": 5,
+     "r": [
+      0.1,
+      0.25
+     ],
+     "abd": 0.8,
+     "blister": 0.2
+    },
+    "bristles": {
+     "legs": 440,
+     "abd": 88,
+     "len": 0.049
+    }
+   },
+   "look": {
+    "set": "Leather032",
+    "scale": 30,
+    "color": [
+     0.3,
+     0.13,
+     0.11
+    ],
+    "belly": [
+     0.4,
+     0.22,
+     0.19
+    ],
+    "joint": [
+     0.5,
+     0.25,
+     0.22
+    ],
+    "rough": [
+     0.2,
+     0.45
+    ],
+    "bump": 0.8,
+    "mottle": 0.45,
+    "speckle": 0.0,
+    "bands": 0.2,
+    "hair": 0.4,
+    "chevrons": 0.3,
+    "eyeColor": [
+     0.006,
+     0.006,
+     0.007
+    ],
+    "abdColor": [
+     0.34,
+     0.15,
+     0.13
+    ],
+    "raw": 0.7,
+    "rawColor": [
+     0.55,
+     0.18,
+     0.16
+    ],
+    "sss": 0.6
+   }
+  },
+  "grinner": {
+   "rig": {
+    "restR": 1.25,
+    "bodyH": 0.2,
+    "legFactor": 1.5,
+    "pairAngles": [
+     26,
+     70,
+     112,
+     156
+    ],
+    "pairLen": [
+     1.0,
+     0.86,
+     0.72,
+     0.95
+    ],
+    "pairRest": [
+     1.0,
+     0.9,
+     0.82,
+     1.0
+    ],
+    "segFrac": [
+     0.04,
+     0.31,
+     0.06,
+     0.25,
+     0.24,
+     0.1
+    ],
+    "alpha": 0.95,
+    "coxaElev": 0.3,
+    "ceph": {
+     "rx": 0.17,
+     "ry": 0.14,
+     "rz": 0.18,
+     "head": 1.15
+    },
+    "abd": {
+     "len": 0.5,
+     "r": 0.12,
+     "sx": 0.95,
+     "sy": 0.9,
+     "tilt": 0.04,
+     "y": 0.0
+    },
+    "chel": {
+     "len": 0.054,
+     "r": 0.03
+    },
+    "palp": {
+     "len": 0.16,
+     "r": 0.014
+    },
+    "strideK": 0.06,
+    "stepMin": 0.16,
+    "stepMax": 0.42,
+    "arc": 0.12,
+    "gait": "ripple",
+    "mass": 1.0,
+    "splay": 0.3
+   },
+   "shape": {
+    "tris": 8000,
+    "legR": 0.021,
+    "legSides": 8,
+    "ringsPerSeg": [
+     2,
+     10,
+     3,
+     10,
+     9,
+     6
+    ],
+    "segRad": [
+     [
+      1.3,
+      1.25
+     ],
+     [
+      1.3,
+      1.0
+     ],
+     [
+      1.1,
+      1.0
+     ],
+     [
+      1.0,
+      0.8
+     ],
+     [
+      0.7,
+      0.55
+     ],
+     [
+      0.55,
+      0.0
+     ]
+    ],
+    "knob": 0.02,
+    "keel": 0.05,
+    "hook": 0.1,
+    "flat": 0.95,
+    "abdRibs": 0,
+    "abdRibDepth": 0,
+    "cephFurrows": 0.0,
+    "eyes": {
+     "kind": "socket",
+     "r": 0.01,
+     "extra": 0,
+     "color": [
+      0.02,
+      0.01,
+      0.01
+     ]
+    },
+    "spines": 0,
+    "facePlate": false,
+    "fangCurl": 0.5,
+    "fangBulge": 1.35,
+    "folds": 0.6,
+    "mouth": {
+     "w": 0.95,
+     "offset": 0.12,
+     "smile": 0.75,
+     "teeth": 28,
+     "y": 0.12,
+     "gap": 0.09,
+     "lip": 0.04,
+     "open": 0.65,
+     "widen": 0.35,
+     "z": 0.99
+    },
+    "humanEyes": {
+     "eyes": [
+      [
+       0.42,
+       0.75,
+       0.55,
+       0.22
+      ],
+      [
+       -0.24,
+       0.82,
+       0.52,
+       0.16
+      ],
+      [
+       0.1,
+       0.98,
+       0.25,
+       0.11
+      ]
+     ],
+     "blink": false,
+     "droop": 0.2
+    },
+    "growths": {
+     "n": 6,
+     "r": [
+      0.1,
+      0.3
+     ],
+     "abd": 0.7,
+     "blister": 0.4
+    },
+    "bristles": {
+     "legs": 242,
+     "abd": 110,
+     "len": 0.020999999999999998
+    }
+   },
+   "look": {
+    "set": "Leather026",
+    "scale": 22,
+    "color": [
+     0.78,
+     0.7020000000000001,
+     0.624
+    ],
+    "belly": [
+     0.8580000000000001,
+     0.78,
+     0.7020000000000001
+    ],
+    "abdColor": [
+     0.676,
+     0.5720000000000001,
+     0.49400000000000005
+    ],
+    "joint": [
+     0.62,
+     0.45,
+     0.42
+    ],
+    "rough": [
+     0.3,
+     0.6
+    ],
+    "bump": 0.7,
+    "mottle": 0.4,
+    "speckle": 0.25,
+    "bands": 0.5,
+    "hair": 0.5,
+    "chevrons": 0.0,
+    "eyeColor": [
+     0.004,
+     0.004,
+     0.005
+    ],
+    "sss": 0.55,
+    "gumColor": [
+     0.4,
+     0.1,
+     0.1
+    ]
+   }
+  },
+  "weeper": {
+   "rig": {
+    "restR": 1.05,
+    "bodyH": 0.32,
+    "legFactor": 1.45,
+    "pairAngles": [
+     26,
+     70,
+     112,
+     156
+    ],
+    "pairLen": [
+     1.15,
+     0.9,
+     0.8,
+     0.92
+    ],
+    "pairRest": [
+     1.0,
+     0.9,
+     0.82,
+     1.0
+    ],
+    "segFrac": [
+     0.04,
+     0.31,
+     0.06,
+     0.25,
+     0.24,
+     0.1
+    ],
+    "alpha": 0.95,
+    "coxaElev": 0.3,
+    "ceph": {
+     "rx": 0.15,
+     "ry": 0.16,
+     "rz": 0.15,
+     "head": 1.8
+    },
+    "abd": {
+     "len": 0.38,
+     "r": 0.2,
+     "sx": 1.0,
+     "sy": 1.0,
+     "tilt": 0.35,
+     "y": 0.02
+    },
+    "chel": {
+     "len": 0.054,
+     "r": 0.03
+    },
+    "palp": {
+     "len": 0.16,
+     "r": 0.014
+    },
+    "strideK": 0.06,
+    "stepMin": 0.16,
+    "stepMax": 0.42,
+    "arc": 0.12,
+    "gait": "wave",
+    "mass": 1.1,
+    "splay": 0.3
+   },
+   "shape": {
+    "tris": 7000,
+    "legR": 0.019,
+    "legSides": 8,
+    "ringsPerSeg": [
+     2,
+     10,
+     3,
+     10,
+     9,
+     6
+    ],
+    "segRad": [
+     [
+      1.3,
+      1.25
+     ],
+     [
+      1.3,
+      1.0
+     ],
+     [
+      1.1,
+      1.0
+     ],
+     [
+      1.0,
+      0.8
+     ],
+     [
+      0.7,
+      0.55
+     ],
+     [
+      0.55,
+      0.0
+     ]
+    ],
+    "knob": 0.02,
+    "keel": 0.05,
+    "hook": 0.1,
+    "flat": 0.95,
+    "abdRibs": 0,
+    "abdRibDepth": 0,
+    "cephFurrows": 0.0,
+    "eyes": {
+     "kind": "socket",
+     "r": 0.01,
+     "extra": 0,
+     "color": [
+      0.02,
+      0.01,
+      0.01
+     ]
+    },
+    "spines": 0,
+    "facePlate": false,
+    "fangCurl": 0.5,
+    "fangBulge": 1.35,
+    "folds": 0.5,
+    "abdShape": "hunch",
+    "humanEyes": {
+     "eyes": [
+      [
+       0.5,
+       0.48,
+       0.75,
+       0.24
+      ],
+      [
+       -0.5,
+       0.48,
+       0.75,
+       0.24
+      ]
+     ],
+     "blink": true,
+     "droop": 0.12,
+     "lidAngle": 1.15
+    },
+    "mouth": {
+     "w": 0.5,
+     "smile": 0.25,
+     "teeth": 12,
+     "y": -0.08,
+     "gap": 0.04,
+     "lip": 0.03,
+     "open": 0.5,
+     "widen": 0.2
+    },
+    "growths": {
+     "n": 4,
+     "r": [
+      0.1,
+      0.22
+     ],
+     "abd": 0.6,
+     "blister": 0.6
+    },
+    "bristles": {
+     "legs": 198,
+     "abd": 88,
+     "len": 0.020999999999999998
+    }
+   },
+   "look": {
+    "set": "Leather026",
+    "scale": 22,
+    "color": [
+     0.6210000000000001,
+     0.5265000000000001,
+     0.5265000000000001
+    ],
+    "belly": [
+     0.7425000000000002,
+     0.6345,
+     0.6210000000000001
+    ],
+    "abdColor": [
+     0.5670000000000001,
+     0.4590000000000001,
+     0.4590000000000001
+    ],
+    "joint": [
+     0.55,
+     0.38,
+     0.38
+    ],
+    "rough": [
+     0.22,
+     0.5
+    ],
+    "bump": 0.7,
+    "mottle": 0.3,
+    "speckle": 0.1,
+    "bands": 0.5,
+    "hair": 0.5,
+    "chevrons": 0.0,
+    "eyeColor": [
+     0.004,
+     0.004,
+     0.005
+    ],
+    "raw": 0.25,
+    "sss": 0.6
+   }
   }
+ },
+ "budget": {
+  "texture": 2048,
+  "gameTexture": 2048,
+  "lowTexture": 1024,
+  "webpQuality": 85,
+  "normalQuality": 92,
+  "maxKB": 4000
+ }
 }
