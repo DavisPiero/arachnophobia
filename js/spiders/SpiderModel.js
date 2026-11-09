@@ -17,6 +17,10 @@ import { loadModel, assetsEnabled } from '../core/Assets.js';
 
 export const SPIDER_TYPES = ['runner', 'brute', 'climber', 'stalker'];
 
+// Three sizes of every model. One mesh per model; a size changes the scale and how heavy the body moves (mass),
+// and the AI scales health, speed and damage (Config.sizes).
+export const SIZES = { small: { scale: 0.62, mass: 0.55 }, medium: { scale: 1, mass: 1 }, large: { scale: 1.45, mass: 1.9 } };
+
 const D2R = Math.PI / 180;
 const SEG = ['coxa', 'femur', 'patella', 'tibia', 'metatarsus', 'tarsus'];
 
@@ -650,7 +654,8 @@ export function createSpiderVisual(type, quality, opts = {}) {
   const root = new THREE.Group();
   root.name = 'spider-' + type;
   const space = new THREE.Group();
-  const scale = (Config.spiders[type]?.scale ?? 1) * (1 + (r() - 0.5) * 0.16);
+  const sz = SIZES[opts.size] || SIZES.medium;
+  const scale = (Config.spiders[type]?.scale ?? 1) * sz.scale * (1 + (r() - 0.5) * 0.12);
   space.scale.setScalar(scale);
   root.add(space);
 
@@ -693,7 +698,7 @@ export function createSpiderVisual(type, quality, opts = {}) {
   hitbox.name = 'spider-hitbox';
   root.add(hitbox);
 
-  const rig = new SpiderRig({ space, bones, def, layout: A.lay, seed, type });
+  const rig = new SpiderRig({ space, bones, def, layout: A.lay, seed, collision: opts.collision || null, mass: (def.mass ?? 1) * sz.mass });
 
   let glowV = 1, opac = 1;
   const applyEyes = () => {

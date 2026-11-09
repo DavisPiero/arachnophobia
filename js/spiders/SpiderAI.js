@@ -10,6 +10,7 @@ import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight, WINDOWS } from '../world/Layout.js';
 import { createSpiderVisual } from './SpiderModel.js';
 import { SpiderVoice } from '../audio/SpiderVoice.js';
+import { SpiderCollision } from './SpiderCollision.js';
 import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -19,13 +20,18 @@ const SLOTS = [ { u: 0, y: 1.42 }, { u: -0.32, y: 1.2 }, { u: 0.34, y: 1.62 } ];
 let nextId = 1;
 
 export class Spider {
-  constructor(type, mgr) {
+  constructor(type, mgr, { size = 'medium' } = {}) {
     this.id = nextId++;
     this.type = type;
     this.mgr = mgr;
-    this.cfg = Config.spiders[type];
+    this.size = size;
+    const sz = Config.sizes[size] || Config.sizes.medium;
+    // a sized copy of the species' numbers: health, speeds and damage scale with size
+    const c = Config.spiders[type];
+    this.cfg = { ...c, health: c.health * sz.health, speed: c.speed * sz.speed, climbSpeed: c.climbSpeed * sz.speed,
+      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage, playerDamage: c.playerDamage * sz.damage };
     this.health = this.cfg.health;
-    this.visual = createSpiderVisual(type, mgr.quality);
+    this.visual = createSpiderVisual(type, mgr.quality, { collision: mgr.collision, size });
     this.root = this.visual.root;
     this.visual.hitbox.userData.spider = this;
     // forgiving hitbox: players aim at the whole creature, not only its body
@@ -486,6 +492,7 @@ export class SpiderManager {
     this.quality = quality;
     this.windows = windows;
     this.colliders = colliders || [];
+    this.collision = new SpiderCollision(this.colliders);   // what feet stand on and bodies bump into
     this.spiders = [];
     this.slots = Object.fromEntries(WINDOWS.map((w) => [w.id, [null, null, null]]));
     this.timers = [];

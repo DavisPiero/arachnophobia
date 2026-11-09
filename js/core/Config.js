@@ -90,6 +90,12 @@ export const Config = {
     climber: { health: 60,  speed: 2.4, climbSpeed: 2.2, windowDamage: 8,  attackInterval: 1.0, playerDamage: 12, scale: 1.0, squeezeSpeed: 0.7 },
     stalker: { health: 70,  speed: 1.4, climbSpeed: 1.2, windowDamage: 10, attackInterval: 1.2, playerDamage: 16, scale: 1.0, squeezeSpeed: 0.55 },
   },
+  // three sizes of every spider (js/spiders/SpiderModel.js SIZES sets scale and body weight)
+  sizes: {
+    small:  { health: 0.45, speed: 1.2,  squeeze: 1.6, damage: 0.5 },   // small ones die to a stomp
+    medium: { health: 1,    speed: 1,    squeeze: 1,   damage: 1 },
+    large:  { health: 1.9,  speed: 0.8,  squeeze: 0.6, damage: 1.7 },
+  },
   waves: {
     firstDelay: 18,          // seconds of quiet before wave 1
     breakTime: 22,           // quiet between waves
