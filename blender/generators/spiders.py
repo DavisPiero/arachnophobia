@@ -416,8 +416,8 @@ def build_bristles(m, pts, rnd, mat, length, radius, count):
         L = length * (0.5 + rnd.random())
         Z = d.cross(UP).normalized() if abs(d.y) < 0.95 else Vector((1, 0, 0))
         Y = Z.cross(d).normalized()
-        st = [(p - d * radius, d, Y, Z, radius, w, (0, 0, 0)), (p + d * (L * 0.5), d, Y, Z, radius * 0.55, w, (0, 0, 0)),
-              (p + d * L + Y * (-0.15 * L), d, Y, Z, radius * 0.12, w, (0, 0, 0))]
+        # two rings and a point: about ten triangles a hair
+        st = [(p - d * radius, d, Y, Z, radius, w, (0, 0, 0)), (p + d * L + Y * (-0.15 * L), d, Y, Z, radius * 0.1, w, (0, 0, 0))]
         tube(m, st, 3, mat, tip=True)
 
 
@@ -745,7 +745,7 @@ def build_species(name, sp, budget):
         tube(m, st, S['legSides'], mi['leg'], keel=S['keel'], flat=S['flat'], tip=True)
         if B.get('legs'):
             leg_pts = [(c + Y * r, Y, w) for (c, X, Y, Z, r, w, reg) in st[: int(len(st) * 0.85)]]
-            build_bristles(m, leg_pts, rnd, mi['leg'], B['len'] * R['restR'], S['legR'] * 0.05, B['legs'] * (0.6 + 0.4 * q))
+            build_bristles(m, leg_pts, rnd, mi['leg'], B['len'] * R['restR'], S['legR'] * 0.05, B['legs'] / 8 * (0.6 + 0.4 * q))   # B['legs'] is the total over all eight legs
 
     if B.get('abd'):
         build_bristles(m, hair_pts, rnd, mi['abd'], B['len'] * R['restR'] * 1.3, S['legR'] * 0.06, B['abd'] * (0.6 + 0.4 * q))

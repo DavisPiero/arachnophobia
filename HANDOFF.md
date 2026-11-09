@@ -1,61 +1,46 @@
 # Hand-off
 
-*Session of 2026-11-07 (fifth). Replaces any earlier note.*
+*Session of 2026-11-09. Replaces any earlier note.*
 
 ## Repo state
-- `main` includes this session's work. It came from branch `m4-spiders`: merged, pushed, then deleted. The user
-  signed off ahead of time ("when you're done merge and push automatically").
-- `npm test` passed before the merge.
+- `main` includes this session's work, from branch `m4-spider-overhaul` (merged, pushed, deleted). The user signed off
+  ahead of time ("when you are done merge and push automatically"), then said to skip the all-sizes score run.
+- `npm test` passed (desktop + phone). `node tests/locomotion.mjs` was last run on medium only (see below).
 
 ## Read first
-1. `STATE.md`: the open questions, and ask them first.
-2. `SPECIES.md`: the nine species; five of them are still guesses.
-3. `SPEC.md`: new controls, 9 × 12 m cabin, burst deaths, squeeze. `DECISIONS.md`: the last 13 lines.
-4. `blender/README.md`: the spiders family.
+1. `STATE.md`: the open questions; ask them first.
+2. `SPECIES.md`: species vs models, the five designs, how a model is made and how it moves.
+3. `DECISIONS.md`: the last 11 lines.
 
 ## What was built
-- **Cabin** 9 × 12 m, 3 m ceiling. Windows, door, table, lamps, routes, terrain and furniture moved with the walls.
-  Furniture is now in `Layout.js` `FURNITURE`.
-- **Weapon switch** (`Weapon.js` `held`/`want`/`drawK`, `ViewModel.js` `AXE_IDLE`):
-  - 1 rifle, 2 axe; the held axe rests up on the right and click swings it.
-  - F is gone; stomp is on C.
-  - Touch: the AXE button swaps and shows the other weapon's name.
-- **Burst deaths** (`js/fx/Chunks.js`): two instanced meshes with a per-instance fade. Leg pieces come from the
-  spider's bones at the moment of death.
-- **Spider generator** (`blender/generators/spiders.py`, `assets/params/spiders.json`):
-  - one skinned mesh per species on the game's 58 bones, with joints weighted smoothly;
-  - CC0 scans with mottling, speckles, bands, belly and joints from a `reg` vertex attribute;
-  - it writes `spider_<species>.glb` and a `.json` with the layout and rest frames.
-  - `tools/assets.mjs` now supports a family with several outputs (`outputs` in the params file).
-- **Loading** (`SpiderModel.js` `loadSpiderModels`): the game rebuilds the skeleton from the `.json` rest frames.
-  `Assets.js` recovers a skinned mesh's real positions from its bind data, because meshopt compression puts the
-  position offset there.
-- **Rig** (`SpiderRig.js`):
-  - feet land on the real ground (`ground` function from the AI);
-  - the body lifts and tilts with its feet;
-  - `gait: 'wave'` steps one leg at a time (the brute);
-  - squeeze mode: each leg grips the window frame on the side of the wall it reaches for (`_grips`).
-- **Window entry** (`SpiderPaths.js` `enterPath`, `SpiderAI.js`): segments flagged `squeeze` move at
-  `Config.spiders.<type>.squeezeSpeed`.
+- **Quick fixes:** chunks are meat, gristle and shell only (no legs), higher-res and marbled (`Chunks.js`); windows
+  1.32 × 1.2 m, centre 1.60 m (`Layout.js`); cracks redrawn as branching light-blue lines (`WindowSystem.js`);
+  first-person legs and the stomp boot removed (files deleted; stomp still kills).
+- **Locomotion** (`js/spiders/`): `LegIK.js`, `Gait.js`, `BodyDynamics.js`, `SpiderCollision.js`, `SpiderRig.js`
+  rewritten on top of them. Squeeze: grips on the frame, body drops and rolls, only a soft abdomen squashes.
+- **Models** (`blender/generators/spiders.py`, `assets/params/spiders.json` `models`): Knot, Sac, Flayed, Grinner,
+  Weeper. New: abdomen shapes, growths, hairs, fleshy folds, lopsided legs, human mouths with teeth, black human eyes
+  with lids, two face bones (60 bones total), translucency read by the game. 12–27k triangles, 2.6–3.4 MB each.
+- **Species and sizes:** `Config.spiders.<species>.model`; new species `weeper`; `Config.sizes` + `SIZES`; waves pick sizes.
+- **Behaviour** (`Behaviour.js`): personalities, reacting to being looked at, light and distance; four-beat attacks
+  (lunge, flurry, slam, feint). Hits shove the player (`Player.damage`).
+- **Tests:** `tests/locomotion.mjs` scores pops, reach errors and clipping; smoke test updated for 5 models, no boot.
 
-## What went badly (be honest with the user about this)
-- **Stance:** the first spider build stood like a harvestman (knees far above the body). The old code-made spiders
-  had the same leg ratios. I flattened it in the params.
-- **Sleeves:** the 10° forearm change barely shows when aiming. The sleeves are still big in the lower middle.
-- **Too dark to judge:** the Blender preview lighting is dim, so the renders undersell the colours. The brute's plate
-  reads bone-white in the game under the flashlight, but dark grey in the renders.
+## What went badly (tell the user plainly)
+- **The models are not yet as horrifying as asked.** Silhouettes differ and the faces read, but the legs are still
+  smooth tubes, the smiles are small at game distance, and the bodies render dark. The script reached its limit
+  on faces; hand-sculpted faces would do better.
+- **Squeeze still pops:** about 0.45% of joint-frames, mostly while squeezing (grips too close to the hip). The test
+  limit is set just above that as a guard, not as a goal.
+- **First bake was 40–70k triangles** (hairs counted per leg); fixed, rebaked.
+- **Not done:** climbing inside walls and the ceiling (collision supports it, no routes yet); tear streaks on the
+  Weeper; a face on the Flayed's back.
 
 ## Known weak spots
-- **Hair:** there are no real hairs on the spiders, only a bump pattern. The runner reads smooth up close.
-- **Sideways legs:** the climber's legs do not bend sideways like a real huntsman's; the rig only bends legs in the
-  vertical plane.
-- **Squeeze:** grips are fixed points beside the opening, and long legs can cross through the window hole. The body
-  narrows by scaling, not by real deformation.
-- **Climbers:** paused mid-window before; that is fixed (no random pauses while squeezing) but not re-checked.
-- **Phones:** the spiders were not checked on the low tier (the `_lod1` meshes) in the real game, only in tests.
-- **Spec:** the four species use the old behaviours; species behaviours are the next milestone 4 step.
+- The locomotion score was not run for small and large after the final bake (user said skip).
+- Behaviour was tested by fast-forwarding 90 s headless (attacks, breaches, damage), not played by hand.
+- Phones: low tier loads the `_low` files; not checked on a real phone.
 
 ## Testing rules (from the user)
-- Keep tests cheap: `npm test` in the background, do not poll.
-- Read at most one or two screenshots per change.
-- The game is too dark to judge models: use the Blender renders (`blender/build/spider_*`) or `dev/spiders.html`.
+- Keep tests cheap: `npm test` in the background. Read one or two screenshots per change.
+- The game is too dark to judge models: use `blender/build/spider_*` renders or `dev/spiders.html?type=…&size=…`.

@@ -91,7 +91,7 @@ for (const device of ['desktop', 'phone']) {
     g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = 0;
     await simWait(0.6);
     const view = g.weapon.view;
-    const r = { viewAssets: view.usingAssets, hasBoot: !!view.bootMesh };
+    const r = { viewAssets: view.usingAssets };
     // the lever cycle blocks a second shot until it is done
     g.weapon.cooldown = 0;
     const m0 = g.weapon.mag; g.weapon.tryFire(); await simWait(0.2);
@@ -117,7 +117,7 @@ for (const device of ['desktop', 'phone']) {
     off?.();
     return r;
   });
-  check(m3.viewAssets && m3.hasBoot, 'Blender hands, rifle and axe loaded');
+  check(m3.viewAssets, 'Blender hands, rifle and axe loaded');
   check(m3.leverOpen > 0.3, `lever opens after a shot (${m3.leverOpen.toFixed(2)} rad)`);
   check(m3.blocked, 'a second shot waits for the lever');
   check(m3.axeHeld, 'pressing 2 puts the axe in your hands');
@@ -126,7 +126,7 @@ for (const device of ['desktop', 'phone']) {
   check(m3.stompStarted && m3.stompKilled && m3.killedBy === 'stomp', `stomp kills a runner on the floor (${m3.killedBy})`);
   check(m3.splats > 0, `kills leave splats (${m3.splats})`);
   check(m3.chunks > 5, `a killed spider bursts into chunks (${m3.chunks})`);
-  check(m3.models === 4, `Blender spider models loaded (${m3.models} of 4)`);
+  check(m3.models === 5, `Blender spider models loaded (${m3.models} of 5)`);
 
   // reload at the table
   const rl = await page.evaluate(async () => {
