@@ -1,8 +1,7 @@
-// First-person view: gloved hands, the lever-action rifle, the axe and the stomp boot, and how they move.
-// The rifle, hands and axe are drawn in the weapon's own scene (on top of the world, never clipping walls);
-// the boot is drawn in the world (it stamps on the real floor).
+// First-person view: gloved hands, the lever-action rifle and the axe, and how they move.
+// They are drawn in the weapon's own scene (on top of the world, never clipping walls).
 //
-// Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb, legs.glb 'boot') with code-made fallbacks.
+// Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb), with code-made fallbacks.
 // Every pivot and grip position comes from assets/params/{rifle,hands,axe}.json, the same numbers Blender used.
 //
 // Spaces: "rifle space" = the params' GAME space (x right, y up, z towards the player, origin = receiver).
@@ -68,8 +67,6 @@ export class ViewModel {
     this.root.add(this.axe);
     this.axeForearm = new THREE.Vector3(0.35, -0.45, 0.82).normalize();   // hands.json forearm.axe (axe space)
     this.shoulder = new THREE.Vector3(0.32, -0.5, 0.12);                  // camera space: where the right arm comes from
-    this.boot = new THREE.Group();          // lives in the WORLD scene; Melee places it
-    this.boot.visible = false;
     // spent cases flying out of the action
     this.cases = [];
     this.caseIdx = 0;
@@ -113,20 +110,17 @@ export class ViewModel {
     const axe = new THREE.Group();
     axe.add(mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.62, 8), wood, 0, 0, -0.22, Math.PI / 2));
     axe.add(mesh(new THREE.BoxGeometry(0.018, 0.13, 0.05), steel, 0, -0.04, -0.49));
-    const boot = new THREE.Group();
-    boot.add(mesh(new THREE.BoxGeometry(0.11, 0.1, 0.3), glove, 0, 0.05, -0.03));
-    boot.add(mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.4, 10), cloth, 0, 0.3, 0.06));
     const round = mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.064, 8), brass, 0, 0, -0.032, Math.PI / 2);
     this.setParts({
       body, lever: new THREE.Group().add(lever, leverBar), hammer: new THREE.Group().add(hammer),
       armR: arm([0.32, -0.36, 0.88]), armL: arm([-0.42, -0.5, 0.76]), armLoad: arm([-0.55, -0.45, 0.7]), armAxe: arm([0.18, -0.9, 0.38]),
-      axe, boot, round, caseMesh: () => mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.044, 8), brass, 0, 0, 0, Math.PI / 2),
+      axe, round, caseMesh: () => mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.044, 8), brass, 0, 0, 0, Math.PI / 2),
     });
   }
 
   /** Swap in the Blender models. Any family that fails keeps its fallback. */
   async loadAssets(quality) {
-    const [rifle, hands, axe, legs, rp, hp] = await Promise.all([loadModel('rifle', quality), loadModel('hands', quality), loadModel('axe', quality), loadModel('legs', quality), loadParams('rifle'), loadParams('hands')]);
+    const [rifle, hands, axe, rp, hp] = await Promise.all([loadModel('rifle', quality), loadModel('hands', quality), loadModel('axe', quality), loadParams('rifle'), loadParams('hands')]);
     if (rp && rp.lever) this.P = { ...RIFLE_DEFAULTS, ...rp, view: { ...RIFLE_DEFAULTS.view, ...(rp.view || {}) } };
     if (hp?.poses?.axe?.forearm) this.axeForearm.fromArray(hp.poses.axe.forearm).normalize();
     const lod = quality?.tier === 'low' ? '_lod1' : '';
@@ -151,21 +145,10 @@ export class ViewModel {
       parts.armR = mk(hands, 'arm_grip_r'); parts.armL = mk(hands, 'arm_support_l');
       parts.armLoad = mk(hands, 'arm_load_l'); parts.armAxe = mk(hands, 'arm_axe_r');
     }
-    if (legs && pick(legs, 'boot')) {
-      const b = mk(legs, 'boot');
-      if (b) {
-        // matte: seen from above, the trouser leg is all grazing angles, and a glossy sheen read as white cloth
-        const src = b.material;
-        b.material = new THREE.MeshLambertMaterial({ map: src.map, normalMap: src.normalMap });
-        b.material.normalScale.copy(src.normalScale);
-        b.frustumCulled = true;
-        parts.boot = b;
-      }
-    }
     if (axe && pick(axe, 'axe')) parts.axe = mk(axe, 'axe');
     if (Object.keys(parts).length) this.setParts(parts);
     this.applyPivots();
-    this.usingAssets = !!(rifle || hands || axe || legs);
+    this.usingAssets = !!(rifle || hands || axe);
     return this.usingAssets;
   }
 
@@ -186,7 +169,6 @@ export class ViewModel {
     if (this.armLoad && this.roundInHand && this.roundInHand.parent !== this.armLoad) this.armLoad.add(this.roundInHand);
     if (p.axe) swap(this.axe, 'axeMesh', p.axe);
     if (p.armAxe) swap(this.axe, 'armAxe', p.armAxe);
-    if (p.boot) swap(this.boot, 'bootMesh', p.boot);
     if (p.caseMesh) {
       for (const c of this.cases) this.root.remove(c.obj);
       this.cases = [];

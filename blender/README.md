@@ -51,7 +51,6 @@ Delete the file in `blender/source/` to go back to the generated version.
 | Rifle (always on screen) | ~12 000 tris all parts | ~50 % | 4096 atlas (phones 2048) | < 5 MB |
 | Hands and sleeves | ~7 300 tris per arm | ~50 % | 4096 atlas (phones 2048) | < 5 MB |
 | Axe | ~4 300 tris | ~50 % | 2048 (phones 1024) | < 5 MB |
-| Legs, waist, stomp boot | ~3 300 tris per leg | ~50 % | 2048 (phones 1024) | < 5 MB |
 | Spiders (one file per species) | runner ~5 000, climber/stalker ~10 000, brute ~18 000 (skinned) | ~50 % | 2048 (phones 1024) | < 4 MB |
 | Whole game | | | | < 25 MB |
 
@@ -71,7 +70,6 @@ all variants of a family with very few draw calls.
 | rifle | barrel, tube, receiver, forend, stock shapes; lever (pivot, loop size) and hammer; sights line; muzzle, eject port, loading gate; grips (where the hands go); `view` (where the rifle sits in front of the eye); look: walnut, bluing, worn steel, bolt, rubber, brass |
 | hands | a hand skeleton (knuckles, finger bones, thumb) and poses: `grip` wraps the fingers round what is held, `pinch` holds a round; per pose the forearm direction, which way the back of the hand faces, where the thumb rests, the held shape (`stock` = the real rifle wrist); sleeve shape; look: glove panels, guard, sleeve |
 | axe | handle length, shape and curve; head size, poll, beard, edge; look: hickory, grime, forge scale, ground edge |
-| legs | stance, hips, waist, trouser radii and folds, boot size, jacket top, how far the body stands behind the eye; look: trousers, mud, boots, soles, belt, jacket |
 | spiders | per species (`SPECIES.md`): `rig` (body and leg sizes, leg angles and lengths, stance, gait: shared with the game's leg code), `shape` (leg thickness and joints, eyes, face plate, quills), `look` (scan set, colours, mottling, speckles, bands, belly, joints). One `.glb` + `.json` (layout and rest pose) per species; `SPIDERS=runner npm run assets spiders` builds just one |
 
 Materials (`blender/lib/materials.py`) layer CC0 photo-scanned sets (`blender/textures.md`): projected from three sides

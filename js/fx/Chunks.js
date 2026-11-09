@@ -1,41 +1,75 @@
-// A killed spider bursts into gooey red chunks: wet lumps of flesh, bits of shell and pieces of its own legs,
-// taken from where its legs were at the moment it died. Chunks fly, fall, bounce, slide down walls and settle,
+// A killed spider bursts into gooey red chunks: torn wet meat, pale stringy gristle and broken bits of shell. Chunks fly, fall, bounce, slide down walls and settle,
 // then fade out (Config.gore.chunkHold + chunkFade). Splats are left where they land.
 //
-// Two instanced meshes (lumps and leg pieces), so a burst costs no extra draw calls. Each instance has its own
+// Three instanced meshes (meat, gristle, shell), so a burst costs no extra draw calls. Each instance has its own
 // colour and its own fade (a per-instance attribute patched into the standard material).
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
 import { CABIN, terrainHeight } from '../world/Layout.js';
-import { BONE } from '../spiders/SpiderRig.js';
 
 const G = Config.gore;
 const GOO = new THREE.Color(0x6e0a08);       // wet dark red
 const GOO_LIGHT = new THREE.Color(0x9a1c12);
+const GRISTLE = new THREE.Color(0xc89a8a);   // pale pink-grey connective tissue
 const UP = new THREE.Vector3(0, 1, 0);
 
-/** Lumpy, slightly flattened blob: a chunk of flesh. */
-function lumpGeometry() {
-  const g = new THREE.IcosahedronGeometry(1, 1);
-  const p = g.attributes.position;
-  for (let i = 0; i < p.count; i++) {
+// cheap 3D value noise for shaping the lumps (once, at load)
+function hash3(x, y, z) { const h = Math.sin(x * 127.1 + y * 311.7 + z * 74.7) * 43758.5453; return h - Math.floor(h); }
+function vnoise(x, y, z) {
+  const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+  const xf = x - xi, yf = y - yi, zf = z - zi;
+  const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), w = zf * zf * (3 - 2 * zf);
+  const L = (a, b, t) => a + (b - a) * t;
+  const c = (i, j, k) => hash3(xi + i, yi + j, zi + k);
+  return L(L(L(c(0, 0, 0), c(1, 0, 0), u), L(c(0, 1, 0), c(1, 1, 0), u), v), L(L(c(0, 0, 1), c(1, 0, 1), u), L(c(0, 1, 1), c(1, 1, 1), u), v), w) * 2 - 1;
+}
+function fbm(x, y, z, oct) { let s = 0, a = 0.5, f = 1; for (let i = 0; i < oct; i++) { s += a * vnoise(x * f, y * f, z * f); f *= 2.03; a *= 0.5; } return s; }
+
+/**
+ * A torn piece of flesh: a high-res sphere pushed out by layered noise (big lobes, small wet bumps, torn ridges),
+ * flattened, with vertex colours for marbling (pale fat streaks, dark clotted pits). kind 0 meat, 1 gristle, 2 shell.
+ */
+function lumpGeometry(kind, seed, detail) {
+  const g = new THREE.IcosahedronGeometry(1, detail);
+  const p = g.attributes.position, n = p.count;
+  const col = new Float32Array(n * 3);
+  const o = seed * 17.3;
+  for (let i = 0; i < n; i++) {
     const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const k = 1 + 0.28 * Math.sin(x * 5.1 + z * 2.3) * Math.cos(y * 4.3 - x) + 0.12 * Math.sin(z * 9 + y * 7);
-    p.setXYZ(i, x * k, y * k * 0.72, z * k);
+    let k;
+    if (kind === 2) {
+      // shell: a curved, broken plate, thin with sharp edges
+      const e = fbm(x * 2 + o, y * 2, z * 2 + o, 3);
+      k = 1 + 0.25 * e;
+      p.setXYZ(i, x * k, (y * 0.22 + 0.25 * (x * x + z * z)) * k, z * k * (0.8 + 0.2 * Math.sign(x + e)));
+      const sh = 0.75 + 0.25 * fbm(x * 9 + o, y * 9, z * 9, 2);
+      col[i * 3] = sh; col[i * 3 + 1] = sh; col[i * 3 + 2] = sh;
+      continue;
+    }
+    const big = fbm(x * 1.3 + o, y * 1.3 - o, z * 1.3, 2);
+    const small = fbm(x * 6 + o, y * 6, z * 6 - o, 3);
+    const ridge = 1 - Math.abs(fbm(x * 3.1 - o, y * 3.1, z * 3.1 + o, 2)) * 2;   // torn, stringy ridges
+    k = 1 + 0.38 * big + 0.09 * small + (kind === 1 ? 0.12 : 0.05) * ridge * ridge;
+    const sy = kind === 1 ? 0.55 : 0.72;
+    const sx = kind === 1 ? 1.35 : 1;
+    p.setXYZ(i, x * k * sx, y * k * sy, z * k);
+    // marbling: fat streaks run through the meat, clots sit in the hollows
+    const streak = Math.max(0, Math.sin((x * 3.7 + y * 1.3 + fbm(x * 2 + o, y * 2, z * 2, 2) * 2.5) * 3.1));
+    const fat = Math.pow(streak, 6) * (kind === 1 ? 0.9 : 0.55);
+    const pit = Math.max(0, -small) * 1.2 + Math.max(0, -big) * 0.4;
+    const base = 1 - 0.55 * pit;
+    col[i * 3] = Math.min(1.6, base + fat * 1.6);
+    col[i * 3 + 1] = Math.min(1.6, base * 0.9 + fat * 2.2);
+    col[i * 3 + 2] = Math.min(1.6, base * 0.9 + fat * 1.8);
   }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   g.computeVertexNormals();
   return g;
 }
-/** A leg segment: tapered tube with a knobbed joint at one end, length 1 along +Y from the origin. */
-function legPieceGeometry() {
-  const pts = [];
-  const prof = [[0, 0], [0.9, 0.0], [1.25, 0.06], [1.1, 0.14], [0.95, 0.3], [0.85, 0.7], [0.8, 0.96], [0.6, 1], [0, 1]];
-  for (const [r, y] of prof) pts.push(new THREE.Vector2(r, y));
-  return new THREE.LatheGeometry(pts, 7);
-}
 
-function fadeMaterial(opts) {
-  const m = new THREE.MeshStandardMaterial(Object.assign({ transparent: true, depthWrite: true }, opts));
+function fadeMaterial(opts, physical) {
+  const M = physical ? THREE.MeshPhysicalMaterial : THREE.MeshStandardMaterial;
+  const m = new M(Object.assign({ transparent: true, depthWrite: true, vertexColors: true }, opts));
   m.onBeforeCompile = (sh) => {
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aFade;\nvarying float vFade;')
@@ -66,12 +100,17 @@ export class Chunks {
       scene.add(m);
       return { mesh: m, fade, list: [] };
     };
-    // the lumps are wet and glossy; the leg pieces are shell (their colour comes from the spider)
-    this.lumps = mk(lumpGeometry(), fadeMaterial({ roughness: 0.22, metalness: 0, color: 0xffffff }), 'gore-lumps');
-    this.legs = mk(legPieceGeometry(), fadeMaterial({ roughness: 0.55, metalness: 0, color: 0xffffff }), 'gore-legs');
+    // wet meat, stringy gristle and broken bits of shell: three instanced meshes, three draw calls for any number of bursts
+    const det = low ? 2 : 4;
+    const wet = { roughness: 0.18, metalness: 0, color: 0xffffff };
+    const wetHi = Object.assign({ clearcoat: 1, clearcoatRoughness: 0.12, sheen: 0.4, sheenColor: new THREE.Color(0x802020) }, wet);
+    this.meat = mk(lumpGeometry(0, 1, det), fadeMaterial(low ? wet : wetHi, !low), 'gore-meat');
+    this.gristle = mk(lumpGeometry(1, 2, det), fadeMaterial(low ? wet : wetHi, !low), 'gore-gristle');
+    this.shell = mk(lumpGeometry(2, 3, low ? 1 : 3), fadeMaterial({ roughness: 0.4, metalness: 0, color: 0xffffff }), 'gore-shell');
+    this.pools = [this.meat, this.gristle, this.shell];
   }
 
-  clear() { this.lumps.list.length = 0; this.legs.list.length = 0; this.lumps.mesh.count = 0; this.legs.mesh.count = 0; }
+  clear() { for (const pl of this.pools) { pl.list.length = 0; pl.mesh.count = 0; } }
 
   _take(pool) {
     if (pool.list.length >= this.max) pool.list.shift(); // the oldest goes first
@@ -89,54 +128,31 @@ export class Chunks {
     const sc = Math.max(0.6, size);
     const outward = dir ? _d.copy(dir).normalize() : _d.set(0, 0, 0);
     const skin = visual.skinColor || GOO;
-    // flesh lumps and shell bits from the body
-    const n = Math.round((10 + 8 * sc) * this.scaleCount);
+    // torn flesh, gristle and bits of shell from the body (no legs: the user wants only chunks)
+    const n = Math.round((12 + 9 * sc) * this.scaleCount);
     const R = visual.radius || 0.1;
     for (let i = 0; i < n; i++) {
-      const c = this._take(this.lumps);
+      const roll = Math.random();
+      const pool = roll < 0.6 ? this.meat : roll < 0.82 ? this.gristle : this.shell;
+      const c = this._take(pool);
       rand3(c.p).multiplyScalar(R * 0.7).add(center);
       const sp = 1.5 + Math.random() * 2.5;
       rand3(c.v).multiplyScalar(sp).addScaledVector(outward, 1.2 + Math.random() * 1.5);
       c.v.y += 1.2 + Math.random() * 2.2;
-      c.r = R * (0.14 + Math.random() * 0.22);
+      // a few big pieces, many small ones
+      c.r = R * (0.08 + Math.pow(Math.random(), 2.2) * 0.34);
       c.s.set(c.r, c.r * (0.7 + Math.random() * 0.6), c.r * (0.8 + Math.random() * 0.5));
       rand3(c.w).multiplyScalar(14);
       c.q.setFromEuler(_e.set(Math.random() * 6, Math.random() * 6, Math.random() * 6));
-      const shell = Math.random() < 0.3;
-      if (shell) c.color.copy(skin); else c.color.copy(GOO).lerp(GOO_LIGHT, Math.random() * 0.6);
-    }
-    // pieces of its legs, from the bones as they were
-    const bones = visual.bones;
-    if (bones) {
-      const legR = visual.legRadius || 0.01;
-      for (let leg = 0; leg < 8; leg++) {
-        // each leg breaks into its two long pieces (femur and tibia+metatarsus), on low only the femur
-        const pieces = this.scaleCount < 1 ? [[1, 2]] : [[1, 2], [3, 5]];
-        for (const [a, b] of pieces) {
-          const A = bones[BONE.LEG + leg * 6 + a], B = bones[BONE.LEG + leg * 6 + b];
-          if (!A || !B) continue;
-          A.getWorldPosition(_a); B.getWorldPosition(_b);
-          const len = _a.distanceTo(_b);
-          if (len < 1e-4) continue;
-          const c = this._take(this.legs);
-          c.p.copy(_a);
-          c.q.setFromUnitVectors(UP, _c.subVectors(_b, _a).normalize());
-          c.s.set(legR * (a === 1 ? 1.15 : 0.9), len, legR * (a === 1 ? 1.15 : 0.9));
-          c.r = legR * 1.2;
-          // thrown away from the body
-          _c.subVectors(_a, center).setY(0).normalize();
-          c.v.copy(_c).multiplyScalar(1.5 + Math.random() * 2.5).addScaledVector(outward, 0.8);
-          c.v.y += 1.5 + Math.random() * 2;
-          rand3(c.w).multiplyScalar(10);
-          c.color.copy(skin);
-        }
-      }
+      if (pool === this.shell) c.color.copy(skin).multiplyScalar(0.8 + Math.random() * 0.4);
+      else if (pool === this.gristle) c.color.copy(GOO_LIGHT).lerp(GRISTLE, 0.3 + Math.random() * 0.5);
+      else c.color.copy(GOO).lerp(GOO_LIGHT, Math.random() * 0.7);
     }
   }
 
   update(dt) {
     const life = G.chunkHold + G.chunkFade;
-    for (const pool of [this.lumps, this.legs]) {
+    for (const pool of this.pools) {
       const L = pool.list;
       for (let i = L.length - 1; i >= 0; i--) {
         const c = L[i];
@@ -151,7 +167,7 @@ export class Chunks {
         // fading: goes see-through, sags and sinks a little (melting into the floor)
         const f = Math.min(1, Math.max(0, 1 - (c.age - G.chunkHold) / G.chunkFade));
         _s.copy(c.s);
-        if (pool === this.lumps) _s.y *= 0.55 + 0.45 * f;
+        if (pool !== this.shell) _s.y *= 0.55 + 0.45 * f;
         _m.compose(c.p, c.q, _s);
         m.setMatrixAt(i, _m);
         m.setColorAt(i, c.color);

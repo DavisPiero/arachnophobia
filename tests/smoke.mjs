@@ -112,7 +112,7 @@ for (const device of ['desktop', 'phone']) {
     r.stompStarted = g.melee.tryStomp(); await simWait(0.7);
     r.stompKilled = !s.alive; r.killedBy = killed;
     r.splats = g.gore.splats.filter((x) => x.mesh.visible).length;
-    r.chunks = g.gore.chunks.lumps.list.length + g.gore.chunks.legs.list.length;
+    r.chunks = g.gore.chunks.pools.reduce((n, p) => n + p.list.length, 0);
     r.models = (g.spiderModels || []).length;
     off?.();
     return r;

@@ -1,4 +1,4 @@
-// Downloads the CC0 texture sets the Blender generators layer into the gun, axe, hands and legs.
+// Downloads the CC0 texture sets the Blender generators layer into the gun, axe and hands.
 // All from ambientCG (https://ambientcg.com), licence CC0 1.0: free for any use, no attribution needed.
 // They land in blender/textures/<Id>/ (git-ignored): only the baked results in assets/models/ are committed.
 // Usage: node tools/fetch-textures.mjs   (skips sets already there)
