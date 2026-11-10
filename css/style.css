@@ -52,7 +52,7 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #health {
   position: absolute; left: calc(28px + var(--safe-l)); bottom: calc(26px + var(--safe-b)); width: 220px;
 }
-#health .label { font-family: 'IM Fell English SC', Georgia, serif; font-size: 15px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 3px; }
+#health .label { font-family: 'VT323', monospace; font-size: 15px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 3px; }
 #health .bar { position: relative; height: 9px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(216, 203, 180, 0.3); box-shadow: 0 0 8px #000; }
 #health-fill, #health-trail { position: absolute; left: 1px; top: 1px; bottom: 1px; width: calc(100% - 2px); }
 #health-fill { background: linear-gradient(#c9b9a2, #8f8070); transition: background 0.3s; }
@@ -77,7 +77,7 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #btn-pause { left: calc(14px + var(--safe-l)); }
 #btn-mute { left: calc(66px + var(--safe-l)); }
 #notice {
-  position: absolute; left: 0; right: 0; top: 57%; text-align: center; font-family: 'IM Fell English SC', Georgia, serif;
+  position: absolute; left: 0; right: 0; top: 57%; text-align: center; font-family: 'VT323', monospace;
   font-size: 30px; letter-spacing: 0.25em; color: #d9472f; text-shadow: 0 0 10px #000, 0 0 3px #000; opacity: 0; transition: opacity 0.2s;
 }
 #notice.show { opacity: 1; }
@@ -213,27 +213,6 @@ body.title #screen-settings .term-panel { overflow-y: auto; }
 body.touch .touch-only { display: block; }
 body.touch .desktop-only { display: none !important; }
 button:disabled { opacity: 0.35; cursor: default; }
-
-/* in game: pause, game over and settings are pages of a field notebook (user: digital look only for boot and menu) */
-body:not(.title) .term-screen.overlay { background: rgba(0, 0, 0, 0.6); color: #2b2540; text-shadow: none; font-family: Georgia, serif; }
-body:not(.title) .term-panel { color: #2b2540; border: 0; padding: 22px 30px 26px 56px; transform: rotate(-0.6deg);
-  background:
-    radial-gradient(circle at 85% 12%, rgba(110, 70, 30, 0.22), transparent 16%),
-    linear-gradient(to right, transparent 38px, rgba(180, 60, 60, 0.5) 38px 39px, transparent 39px),
-    repeating-linear-gradient(to bottom, #d9cfb2 0 31px, rgba(70, 90, 130, 0.3) 31px 32px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85); }
-body:not(.title) .term-panel h2 { font-family: 'IM Fell English SC', Georgia, serif; font-size: 40px; letter-spacing: 0.04em; color: #3a1c18; }
-body:not(.title) .term-panel .dimline { color: #5a5070; font-family: Georgia, serif; }
-body:not(.title) .term-panel .term-menu button { font: 34px/1.1 'Reenie Beanie', cursive; color: #2b2540; text-shadow: none; padding: 0 10px 0 36px; }
-body:not(.title) .term-panel .term-menu button::before { content: '\2192'; color: #8c1a10; }
-body:not(.title) .term-panel .term-menu button:hover, body:not(.title) .term-panel .term-menu button.sel { background: none; color: #8c1a10; text-decoration: underline; }
-body:not(.title) .term-panel label { font-family: Georgia, serif; font-size: 18px; }
-body:not(.title) .term-panel input[type=range], body:not(.title) .term-panel input[type=checkbox] { accent-color: #8c1a10; }
-body:not(.title) .term-panel select, body:not(.title) #keybinds button, body:not(.title) .small-btn { font: 17px Georgia, serif; background: rgba(255, 255, 255, 0.25); color: #2b2540; border: 1px solid #8a7d68; }
-body:not(.title) .tabs { border-bottom: 1px solid #8a7d68; }
-body:not(.title) .tabs button { font: 30px 'Reenie Beanie', cursive; color: #6a6070; }
-body:not(.title) .tabs button.on { background: none; color: #8c1a10; text-decoration: underline; }
-body:not(.title) #keybinds { font-family: Georgia, serif; font-size: 17px; }
 
 #rotate { position: fixed; inset: 0; z-index: 50; background: #000; display: none; place-items: center; text-align: center; color: var(--dim); font-size: 18px; line-height: 2; }
 #rotate div { font-size: 16px; }
