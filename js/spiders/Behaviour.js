@@ -24,7 +24,7 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 /**
  * Per species. attacks: weighted choice. windup: seconds [min, max]. moves: how it travels.
  *   burst: moves in bursts, freezing between them (s ranges); freezeLooked: chance it goes dead still when looked at;
- *   onlyUnseen: only moves while you are NOT looking at it (and faster then); crouch: travels low;
+ *   stareCharge: when you look at it or light it, it stops and stares (the smile widening), then charges; crouch: travels low;
  *   twitch: how often it has a fit of trembling (per second); smileLooked: the smile widens while you watch.
  */
 const PERSONALITY = {
@@ -40,13 +40,14 @@ const PERSONALITY = {
     attacks: { flurry: 3, lunge: 2, feint: 2 }, windup: [0.35, 0.8], recover: [0.4, 0.8],
     burst: { go: [0.4, 1.4], stop: [0.6, 2.5], fast: 1.7 }, splayStill: 1, twitch: 0.25, freezeLooked: 0.4,
   },
-  stalker: { // the Grinner: moves only while you are not looking; when you look it is perfectly still and smiles wider
+  stalker: { // the Grinner: when you look at it or light it, it stops dead, stares, smiles wider, then charges
+    // (replaces "only moves while unseen": user's call, 2026-11-10)
     attacks: { lunge: 3, feint: 2, flurry: 1 }, windup: [0.5, 1.6], recover: [0.4, 0.9],
-    onlyUnseen: true, smileLooked: true, headTilt: 0.5, twitch: 0.12,
+    stareCharge: { stare: [0.6, 1.3], charge: [1.2, 2.0], fast: 2.3, rest: [3, 6] }, smileLooked: true, headTilt: 0.5, twitch: 0.12,
   },
   weeper: { // the Weeper: creeps low under the sill, rises slowly into view, stares and blinks; sinks away when you turn
     attacks: { lunge: 2, slam: 1, feint: 3 }, windup: [0.8, 1.8], recover: [0.5, 1.0],
-    crouch: 0.85, blink: true, headTilt: 0.35, twitch: 0.1, onlyUnseen: false, riseWhenNear: true,
+    crouch: 0.85, blink: true, headTilt: 0.35, twitch: 0.1, riseWhenNear: true,
   },
 };
 
@@ -118,15 +119,22 @@ export class Behaviour {
       if (this.lurchT <= 0 && Math.random() < dt * P.lurch * 8) this.lurchT = rnd(0.5, 0.9);
       speedK = this.lurchT > 0 ? 2.4 : 0.75 + 0.25 * Math.sin(this.t * 1.3);
     }
-    // looked at: some go dead still; the Grinner ONLY moves while unseen; the Knot sometimes darts aside
+    // looked at: some go dead still; the Grinner stares then charges; the Knot sometimes darts aside
     if (sense.looked) {
       if (!this.stillLooked && Math.random() < (P.freezeLooked || 0)) this.stillLooked = true;
       if (P.dartLooked && !this.dart && Math.random() < dt * P.dartLooked) this.dart = Math.random() < 0.5 ? -1 : 1;
     } else this.stillLooked = false;
     if (this.dart) { this.dartT = (this.dartT || 0) + dt; if (this.dartT > 0.35) { this.dart = 0; this.dartT = 0; } }
-    if (P.onlyUnseen) {
-      if (sense.looked) { speedK = 0; freeze = 1; }
-      else speedK *= 1.7;
+    if (P.stareCharge) {
+      const C = P.stareCharge;
+      this.scRest = Math.max(0, (this.scRest || 0) - dt);
+      if (this.stareT > 0) {
+        this.stareT -= dt; speedK = 0; freeze = 1;
+        if (this.stareT <= 0) this.chargeT = rnd(...C.charge);
+      } else if (this.chargeT > 0) {
+        this.chargeT -= dt; speedK *= C.fast; crouch = Math.max(crouch, 0.35);
+        if (this.chargeT <= 0) this.scRest = rnd(...C.rest);
+      } else if ((sense.looked || sense.lit) && this.scRest <= 0) this.stareT = rnd(...C.stare);
     }
     if (this.stillLooked && !this.dart) { speedK = 0; freeze = 1; shiver = 0; }
     if (this.dart) speedK = 2.2;

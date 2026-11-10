@@ -2,6 +2,7 @@
 // Left side: a floating joystick appears where the thumb lands.
 // Right side: drag to look/aim. Fire button also aims while held (drag from it).
 // Each finger is tracked by its pointerId, so the controls never steal each other's touches.
+import { Settings } from '../core/Settings.js';
 import { Config } from '../core/Config.js';
 
 export class TouchControls {
@@ -75,8 +76,8 @@ export class TouchControls {
       const last = this.lookIds.get(e.pointerId);
       if (!last) return;
       e.preventDefault();
-      const s = Config.player.lookSensitivityTouch;
-      input.addLook(-(e.clientX - last.x) * s, -(e.clientY - last.y) * s);
+      const s = Config.player.lookSensitivityTouch * Settings.look;
+      input.addLook(-(e.clientX - last.x) * s, -(e.clientY - last.y) * s * (Settings.invertY ? -1 : 1));
       last.x = e.clientX; last.y = e.clientY;
     };
     const lookUp = (el, isFire) => (e) => {

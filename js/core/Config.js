@@ -17,8 +17,8 @@ export const Config = {
     aimMoveMultiplier: 0.6,  // walking speed while aiming down sights
   },
   flashlight: {
-    intensity: 42,           // candela-ish (three.js physical units)
-    range: 26,               // metres; beyond this it lights nothing
+    intensity: 70,           // candela-ish (three.js physical units)
+    range: 48,               // metres; beyond this it lights nothing (user: the beam should reach further)
     angle: 0.34,             // radians, half-angle of the cone
     penumbra: 0.6,           // soft edge
     decay: 2,
@@ -77,10 +77,31 @@ export const Config = {
     darkDistance: 5.0,       // closeness 0 at or beyond this
   },
   // Outside at night. Was moon 0.5, hemi 0.6, fog 0.046 near-black: too dark (user, after milestone 2).
+  // brightness floors (tests/brightness.mjs): the hands, gun and spiders must never read as black shapes
+  render: {
+    exposure: 1.15,          // tone mapping exposure, desktop
+    exposureLow: 1.32,       // phones: dimmer screens, often lower brightness settings
+    viewAlbedo: 3.4,         // hands and gun: multiplies the baked colour textures (they average ~3% reflectance)
+    viewAmbient: 1.4,        // hands and gun: soft warm fill (was 0.32)
+    viewKeyMin: 1.3,         // hands and gun: the warm key light never drops below this (was 0.5)
+    spiderFill: 0.1,         // spiders: a faint light of their own
+  },
+  // menu music (js/audio/Music.js): seconds into assets/audio/menu-track.m4a
+  music: {
+    url: './assets/audio/menu-track.m4a',
+    leadIn: 78,       // starts here, a bit before the good part, fading in
+    fadeIn: 6,
+    kick: 86,         // the good part (1:26): the loading screen ends on it
+    kickFade: 0.35,   // crossfade when the end of the loading screen jumps to it
+    loopStart: 86,    // the menu loops 1:26 to the end of the track
+    fadeOut: 2.5,     // when the game starts
+  },
+  loading: { minSeconds: 7 },   // the loading screen stays at least this long (so the music builds up to the kick)
   night: {
     moon: 0.7,               // cold moonlight
     hemi: 0.85,              // sky fill from above
-    fogDensity: 0.034,       // lower = see further (east clearing readable to ~25 m)
+    fogDensity: 0.034,       // lower = see further (east clearing readable to ~25 m); phones / low tier
+    fogDensityHigh: 0.052,   // desktop: the forest swallows things sooner, darker with distance (user's call; not on phones)
     fogColor: [0.011, 0.014, 0.019],  // linear RGB; near-black so the forest still darkens with distance
   },
   // squeezeSpeed: m/s while hauling itself through a breached window frame (big ones get stuck for a while)

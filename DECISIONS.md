@@ -89,3 +89,18 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-09 — Locomotion rebuilt in modules: LegIK (soft reach, knee splay, no flips), Gait (neighbour rules, demand-driven feet in the air), BodyDynamics (springs), SpiderCollision (analytic shapes from Layout.js). Causes of the old twitching: ankle snap at full reach, leg plane flips, last-frame stretch feedback, urgent steps breaking the gait.
 - 2026-11-09 — Squeeze: legs grip the frame, the body drops and rolls to fit; nothing shrinks except a soft abdomen (the Sac).
 - 2026-11-09 — Behaviour layer (Behaviour.js): per-species personality, reacts to being looked at, light and distance; attacks in four beats with lunge, flurry, slam and feint, never the same twice in a row. Hits shove the player.
+- 2026-11-10 — Playtest notes triaged into six sessions (SPEC "Second iteration" 5); the user accepted every recommendation and merged session 3 (front end) into session 1.
+- 2026-11-10 — Spider look rewritten (user): more human faces, some gaunt; still flesh, no exposed bone. Pillar 4 rewritten. New models wait for session 6, with a pick-from-variants round before baking.
+- 2026-11-10 — Grinner: "only moves while unseen" removed (user: not a good feature). Now it stops and stares when looked at or lit, then charges. Its tree-line watching stays. Guess: that part was not the complaint.
+- 2026-11-10 — Overturned chair removed; the candle on the ammo table is now a standing hurricane lantern like the wall lamp (user's call).
+- 2026-11-10 — Window glass is unlit (MeshBasic, 12% tint): no flashlight glare (user's call). Flashlight range 26 → 48 m, intensity 42 → 70.
+- 2026-11-10 — Desktop fog 0.034 → 0.052 (darker with distance); phones keep 0.034 (user: phones are already too dark).
+- 2026-11-10 — Pause button top-left, 58 px on touch, above the touch zones (they covered it: the cause of "the pause button doesn't work"). No mute button on touch devices.
+- 2026-11-10 — One terminal look for every screen (boot gate, loading log, CRT main menu on a lab bench with a notebook and webs, pause, game over, settings). Fonts: VT323, Reenie Beanie (Google Fonts).
+- 2026-11-10 — A boot gate ("press any key") comes first: browsers only allow sound after a gesture, and the music must play during loading.
+- 2026-11-10 — Menu music: the user's track, starts at 1:18 fading in over 6 s, jumps to 1:26 when the loading screen ends (at least 7 s), loops 1:26 to the end on the menu, fades out when play starts. Re-encoded to AAC 128 kbps (1.9 MB). Own volume slider.
+- 2026-11-10 — Settings (saved per browser): Gameplay (look speed, invert, hints), Graphics (quality auto/low/high on reload, film effects, brightness), Audio (4 volumes, mute), Controls (every key rebindable; touch shows its layout).
+- 2026-11-10 — Text: "Silence" → "Wave N survived · fresh rounds are on the ammo table"; NO AMMO notice on an empty click; four one-time hints (start, windows, first crack, first empty).
+- 2026-11-10 — Hits: red floods in from the hit's side, a brief darkening, a shaking health bar with a red trail, a heartbeat below 35 health.
+- 2026-11-10 — Bounce: an under-damped spring on the held weapon, kicked by switching, every shot, and the axe's start, impact and recovery.
+- 2026-11-10 — Kill sound rebuilt in three layers: burst (thump, shell, wet blast), a choked dying screech, chunks pattering for a second.

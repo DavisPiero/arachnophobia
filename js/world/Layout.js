@@ -60,7 +60,6 @@ export const FURNITURE = {
   stove:   { corner: 'ne', inset: 0.55 },                               // pipe through the roof; firewood along the north wall
   shelves: { wall: 'east', z0: 2.4, z1: 3.9 },                          // south part of the east wall, jars and tins
   crates:  { corner: 'se' },
-  chair:   { x: -2.0, z: -1.9 },                                         // overturned, near the middle
   rug:     { minX: -1.2, maxX: 1.2, minZ: -1.6, maxZ: 1.9 },            // under the lantern
   hooks:   { wall: 'west', z0: 3.3, z1: 4.1, y: 1.72 },                // coat hooks, rope and bag, south of the west window
 };

@@ -15,7 +15,7 @@ import { buildBank, renderIR } from './SoundBank.js';
 import { Quality } from '../core/Quality.js';
 
 const STORE_KEY = 'arachnophobia.audio.v1';
-const DEFAULT_VOL = { master: 0.85, sfx: 1, ambience: 0.8 };
+const DEFAULT_VOL = { master: 0.85, sfx: 1, ambience: 0.8, music: 0.7 };
 const MAX_ONESHOTS = 24;
 const STUB = Object.freeze({ stop() {} });
 
@@ -146,6 +146,9 @@ export class AudioEngine {
       input.connect(f1); f1.connect(eg); input.connect(leak); leak.connect(eg); eg.connect(g);
       this.ext[b] = input; this.extGain[b] = eg; this[`_extF_${b}`] = [f1]; this[`_extLeak_${b}`] = leak;
     }
+    // menu music: its own bus straight into the master (no exterior filtering, no reverb)
+    this.musicBus = ctx.createGain(); this.musicBus.gain.value = this._vol.music; this.musicBus.connect(this.master);
+    this.bus.music = this.musicBus;
     this.roomIn = ctx.createGain(); this.roomConv = ctx.createConvolver();
     this.roomReturn = ctx.createGain(); this.roomReturn.gain.value = 0.9;
     this.roomIn.connect(this.roomConv); this.roomConv.connect(this.roomReturn); this.roomReturn.connect(this.bus.sfx);

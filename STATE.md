@@ -1,28 +1,28 @@
 # State
 
-**Where we are:** milestone 4, spider overhaul merged into main (2026-11-09):
-- **Five species, five models, three sizes:** runner/Knot, brute/Sac, climber/Flayed, stalker/Grinner, weeper/Weeper
-  (`SPECIES.md`). Species and models are separate (`Config.spiders.<species>.model`).
-- **Locomotion rebuilt:** `LegIK`, `Gait`, `BodyDynamics`, `SpiderCollision`. Feet land on real surfaces; knees fold
-  away from walls; the body sags and leans. Scored by `node tests/locomotion.mjs`.
-- **Behaviour:** per-species personalities (`Behaviour.js`); attacks in four beats (wind-up, lunge/flurry/slam/feint,
-  impact with a shove, recovery).
-- **Quick fixes:** chunks without legs, windows 1.2× and higher, light-blue branching cracks, no first-person legs.
+**Where we are:** milestone 5 (the playtest notes of 2026-11-10), session 1 of 6 built on branch
+`m5-session1-fixes-frontend`, not merged yet. Plan for all six sessions: `SPEC.md` "Second iteration" 5.
 
-GitHub Pages serves main.
+Session 1 (with the old session 3 folded in):
+- **Phone darkness:** hands and gun colours lifted ×3.4, a faint fill light on spiders, brighter exposure on
+  phones. Measured by `node tests/brightness.mjs` (gun 4.7 → 15, spider 19 → 23).
+- **Pause works on touch** (the invisible touch zones were on top of it), big, top-left; no mute button on touch.
+- **Room:** chair gone, a hurricane lantern on the ammo table, glass no longer reflects the flashlight, beam ~45 m,
+  desktop fog darker with distance.
+- **Text and feedback:** NO AMMO, "Wave N survived", four one-time hints, hits flood red from their side, health bar
+  with a damage trail, heartbeat at low health, weapon bounce, new kill sound. Grinner stares, then charges.
+- **Front end:** boot gate → loading log → terminal main menu (CRT, notebook, webs) with your track; settings with
+  four tabs (key rebinding included) on the menu and the pause screen.
 
-**Next:**
-- The user's notes on the five models and how they move (the faces especially).
-- Squeeze pops (see Known weak spots in `HANDOFF.md`), inside-wall and ceiling routes, milestone 5 horror.
+**Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
 
 **Open with you:**
-- **The faces:** smiles and black eyes are made by script. Good enough, or do you want to sculpt the Grinner's and
-  Weeper's faces by hand in `blender/source/`?
-- **Sizes:** small 0.62×, large 1.45×. A large Sac is about 4 m across. Right?
-- **Squeeze speed** (unchanged from before: ~5 s for a big one). Too long, too short?
-- **Old, never answered:** sleeves when aiming; dark far ends of the room; is the night bright enough; phone double-tap.
+- **Sign-off of session 1** after you play it (it is not merged).
+- **Phone darkness on your iPad:** I could not reproduce "black only on phones" (the phone tier measured the same as
+  desktop); I made everything brighter. Does the iPad look right now?
+- **Still unanswered:** spider sizes (large ×1.45, a big Sac ~4 m across); squeeze speed (~5 s for a big one);
+  sleeves when aiming; phone double-tap.
 
 **Tools:**
-- `npm run assets spiders` rebuilds the models (`SPIDERS=sac` for one; `ASSET_FAST=1` for a quick look).
-- `dev/spiders.html?type=stalker&size=large` shows one walking. In the game `?debug=1`, keys 1–5 spawn.
-- `node tests/locomotion.mjs` scores the walking; `npm test` is the quick check.
+- `npm test` quick check; `node tests/brightness.mjs`; `node tests/locomotion.mjs` (slow, background).
+- `index.html?mute=1&autostart=1` skips the gate, loading and music.

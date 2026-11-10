@@ -77,8 +77,8 @@ export function buildLighting(scene, renderer, quality) {
   scene.add(group);
 
   scene.background = new THREE.Color().setRGB(0.012, 0.015, 0.02, THREE.LinearSRGBColorSpace);
-  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), N.fogDensity);
-  renderer.toneMappingExposure = 1.15;
+  scene.fog = new THREE.FogExp2(FOG_COLOR.clone(), quality.tier === 'high' ? N.fogDensityHigh : N.fogDensity);
+  renderer.toneMappingExposure = quality.tier === 'low' ? Config.render.exposureLow : Config.render.exposure;
 
   // ---------------------------------------------------------- sky dome
   const skyUniforms = { uFlash: { value: 0 }, uMoonDir: { value: new THREE.Vector3(0.62, 0.62, -0.38).normalize() } };
@@ -250,7 +250,7 @@ export function buildLighting(scene, renderer, quality) {
 }
 
 // Hurricane lantern: tank, glass globe, wire guards, cap, bail handle, chain to the beam above.
-function buildLanternModel({ wall = null } = {}) {
+function buildLanternModel({ wall = null, standing = false } = {}) {
   const g = new THREE.Group();
   g.name = 'lanternModel';
   // unlit dark metal: the light sits centimetres away and would blow out a lit cap and guards
@@ -304,7 +304,7 @@ function buildLanternModel({ wall = null } = {}) {
     const brace = new THREE.CylinderGeometry(0.004, 0.004, Math.hypot(toWall * 0.6, 0.1), 5).rotateZ(Math.atan2(toWall * 0.6, 0.1) * -s);
     add(brace, metal, s * toWall * 0.7, 0.19, 0);
     add(new THREE.TorusGeometry(0.014, 0.003, 4, 10, Math.PI * 1.5).rotateY(Math.PI / 2), metal, 0, 0.215, 0);
-  } else {
+  } else if (!standing) {
     // chain up to the beam bottom (0.18 m under the ceiling)
     const chainTop = CABIN.wallHeight - 0.18 - LANTERN.position.y;
     const linkGeo = new THREE.TorusGeometry(0.012, 0.0028, 4, 8);
@@ -334,4 +334,4 @@ function buildLanternModel({ wall = null } = {}) {
   return g;
 }
 
-export { CANDLE_COLOR };
+export { CANDLE_COLOR, buildLanternModel };

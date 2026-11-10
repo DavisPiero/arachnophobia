@@ -43,7 +43,7 @@ export class Weapon {
     this.viewRoot = this.view.root;
     this.viewScene.add(this.viewRoot);
     // lighting for the hands and gun: follows the interior mood (warm, dim), plus the muzzle flash
-    this.viewAmbient = new THREE.HemisphereLight(0x5a5048, 0x0a0806, 0.32);
+    this.viewAmbient = new THREE.HemisphereLight(0x6a5a48, 0x1a120c, Config.render.viewAmbient);
     this.viewKey = new THREE.PointLight(0xffc48a, 2.0, 3, 2);
     this.viewKey.position.set(0.5, 0.45, 0.1);
     this.viewFlash = new THREE.PointLight(0xffc27a, 0, 2.5, 2);
@@ -101,8 +101,10 @@ export class Weapon {
     }
     if (this.mag <= 0) {
       this.audio.play('dryFire', { volume: 0.8 });
+      this.events.emit('dryFire');
       this.cooldown = 0.35;
       this.kick = Math.max(this.kick, 0.15);
+      this.view.bump(0, 0.05, 0.35, 0);
       return false;
     }
     this.mag--;
@@ -110,6 +112,7 @@ export class Weapon {
     this.sinceShot = 0;
     this.leverDone = this.mag <= 0;   // an empty tube: nothing to chamber, the lever stays shut until the reload
     this.kick = 1;
+    this.view.bump(0.1 + Math.random() * 0.05, 0.22, 1.1 + Math.random() * 0.4, (Math.random() - 0.5) * 0.8);   // recoil bounce
     this.flashT = 1;
     this.player.recoil += W.recoilPitch * (0.9 + Math.random() * 0.2);
     this.player.recoilYaw += (Math.random() - 0.5) * 2 * W.recoilYaw;

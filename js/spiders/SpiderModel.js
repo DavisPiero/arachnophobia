@@ -469,6 +469,9 @@ function remapJoints(m) {
   return m;
 }
 
+// shared by every spider material: the faint fill light (Config.render.spiderFill)
+const SPIDER_FILL = { value: Config.render.spiderFill };
+
 function buildGlbAssets(type, detail) {
   const G = glb[modelOf(type)];
   const key = type + ':glb:' + detail;
@@ -478,22 +481,24 @@ function buildGlbAssets(type, detail) {
   const src = (!detail && G.lod) ? G.lod : G.mesh;
   const material = src.material.clone();
   material.envMapIntensity = 0.5;
-  // subsurface, faked: thin flesh lets light through, so lit skin glows warm at the edges and where light is behind it
+  // subsurface, faked: thin flesh lets light through, so lit skin glows warm at the edges and where light is behind it.
+  // fill: a faint light of their own so they never render as pure black shapes (user: spiders pitch black on phones);
+  // see Config.render and tests/brightness.mjs.
   const sss = G.side.look?.sss || 0;
-  if (sss > 0) {
-    const col = new THREE.Color(...(G.side.look.sssColor || [0.8, 0.25, 0.15]));
-    material.onBeforeCompile = (sh) => {
-      sh.uniforms.uSss = { value: sss }; sh.uniforms.uSssColor = { value: col };
-      sh.fragmentShader = sh.fragmentShader
-        .replace('#include <common>', '#include <common>\nuniform float uSss;\nuniform vec3 uSssColor;')
-        .replace('#include <opaque_fragment>', `
-          { float rim = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 2.5);
-            vec3 lit = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
-            outgoingLight += uSssColor * uSss * (lit * 0.55 + lit * rim * 1.6); }
-          #include <opaque_fragment>`);
-    };
-    material.customProgramCacheKey = () => 'spider-sss';
-  }
+  const col = new THREE.Color(...(G.side.look?.sssColor || [0.8, 0.25, 0.15]));
+  material.onBeforeCompile = (sh) => {
+    sh.uniforms.uSss = { value: sss }; sh.uniforms.uSssColor = { value: col };
+    sh.uniforms.uFill = SPIDER_FILL;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uSss;\nuniform vec3 uSssColor;\nuniform float uFill;')
+      .replace('#include <opaque_fragment>', `
+        { float rim = pow(1.0 - saturate(dot(normal, normalize(vViewPosition))), 2.5);
+          vec3 lit = reflectedLight.directDiffuse + reflectedLight.indirectDiffuse;
+          outgoingLight += uSssColor * uSss * (lit * 0.55 + lit * rim * 1.6);
+          outgoingLight += diffuseColor.rgb * uFill * (0.6 + rim * 1.4); }
+        #include <opaque_fragment>`);
+  };
+  material.customProgramCacheKey = () => 'spider-sss-fill';
   // the red eye glow (glowing species): points in body-bone space from the generator
   const glowGeometry = new THREE.BufferGeometry();
   glowGeometry.setAttribute('position', new THREE.Float32BufferAttribute(G.side.glow.flat(), 3));

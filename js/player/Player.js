@@ -26,6 +26,7 @@ export class Player {
     this.bobPhase = 0;
     this.shake = 0;
     this.hurtFlash = 0;
+    this.hurtDir = new THREE.Vector2(0, 0); // screen direction the last hit came from (x right, y up); 0 = all round
     this.dead = false;
     this.sprinting = false;
     this.aiming = false;     // set by the game from the weapon (true once the rifle is up)
@@ -90,7 +91,7 @@ export class Player {
 
     // --- camera ---
     this.shake *= Math.exp(-6 * dt);
-    this.hurtFlash = Math.max(0, this.hurtFlash - dt * 1.6);
+    this.hurtFlash = Math.max(0, this.hurtFlash - dt * 1.1);
     const sh = this.shake;
     const deadDrop = this.dead ? 1.2 : 0;
     this.camera.position.set(
@@ -135,6 +136,7 @@ export class Player {
   /** from: world position of what hit us (optional). The view is knocked away from it. */
   damage(amount, from) {
     if (this.dead) return;
+    if (!from) this.hurtDir.set(0, 0);
     this.health = Math.max(0, this.health - amount);
     this.shake = Math.min(1.5, this.shake + amount / 20);
     if (from) {
@@ -142,6 +144,7 @@ export class Player {
       const dx = from.x - this.position.x, dz = from.z - this.position.z;
       const ang = Math.atan2(dx, dz) - Math.atan2(-Math.sin(this.yaw), -Math.cos(this.yaw)); // 0 = straight ahead
       const side = Math.sin(ang), front = Math.cos(ang);
+      this.hurtDir.set(-side, front >= 0 ? front * 0.6 : front).normalize();
       const k = Math.min(1.4, amount / 14);
       this.push.x += -side * 0.07 * k;       // yaw away (side < 0 = hit from the right)
       this.push.y += front * 0.05 * k;       // hit from the front snaps the head up
@@ -150,7 +153,7 @@ export class Player {
       const d = Math.hypot(dx, dz) || 1;
       this.velocity.x -= (dx / d) * 2.6 * k; this.velocity.z -= (dz / d) * 2.6 * k;
     }
-    this.hurtFlash = Math.min(1, this.hurtFlash + amount / 30);
+    this.hurtFlash = Math.min(1, this.hurtFlash + 0.35 + amount / 25);  // even a small hit shows clearly
     this.audio.play('playerHurt', { volume: 0.9 });
     this.events.emit('playerHurt', { amount, health: this.health });
     if (this.health <= 0) this.dead = true;
