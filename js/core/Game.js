@@ -109,8 +109,13 @@ export class Game {
       this.music.stop();
       if (!isTouch) this.input.keyboard.requestLock();
       await this.menu.runEnter();
+      // the loading screen's own cut already left the view black; hold that (no transition) across the
+      // scene switch, then fade up into the cabin instead of popping straight to full brightness
+      const fade = $('enter-fade');
+      fade.classList.add('instant', 'on');
       this.entering = false;
       this.start(false);
+      requestAnimationFrame(() => requestAnimationFrame(() => { fade.classList.remove('instant'); fade.classList.remove('on'); }));
     };
     $('btn-start').addEventListener('click', begin);
     $('btn-resume').addEventListener('click', () => this.resume());

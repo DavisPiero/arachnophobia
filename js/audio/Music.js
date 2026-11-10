@@ -35,8 +35,6 @@ export class Music {
     const ctx = this.audio.ctx;
     const src = ctx.createBufferSource();
     src.buffer = this.buffer;
-    // at the end of the track: start again from the beginning, fading in (user: loop nicely, from the very start)
-    src.onended = () => { if (this.src === src && !this.stopped) this._startAt(0, M.fadeIn); };
     const g = ctx.createGain();
     const now = ctx.currentTime;
     g.gain.setValueAtTime(0.0001, now);
@@ -44,9 +42,30 @@ export class Music {
     src.connect(g); g.connect(this.audio.musicBus);
     src.start(now, offset);
     this.src = src; this.gain = g; this.startedAt = now - offset;
+    this._scheduleLoop(src, g, offset);
+  }
+
+  // Loops the track by crossfading the tail into the next pass (from offset 0) a few seconds before the end,
+  // instead of stopping into silence and fading back in (user: "more loopable" — the drums carry through the
+  // seam). The old source is left to fade out and end on its own; nothing explicitly stops it.
+  _scheduleLoop(src, g, offset) {
+    clearTimeout(this.loopTimer);
+    if (!this.buffer) return;
+    const xfade = M.loopCrossfade;
+    const remain = this.buffer.duration - offset - xfade;
+    if (remain <= 0) return;
+    this.loopTimer = setTimeout(() => {
+      if (this.src !== src || this.stopped) return;
+      const ctx = this.audio.ctx, now = ctx.currentTime;
+      g.gain.cancelScheduledValues(now);
+      g.gain.setValueAtTime(g.gain.value, now);
+      g.gain.linearRampToValueAtTime(0.0001, now + xfade);
+      this._startAt(0, xfade);
+    }, remain * 1000);
   }
 
   _fadeOutCurrent(seconds) {
+    clearTimeout(this.loopTimer);
     if (!this.src) return;
     const ctx = this.audio.ctx, now = ctx.currentTime, g = this.gain, src = this.src;
     g.gain.cancelScheduledValues(now);

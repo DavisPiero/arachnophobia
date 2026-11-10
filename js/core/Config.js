@@ -94,8 +94,11 @@ export const Config = {
     kick: 86,         // the good part (1:26): the loading screen ends on it
     kickFade: 3,      // slow crossfade if the loading screen ends before the good part
     fadeOut: 2.5,     // when the game starts
+    loopCrossfade: 4, // user: "more loopable" — the end overlaps into the start instead of restarting from silence
   },
-  loading: { minSeconds: 7 },   // the loading screen stays at least this long (so the music builds up to the kick)
+  // the loading screen stays at least this long: long enough for the retimed BOOT_LOG failure run (js/ui/Menu.js)
+  // to play out in full and for the music to have built up to the kick by the time the screen reveals the menu
+  loading: { minSeconds: 9.7 },
   night: {
     moon: 0.7,               // cold moonlight
     hemi: 0.85,              // sky fill from above

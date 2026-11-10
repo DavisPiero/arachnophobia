@@ -104,3 +104,21 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-10 — Hits: red floods in from the hit's side, a brief darkening, a shaking health bar with a red trail, a heartbeat below 35 health.
 - 2026-11-10 — Bounce: an under-damped spring on the held weapon, kicked by switching, every shot, and the axe's start, impact and recovery.
 - 2026-11-10 — Kill sound rebuilt in three layers: burst (thump, shell, wet blast), a choked dying screech, chunks pattering for a second.
+- 2026-11-11 — Main menu overhaul started (user's brief). The wall spider is now the real Grinner model from the game
+  (code-made fallback kept), not a hand-coded shape: fits the notes ("the big one smiled, teeth like ours").
+- 2026-11-11 — Menu composition reworked: the menu CRT is bigger/closer and the clear focal point; secondary monitors
+  and papers pushed back and scaled down so they read as background.
+- 2026-11-11 — Menu gets shadows, cheap contact-shadow discs, and a subtle bloom pass (off on the `low` tier); warm
+  lamp vs. cool back light pushed further apart for contrast.
+- 2026-11-11 — A second, small spider now scuttles irregularly across the back wall in the menu (the nailed one
+  stays dead; only twitches). Waveform monitors redraw live instead of a static texture.
+- 2026-11-11 — Begin → gameplay transition: the menu CRT text dissolves, the loading screen's own cut-to-black now
+  fades (was instant), and a new `#enter-fade` overlay fades the game up from black instead of popping to it.
+- 2026-11-11 — Installed ffmpeg (Homebrew, one-time dev tool, user approved) to work on the menu music. Rather than
+  re-encoding the user's track, the loop itself was rebuilt in `js/audio/Music.js`: the next pass now starts and
+  crossfades under the current one a few seconds before it ends, instead of fading from silence after a hard stop.
+  Chose not to attempt "remake with continuing drums": no stems, and isolating drums from a finished stereo mix
+  isn't something I can do reliably — flagged to the user as the one piece of their brief not really deliverable.
+- 2026-11-11 — BOOT_LOG's failure run retimed against a crude onset scan of the track's build-up into the kick
+  (scratchpad analysis, not confirmed by ear — no AAC decoder in the headless test browser, per the existing note
+  above); `loading.minSeconds` raised 7 → 9.7s to fit the retimed log and land the menu reveal near the kick.
