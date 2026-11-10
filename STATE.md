@@ -19,6 +19,8 @@ Session 1b (UI notes, 2026-11-10):
   monitor. Picking begin plays a short loading log. In-game screens stay terminal (notebook style tried, reverted).
 - Music starts at the first key with an 8 s fade; cracks fewer and fainter; roof spiders hidden from inside; tests run
   desktop and phone in parallel at lower resolution.
+- Spiders no longer freeze when looked at (the Grinner charges instead of stopping to stare); the menu track restarts
+  from 0:00 with a fade when it ends; new settings: field of view, crosshair, HUD opacity, show fps.
 
 **Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
 

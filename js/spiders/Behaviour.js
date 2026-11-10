@@ -23,8 +23,8 @@ const rnd = (a, b) => a + Math.random() * (b - a);
 
 /**
  * Per species. attacks: weighted choice. windup: seconds [min, max]. moves: how it travels.
- *   burst: moves in bursts, freezing between them (s ranges); freezeLooked: chance it goes dead still when looked at;
- *   stareCharge: when you look at it or light it, it stops and stares (the smile widening), then charges; crouch: travels low;
+ *   burst: moves in bursts, freezing between them (s ranges); 
+ *   stareCharge: when you look at it or light it, it charges; crouch: travels low;
  *   twitch: how often it has a fit of trembling (per second); smileLooked: the smile widens while you watch.
  */
 const PERSONALITY = {
@@ -119,11 +119,10 @@ export class Behaviour {
       if (this.lurchT <= 0 && Math.random() < dt * P.lurch * 8) this.lurchT = rnd(0.5, 0.9);
       speedK = this.lurchT > 0 ? 2.4 : 0.75 + 0.25 * Math.sin(this.t * 1.3);
     }
-    // looked at: some go dead still; the Grinner stares then charges; the Knot sometimes darts aside
+    // looked at: nothing stops (user: no freezing when watched); the Grinner charges, the Knot sometimes darts aside
     if (sense.looked) {
-      if (!this.stillLooked && Math.random() < (P.freezeLooked || 0)) this.stillLooked = true;
       if (P.dartLooked && !this.dart && Math.random() < dt * P.dartLooked) this.dart = Math.random() < 0.5 ? -1 : 1;
-    } else this.stillLooked = false;
+    }
     if (this.dart) { this.dartT = (this.dartT || 0) + dt; if (this.dartT > 0.35) { this.dart = 0; this.dartT = 0; } }
     if (P.stareCharge) {
       const C = P.stareCharge;
@@ -134,9 +133,8 @@ export class Behaviour {
       } else if (this.chargeT > 0) {
         this.chargeT -= dt; speedK *= C.fast; crouch = Math.max(crouch, 0.35);
         if (this.chargeT <= 0) this.scRest = rnd(...C.rest);
-      } else if ((sense.looked || sense.lit) && this.scRest <= 0) this.stareT = rnd(...C.stare);
+      } else if ((sense.looked || sense.lit) && this.scRest <= 0) this.chargeT = rnd(...C.charge);
     }
-    if (this.stillLooked && !this.dart) { speedK = 0; freeze = 1; shiver = 0; }
     if (this.dart) speedK = 2.2;
 
     // --- the Weeper creeps low and rises into view when you come near its window; sinks away when you look off

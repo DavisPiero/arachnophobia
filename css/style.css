@@ -214,6 +214,8 @@ body.touch .touch-only { display: block; }
 body.touch .desktop-only { display: none !important; }
 button:disabled { opacity: 0.35; cursor: default; }
 
+#fps { position: fixed; right: calc(10px + var(--safe-r)); top: calc(8px + var(--safe-t)); z-index: 4; font: 16px 'VT323', monospace; color: var(--phos); pointer-events: none; }
+
 #rotate { position: fixed; inset: 0; z-index: 50; background: #000; display: none; place-items: center; text-align: center; color: var(--dim); font-size: 18px; line-height: 2; }
 #rotate div { font-size: 16px; }
 @media (orientation: portrait) and (pointer: coarse) { #rotate { display: grid; } }

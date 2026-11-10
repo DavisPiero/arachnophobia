@@ -1,7 +1,7 @@
 // Menu music: the user's track (assets/audio/menu-track.m4a), on the loading screen and the main menu only
 // (the spec rules out music during play). The file is fetched at boot; it is decoded once the AudioContext
 // exists (first gesture). It starts a little before the good part with a slow fade-in, jumps ("kicks in")
-// to the good part when the loading screen ends, and loops the stretch from there to the end while the menu is open.
+// to the good part when the loading screen ends, and when the track ends it fades back in from the very start.
 import { Config } from '../core/Config.js';
 
 const M = Config.music;
@@ -28,19 +28,15 @@ export class Music {
   /** Position in the track, seconds. */
   get position() {
     if (!this.src || !this.audio.ctx) return 0;
-    const t = this.audio.ctx.currentTime - this.startedAt;
-    if (t < M.loopStart || !this.buffer) return t;
-    const len = this.buffer.duration - M.loopStart;
-    return M.loopStart + ((t - M.loopStart) % len);
+    return this.audio.ctx.currentTime - this.startedAt;
   }
 
   _startAt(offset, fadeIn) {
     const ctx = this.audio.ctx;
     const src = ctx.createBufferSource();
     src.buffer = this.buffer;
-    src.loop = true;
-    src.loopStart = M.loopStart;
-    src.loopEnd = this.buffer.duration;
+    // at the end of the track: start again from the beginning, fading in (user: loop nicely, from the very start)
+    src.onended = () => { if (this.src === src && !this.stopped) this._startAt(0, M.fadeIn); };
     const g = ctx.createGain();
     const now = ctx.currentTime;
     g.gain.setValueAtTime(0.0001, now);

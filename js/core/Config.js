@@ -93,7 +93,6 @@ export const Config = {
     fadeIn: 8,
     kick: 86,         // the good part (1:26): the loading screen ends on it
     kickFade: 3,      // slow crossfade if the loading screen ends before the good part
-    loopStart: 86,    // the menu loops 1:26 to the end of the track
     fadeOut: 2.5,     // when the game starts
   },
   loading: { minSeconds: 7 },   // the loading screen stays at least this long (so the music builds up to the kick)
