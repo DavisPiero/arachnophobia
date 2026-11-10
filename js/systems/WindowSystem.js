@@ -50,7 +50,7 @@ export class WindowSystem {
     crackCanvas.width = crackCanvas.height = 512;
     const crackTex = new THREE.CanvasTexture(crackCanvas);
     crackTex.colorSpace = THREE.SRGBColorSpace;
-    const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
+    const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
     crack.position.z = GLASS_Z - 0.002;
     crack.renderOrder = 12;
     group.add(crack);
@@ -131,9 +131,9 @@ export class WindowSystem {
     const pos = point || w.outside;
 
     if (w.stage < 2) {
-      // add a crack where it was hit
+      // add a crack where it was hit (only some hits make a new one, so the glass stays see-through)
       const local = w.group.worldToLocal(pos.clone());
-      this.addCrack(w, local.x / w.def.width + 0.5, 0.5 - local.y / w.def.height, 0.4 + amount / 25);
+      if (w.cracks.length < 4 && (w.cracks.length === 0 || Math.random() < 0.4)) this.addCrack(w, local.x / w.def.width + 0.5, 0.5 - local.y / w.def.height, 0.4 + amount / 25);
       if (Math.random() < 0.6 || after > before) this.audio.play('glassCrack', { position: pos, volume: 0.5 + amount / 30, reverb: 0.25 });
     } else {
       this.audio.play('boardHit', { position: w.center, volume: 0.6 + amount / 30, reverb: 0.2 });
@@ -217,14 +217,14 @@ export class WindowSystem {
       lines.push({ pts, width });
       return pts;
     };
-    const n = 5 + Math.floor(Math.random() * 5);
+    const n = 3 + Math.floor(Math.random() * 3);
     const radials = [];
     for (let i = 0; i < n; i++) {
       const a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      radials.push(branch(u, v, a, (0.2 + Math.random() * 0.45) * size, 1.6 + Math.random() * 0.8, 3));
+      radials.push(branch(u, v, a, (0.2 + Math.random() * 0.45) * size, 1.6 + Math.random() * 0.8, 2));
     }
     // web: two or three rings of short jagged lines joining neighbouring radials
-    const rings = 1 + Math.floor(Math.random() * 3 * Math.min(1, size));
+    const rings = Math.random() < 0.5 ? 1 : 0;
     for (let k = 1; k <= rings; k++) {
       for (let i = 0; i < n; i++) {
         if (Math.random() < 0.25) continue;
@@ -245,7 +245,7 @@ export class WindowSystem {
     const S = c.width;
     if (shattered) {
       // jagged shards left in the frame edges
-      g.fillStyle = 'rgba(170,210,240,0.2)';
+      g.fillStyle = 'rgba(170,210,240,0.08)';
       g.strokeStyle = 'rgba(200,232,255,0.75)';
       g.lineWidth = 1.2;
       const edge = (x0, y0, x1, y1, inward) => {
@@ -264,10 +264,10 @@ export class WindowSystem {
       g.lineCap = 'round'; g.lineJoin = 'round';
       const k = S / 512;
       for (const pass of [0, 1]) {
-        g.strokeStyle = pass ? 'rgba(200,232,255,0.7)' : 'rgba(120,180,235,0.14)';
+        g.strokeStyle = pass ? 'rgba(215,235,250,0.5)' : 'rgba(140,190,235,0.05)';
         for (const cr of w.cracks) {
           for (const ln of cr.lines) {
-            g.lineWidth = (pass ? ln.width * 0.45 : ln.width * 2.2) * k;
+            g.lineWidth = (pass ? ln.width * 0.3 : ln.width * 1.2) * k;
             g.beginPath();
             ln.pts.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
             g.stroke();
@@ -276,10 +276,10 @@ export class WindowSystem {
       }
       // the crushed point of each impact: a small frosted spot
       for (const cr of w.cracks) {
-        const gr = g.createRadialGradient(cr.u * S, cr.v * S, 0, cr.u * S, cr.v * S, cr.ring * S * 2.2);
-        gr.addColorStop(0, 'rgba(215,238,255,0.55)'); gr.addColorStop(1, 'rgba(160,205,245,0)');
+        const gr = g.createRadialGradient(cr.u * S, cr.v * S, 0, cr.u * S, cr.v * S, cr.ring * S * 0.9);
+        gr.addColorStop(0, 'rgba(215,238,255,0.25)'); gr.addColorStop(1, 'rgba(160,205,245,0)');
         g.fillStyle = gr;
-        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S * 2.2, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S * 0.9, 0, Math.PI * 2); g.fill();
       }
     }
     w.crackTex.needsUpdate = true;

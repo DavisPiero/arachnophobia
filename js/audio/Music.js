@@ -44,7 +44,7 @@ export class Music {
     const g = ctx.createGain();
     const now = ctx.currentTime;
     g.gain.setValueAtTime(0.0001, now);
-    g.gain.exponentialRampToValueAtTime(1, now + Math.max(0.02, fadeIn));
+    g.gain.linearRampToValueAtTime(1, now + Math.max(0.02, fadeIn));
     src.connect(g); g.connect(this.audio.musicBus);
     src.start(now, offset);
     this.src = src; this.gain = g; this.startedAt = now - offset;
@@ -69,7 +69,7 @@ export class Music {
   /** The loading screen is over: if the good part has not started yet, jump to it now. */
   kickIn() {
     if (!this.src || !this.buffer) return;
-    if (this.position >= M.kick - 0.5) return;
+    if (this.position >= M.kick - 4) return;   // close enough: let it arrive on its own
     this._fadeOutCurrent(M.kickFade);
     this._startAt(M.kick, M.kickFade);
   }

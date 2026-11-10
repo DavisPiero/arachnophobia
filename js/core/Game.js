@@ -22,6 +22,7 @@ import { WaveSystem } from '../spiders/WaveSystem.js';
 import { PostFX } from '../fx/PostFX.js';
 import { HUD } from '../ui/HUD.js';
 import { Menu } from '../ui/Menu.js';
+import { MenuScene, quadTransform, SCREEN_W, SCREEN_H } from '../ui/MenuScene.js';
 import { loadSpiderModels } from '../spiders/SpiderModel.js';
 import { Music } from '../audio/Music.js';
 import { Settings } from './Settings.js';
@@ -70,6 +71,7 @@ export class Game {
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
     this.hud = new HUD(isTouch);
+    this.menuScene = new MenuScene(renderer, Quality);
     this.music = new Music(this.audio);
     this.menu = new Menu(this.audio, this.input.keyboard);
     this.menu.onOptions = () => this.postfx.setOptions(Settings);
@@ -96,7 +98,18 @@ export class Game {
   wireEvents() {
     const $ = (id) => document.getElementById(id);
     // the Begin button: also the audio unlock gesture
-    const begin = (e) => { e.preventDefault(); this.start(); };
+    // picking begin plays the loading screen again; pointer lock is asked for now, inside the click
+    const begin = async (e) => {
+      e.preventDefault();
+      if (this.state !== 'title' || this.entering) return;
+      this.entering = true;
+      this.audio.unlock();
+      this.music.stop();
+      if (!isTouch) this.input.keyboard.requestLock();
+      await this.menu.runEnter();
+      this.entering = false;
+      this.start(false);
+    };
     $('btn-start').addEventListener('click', begin);
     $('btn-resume').addEventListener('click', () => this.resume());
     $('btn-restart').addEventListener('click', () => { this.restart(); this.resume(); });
@@ -145,6 +158,13 @@ export class Game {
       this.start(false);
       return;
     }
+    if (params.has('menu')) {
+      // straight to the main menu (screenshots of the menu scene)
+      document.getElementById('screen-boot').classList.add('hidden');
+      await loaded;
+      this.state = 'title'; this.menu.ready(); this.menu.showMain(); this.loop();
+      return;
+    }
     await this.menu.waitForWake();
     this.audio.unlock();          // inside the gesture: sound may start from here on
     this.music.start();
@@ -165,7 +185,7 @@ export class Game {
     this.menu.showStart(false);
     this.hud.hint('start', isTouch
       ? 'Your ammo is on the table by the door. Reload there with USE.'
-      : `Your ammo is on the table by the door. Reload there with ${this.hud.key('interact')}. Esc pauses; settings are in the pause menu.`, 7);
+      : `Your ammo is on the table by the door. Reload there with ${this.hud.key('interact')}.`, 7);
     this.resume(fromGesture);
   }
 
@@ -225,6 +245,15 @@ export class Game {
     this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
     this.postfx.setSize(w, h);
+    this.menuScene?.resize(w, h);
+  }
+
+  /** Main menu: the 3D lab renders, and the menu HTML (and settings, if open) is warped onto the left monitor. */
+  renderTitle(dt) {
+    this.menuScene.update(dt);
+    this.menuScene.render();
+    const m = quadTransform(SCREEN_W, SCREEN_H, this.menuScene.screenQuad());
+    for (const el of this.onScreenEls ||= [document.getElementById('menu-screen'), document.querySelector('#screen-settings .term-panel')]) el.style.transform = m;
   }
 
   loop = () => {
@@ -233,6 +262,10 @@ export class Game {
     const dt = Math.min(0.05, this.lastT ? now - this.lastT : 0.016);
     this.lastT = now;
     this.update(dt);
+    const title = this.state === 'title';
+    document.body.classList.toggle('title', title);
+    if (title) { this.renderTitle(dt); if (this.debug) this.updateDebug(dt); return; }
+    for (const el of this.onScreenEls || []) el.style.transform = '';
     this.postfx.render(dt, { hurt: this.player.hurtFlash, hurtDir: this.player.hurtDir, lowHealth: this.player.health < 35 ? 1 - this.player.health / 35 : 0 });
     if (this.debug) this.updateDebug(dt);
   };

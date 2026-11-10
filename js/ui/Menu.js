@@ -1,5 +1,6 @@
-// Every screen outside play: boot gate -> loading (a boot log typing itself out) -> main menu (an old terminal on a
-// lab bench), plus pause, game over and the four-tab settings. One terminal look throughout (user: "make it Unix").
+// Every screen outside play: boot gate -> loading (a boot log typing itself out) -> main menu (HTML warped onto a
+// monitor in the 3D lab, js/ui/MenuScene.js), plus pause, game over and the four-tab settings.
+// Terminal look for boot and main menu only; in game (pause, game over, settings from pause) it is a field notebook.
 import { Config } from '../core/Config.js';
 import { Settings, setSetting, ACTIONS, bindKey, resetKeys, keyLabel } from '../core/Settings.js';
 import { Quality, isTouch } from '../core/Quality.js';
@@ -27,6 +28,15 @@ const BOOT_LOG = [
   [700, 'do not let the fire go out'],
 ];
 
+// played again when you pick begin: the link out to the cabin
+const ENTER_LOG = [
+  [200, 'connecting to field station ........ ok'],
+  [300, 'camera 1: cabin interior'],
+  [400, 'camera 2: no signal', 'bad'],
+  [350, 'lantern lit. rifle loaded.'],
+  [500, 'good luck'],
+];
+
 export class Menu {
   constructor(audio, keyboard) {
     this.audio = audio;
@@ -52,7 +62,6 @@ export class Menu {
     $('btn-settings-back').addEventListener('click', () => this.closeSettings());
     this.wireSettings();
     this.wireKeyboardNav();
-    this.drawWebs();
   }
 
   // ---------------------------------------------------------------- boot and loading
@@ -71,30 +80,31 @@ export class Menu {
   }
 
   /** The loading screen: types the boot log while `loaded` (a promise) finishes, for at least Config.loading.minSeconds. */
-  async runLoading(loaded) {
+  async runLoading(loaded, log = BOOT_LOG, minSeconds = Config.loading.minSeconds) {
     this.boot.classList.add('hidden');
-    this.loadingScreen.classList.remove('hidden');
+    this.log.textContent = '';
+    this.loadingScreen.classList.remove('hidden', 'cut');
     const t0 = performance.now();
     this.logT0 = t0;
     let done = false;
     loaded.then(() => { done = true; });
     const progress = $('boot-progress');
     const bar = () => {
-      const k = done ? 1 : Math.min(0.95, (performance.now() - t0) / 1000 / (Config.loading.minSeconds + 2));
+      const k = done ? 1 : Math.min(0.95, (performance.now() - t0) / 1000 / (minSeconds + 2));
       const n = Math.round(k * 24);
       progress.textContent = `[${'#'.repeat(n)}${'.'.repeat(24 - n)}] ${done ? 'ready' : 'loading'}`;
     };
-    const total = BOOT_LOG.reduce((s, l) => s + l[0], 0);
-    const scale = Math.min(1, (Config.loading.minSeconds * 1000 - 600) / total);
-    for (const [ms, text, cls] of BOOT_LOG) {
+    const total = log.reduce((s, l) => s + l[0], 0);
+    const scale = Math.min(1, (minSeconds * 1000 - 600) / total);
+    for (const [ms, text, cls] of log) {
       await wait(ms * scale);
       this.logLine(text, cls);
       bar();
       if (cls === 'bad') this.glitch();
     }
-    while (!done || performance.now() - t0 < Config.loading.minSeconds * 1000) { bar(); await wait(120); }
+    while (!done || performance.now() - t0 < minSeconds * 1000) { bar(); await wait(120); }
     bar();
-    this.logLine('login: _');
+    if (log === BOOT_LOG) this.logLine('login: _');
     await wait(450);
     // a hard cut to black, then the menu
     this.glitch(); await wait(120);
@@ -115,6 +125,13 @@ export class Menu {
   glitch() {
     this.loadingScreen.classList.add('glitch');
     setTimeout(() => this.loadingScreen.classList.remove('glitch'), 90 + Math.random() * 80);
+  }
+
+  /** Picking begin: the loading screen again, short, then into the cabin. */
+  async runEnter() {
+    this.start.classList.add('hidden');
+    await this.runLoading(Promise.resolve(), ENTER_LOG, 2.4);
+    this.loadingScreen.classList.add('hidden');
   }
 
   /** Progress from the real loader: the progress bar shows it; the log tells its own story. */
@@ -256,40 +273,4 @@ export class Menu {
       });
     }
   }
-
-  // ---------------------------------------------------------------- webs in the corners of the lab
-
-  drawWebs() {
-    const lab = this.start.querySelector('.lab');
-    const corners = [['left', 'top', 1, 1], ['right', 'top', -1, 1], ['right', 'bottom', -1, -1]];
-    corners.forEach(([h, v, sx, sy], k) => {
-      const size = [300, 230, 200][k];
-      lab.insertAdjacentHTML('beforeend', webSVG(size, k * 7 + 3, sx, sy, `${h}:0;${v}:0`));
-    });
-  }
-}
-
-// A corner web: spokes out from the corner, a sagging spiral between them, a few broken strands.
-function webSVG(size, seed, sx, sy, pos) {
-  let s = seed;
-  const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
-  const spokes = 7;
-  const angles = [];
-  for (let i = 0; i < spokes; i++) angles.push((i / (spokes - 1)) * (Math.PI / 2) + (rnd() - 0.5) * 0.12);
-  const P = (a, r) => [Math.cos(a) * r, Math.sin(a) * r];
-  let d = '';
-  for (const a of angles) { const [x, y] = P(a, size * (0.9 + rnd() * 0.15)); d += `M0 0L${x.toFixed(1)} ${y.toFixed(1)}`; }
-  for (let r = 18; r < size * 0.95; r += 12 + rnd() * 10) {
-    if (rnd() < 0.12) continue; // a broken ring
-    for (let i = 0; i < spokes - 1; i++) {
-      const a0 = angles[i], a1 = angles[i + 1];
-      const r0 = r * (0.97 + rnd() * 0.06), r1 = r * (0.97 + rnd() * 0.06);
-      const [x0, y0] = P(a0, r0), [x1, y1] = P(a1, r1);
-      const [mx, my] = P((a0 + a1) / 2, r * 0.9); // sags toward the corner
-      d += `M${x0.toFixed(1)} ${y0.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x1.toFixed(1)} ${y1.toFixed(1)}`;
-    }
-  }
-  const t = `scale(${sx},${sy})`;
-  return `<svg class="web" width="${size}" height="${size}" viewBox="${sx < 0 ? -size : 0} ${sy < 0 ? -size : 0} ${size} ${size}" style="${pos}" aria-hidden="true">
-    <path d="${d}" transform="${t}" fill="none" stroke="rgba(200,210,200,0.55)" stroke-width="0.7"/></svg>`;
 }

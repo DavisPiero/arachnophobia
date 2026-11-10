@@ -59,56 +59,31 @@
   <div id="boot-progress"></div>
 </div>
 
-<!-- 3. main menu: an old terminal on a lab bench, a notebook, webs -->
+<!-- 3. main menu: a 3D lab (js/ui/MenuScene.js); this panel is warped onto the left monitor's screen -->
 <div id="screen-start" class="screen hidden">
-  <div class="lab">
-    <div class="notebook" aria-hidden="true">
-      <div class="page">
-        <p class="date">Oct 29</p>
-        <p>Specimen 7 is bigger again. It watched me through the glass the whole time I fed the others.</p>
-        <p>They <u>hate</u> the light.</p>
-        <p class="date">Oct 30</p>
-        <p>The big one smiled. I am sure of it. Teeth like ours.</p>
-        <p class="date">Oct 31</p>
-        <p>Seal 7 is gone. Taking the rifle to the cabin. Keep the fire going. Never stand at a window too long.</p>
-      </div>
-    </div>
-    <div class="crt">
-      <div class="crt-screen">
-        <div class="crt-text">
-          <div class="dimline">ARACHNE-LAB 4.3BSD (tty0)</div>
-          <div class="dimline">WARNING: enclosure 7 reports a breach</div>
-          <h1 class="term-title">ARACHNOPHOBIA</h1>
-          <div class="dimline">$ cd /field-station/cabin</div>
-          <ul id="menu-list" class="term-menu">
-            <li><button id="btn-start" data-cmd="begin">./begin</button><span class="desc">survive the night</span></li>
-            <li><button id="btn-settings-menu" data-cmd="settings">settings</button><span class="desc">gameplay · graphics · audio · controls</span></li>
-          </ul>
-          <div id="loading-text" class="dimline"></div>
-          <div class="dimline hint-line">headphones recommended. listen for where they are.</div>
-        </div>
-      </div>
-      <div class="crt-led"></div>
-    </div>
+  <div id="menu-screen" class="crt-text on-screen">
+    <h1 class="term-title">ARACHNOPHOBIA</h1>
+    <ul id="menu-list" class="term-menu">
+      <li><button id="btn-start">begin</button></li>
+      <li><button id="btn-settings-menu">settings</button></li>
+    </ul>
+    <div id="loading-text" class="dimline"></div>
   </div>
 </div>
-
 <div id="screen-pause" class="screen term-screen overlay hidden">
   <div class="term-panel">
-    <div class="dimline">[1]+ Stopped    ./begin</div>
-    <h2>PAUSED</h2>
+        <h2>PAUSED</h2>
     <ul class="term-menu">
       <li><button id="btn-resume">resume</button></li>
       <li><button id="btn-settings-pause">settings</button></li>
-      <li><button id="btn-restart">restart</button><span class="desc">back to wave 1</span></li>
+      <li><button id="btn-restart">restart</button></li>
     </ul>
   </div>
 </div>
 
 <div id="screen-over" class="screen term-screen overlay hidden">
   <div class="term-panel">
-    <div class="dimline">SIGNAL LOST</div>
-    <h2>They got in.</h2>
+        <h2>They got in.</h2>
     <p id="over-stats" class="dimline"></p>
     <ul class="term-menu"><li><button id="btn-again">try again</button></li></ul>
   </div>
@@ -126,29 +101,26 @@
       <label class="check"><input type="checkbox" id="set-hints"> show hints</label>
     </div>
     <div class="tab hidden" data-tab="graphics">
-      <label>quality <select id="set-quality"><option value="auto">auto</option><option value="low">low (phones)</option><option value="high">high</option></select></label>
+      <label>quality <select id="set-quality"><option value="auto">auto</option><option value="low">low</option><option value="high">high</option></select></label>
       <div id="quality-note" class="dimline small"></div>
-      <label class="check"><input type="checkbox" id="set-effects"> film effects (grain, colour fringe, vignette)</label>
+      <label class="check"><input type="checkbox" id="set-effects"> film effects</label>
       <label>brightness <input type="range" id="set-brightness" min="0.7" max="1.6" step="0.05"></label>
     </div>
     <div class="tab hidden" data-tab="audio">
       <label>master <input type="range" id="vol-master" min="0" max="1" step="0.01"></label>
       <label>effects <input type="range" id="vol-sfx" min="0" max="1" step="0.01"></label>
       <label>ambience <input type="range" id="vol-ambience" min="0" max="1" step="0.01"></label>
-      <label>music (menu) <input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
+      <label>music <input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
       <label class="check"><input type="checkbox" id="chk-mute"> mute all sound</label>
     </div>
     <div class="tab hidden" data-tab="controls">
       <div class="desktop-only">
         <div id="keybinds"></div>
-        <div class="dimline small">mouse: look · left click fire / swing · right click aim · Esc pause</div>
         <button id="btn-keys-reset" class="small-btn">reset keys</button>
       </div>
       <div class="touch-only dimline touch-help">
-        <div>left thumb: move (push to the edge to sprint)</div>
-        <div>right thumb: look · FIRE fires or swings (drag it to aim)</div>
-        <div>AIM zooms · AXE swaps weapons · STOMP · LIGHT flashlight</div>
-        <div>USE reloads at the ammo table</div>
+        <div>left thumb: move · right thumb: look</div>
+        <div>USE reloads at the table</div>
       </div>
     </div>
     <ul class="term-menu"><li><button id="btn-settings-back">back</button></li></ul>
