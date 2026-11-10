@@ -31,6 +31,19 @@ node tests/soak.mjs 150
 
 A simple bot plays for 150 seconds of game time (phone settings) and reports waves, kills, misses and errors.
 
+```bash
+node tests/brightness.mjs [--shots]
+```
+
+Measures how bright the hands and gun, a spider and the room render on the desktop and phone tiers, and fails if
+the phone tier is much darker or anything drops toward black.
+
+```bash
+node tests/locomotion.mjs [--only=runner] [--size=large]
+```
+
+Scores spider walking (pops, reach errors, clipping) for every model and size. Slow: run it in the background.
+
 ## Deploy
 
 GitHub Pages serves the `main` branch from the repository root. There is no build step: push to `main` and the site
@@ -44,8 +57,14 @@ updates within a minute or two. All paths are relative, so it works under `/arac
 | Look / aim | mouse | drag on the right half |
 | Fire | left click | Fire button |
 | Reload at the table | E | Interact button |
-| Mute | M | speaker button |
-| Pause / volume | Esc | pause button |
+| Rifle / axe | 1 / 2 | Axe button |
+| Stomp | C | Stomp button |
+| Flashlight | Q | Light button |
+| Mute | M (or the speaker button) | Settings → Audio |
+| Pause / settings | Esc or P | pause button (top left) |
+
+Every desktop key can be rebound in Settings → Controls. Without `?autostart=1` the game opens on a boot gate
+(the first key or tap starts the sound), then the loading screen and the main menu with music.
 
 ## Developer pages
 

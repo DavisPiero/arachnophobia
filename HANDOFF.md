@@ -1,46 +1,41 @@
 # Hand-off
 
-*Session of 2026-11-09. Replaces any earlier note.*
+*Session of 2026-11-10. Replaces any earlier note.*
 
 ## Repo state
-- `main` includes this session's work, from branch `m4-spider-overhaul` (merged, pushed, deleted). The user signed off
-  ahead of time ("when you are done merge and push automatically"), then said to skip the all-sizes score run.
-- `npm test` passed (desktop + phone). `node tests/locomotion.mjs` was last run on medium only (see below).
+- Branch `m5-session1-fixes-frontend`, not merged. `main` is unchanged (milestone 4).
+- The user's music track is committed as `assets/audio/menu-track.m4a` (re-encoded AAC 128 kbps, 1.9 MB). It will be
+  public on GitHub Pages once merged.
 
 ## Read first
 1. `STATE.md`: the open questions; ask them first.
-2. `SPECIES.md`: species vs models, the five designs, how a model is made and how it moves.
-3. `DECISIONS.md`: the last 11 lines.
+2. `SPEC.md` "Second iteration" 5: the six-session plan the user accepted (every recommendation, session 3 folded into 1).
+3. `DECISIONS.md`: the last 15 lines.
 
-## What was built
-- **Quick fixes:** chunks are meat, gristle and shell only (no legs), higher-res and marbled (`Chunks.js`); windows
-  1.32 × 1.2 m, centre 1.60 m (`Layout.js`); cracks redrawn as branching light-blue lines (`WindowSystem.js`);
-  first-person legs and the stomp boot removed (files deleted; stomp still kills).
-- **Locomotion** (`js/spiders/`): `LegIK.js`, `Gait.js`, `BodyDynamics.js`, `SpiderCollision.js`, `SpiderRig.js`
-  rewritten on top of them. Squeeze: grips on the frame, body drops and rolls, only a soft abdomen squashes.
-- **Models** (`blender/generators/spiders.py`, `assets/params/spiders.json` `models`): Knot, Sac, Flayed, Grinner,
-  Weeper. New: abdomen shapes, growths, hairs, fleshy folds, lopsided legs, human mouths with teeth, black human eyes
-  with lids, two face bones (60 bones total), translucency read by the game. 12–27k triangles, 2.6–3.4 MB each.
-- **Species and sizes:** `Config.spiders.<species>.model`; new species `weeper`; `Config.sizes` + `SIZES`; waves pick sizes.
-- **Behaviour** (`Behaviour.js`): personalities, reacting to being looked at, light and distance; four-beat attacks
-  (lunge, flurry, slam, feint). Hits shove the player (`Player.damage`).
-- **Tests:** `tests/locomotion.mjs` scores pops, reach errors and clipping; smoke test updated for 5 models, no boot.
+## What was built (session 1)
+- **Darkness:** `Config.render` (exposure per tier, `viewAlbedo` lift for the baked hand/gun colours, view lights,
+  `spiderFill`). The cause was not the phone tier: the baked hand and gun colours average ~3% reflectance and read as
+  black in lantern light on every tier. `tests/brightness.mjs` measures both tiers.
+- **Pause on touch:** `#hud` now sits above `#touch-ui` (z 3 over 2); the touch zones were swallowing taps.
+- **Front end:** `js/ui/Menu.js` (gate, boot log, terminal menus, settings, webs), `js/audio/Music.js`,
+  `js/core/Settings.js` (saved settings, key bindings read by `KeyboardMouse`), new markup in `index.html`, styles
+  in `css/style.css` (screens section).
+- **In play:** `HUD.notice` / `HUD.hint`, `PostFX` directional hurt and brightness/effects options, `ViewModel.bump`
+  spring, `spiderKill` recipe, Grinner `stareCharge` in `Behaviour.js`, standing lantern from `buildLanternModel`.
 
 ## What went badly (tell the user plainly)
-- **The models are not yet as horrifying as asked.** Silhouettes differ and the faces read, but the legs are still
-  smooth tubes, the smiles are small at game distance, and the bodies render dark. The script reached its limit
-  on faces; hand-sculpted faces would do better.
-- **Squeeze still pops:** about 0.45% of joint-frames, mostly while squeezing (grips too close to the hip). The test
-  limit is set just above that as a guard, not as a goal.
-- **First bake was 40–70k triangles** (hairs counted per leg); fixed, rebaked.
-- **Not done:** climbing inside walls and the ceiling (collision supports it, no routes yet); tear streaks on the
-  Weeper; a face on the Flayed's back.
+- My first brightness test measured the sky colour behind the gun and showed no change; fixed. The numbers in STATE
+  are from the corrected test.
+- I could not reproduce "black only on phones". If the iPad still shows black models after this, it is a device
+  problem I need the iPad to find (a texture or shader failing on that GPU).
+- The menu music cannot be checked headless (the test browser has no AAC decoder). Real Chrome and Safari decode it.
 
 ## Known weak spots
-- The locomotion score was not run for small and large after the final bake (user said skip).
-- Behaviour was tested by fast-forwarding 90 s headless (attacks, breaches, damage), not played by hand.
-- Phones: low tier loads the `_low` files; not checked on a real phone.
+- The music timing (1:18 start, jump to 1:26) is set from your description, not by listening.
+- Weapon bounce strengths were set by numbers (recoil ~2.5°), not by feel.
+- The Grinner's stare-then-charge was not tested by hand.
+- The left sleeve is still the darkest thing on screen (it is dark canvas by your earlier choice).
 
 ## Testing rules (from the user)
-- Keep tests cheap: `npm test` in the background. Read one or two screenshots per change.
-- The game is too dark to judge models: use `blender/build/spider_*` renders or `dev/spiders.html?type=…&size=…`.
+- Keep tests cheap: `npm test` in the background. One or two screenshots per change.
+- `node tests/locomotion.mjs` takes very long for all sizes; run it in the background.
