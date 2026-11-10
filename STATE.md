@@ -16,7 +16,7 @@ Session 1 (with the old session 3 folded in):
 Session 1b (UI notes, 2026-11-10):
 - **Main menu is a 3D lab** built in code (`js/ui/MenuScene.js`): bench, notes, photographs, old monitors, a glass panel with a
   spider nailed behind it; depth of field and a slow drift. The menu (and settings opened from it) is warped onto the left
-  monitor. Picking begin plays a short loading log. Pause, game over and in-game settings are now notebook pages.
+  monitor. Picking begin plays a short loading log. In-game screens stay terminal (notebook style tried, reverted).
 - Music starts at the first key with an 8 s fade; cracks fewer and fainter; roof spiders hidden from inside; tests run
   desktop and phone in parallel at lower resolution.
 

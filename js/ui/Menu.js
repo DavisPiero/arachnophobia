@@ -1,6 +1,6 @@
 // Every screen outside play: boot gate -> loading (a boot log typing itself out) -> main menu (HTML warped onto a
 // monitor in the 3D lab, js/ui/MenuScene.js), plus pause, game over and the four-tab settings.
-// Terminal look for boot and main menu only; in game (pause, game over, settings from pause) it is a field notebook.
+// One terminal look throughout (user: notebook style tried in game, then switched back to terminal).
 import { Config } from '../core/Config.js';
 import { Settings, setSetting, ACTIONS, bindKey, resetKeys, keyLabel } from '../core/Settings.js';
 import { Quality, isTouch } from '../core/Quality.js';
