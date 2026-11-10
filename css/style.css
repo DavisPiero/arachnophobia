@@ -52,7 +52,7 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #health {
   position: absolute; left: calc(28px + var(--safe-l)); bottom: calc(26px + var(--safe-b)); width: 220px;
 }
-#health .label { font-family: 'VT323', monospace; font-size: 15px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 3px; }
+#health .label { font-family: 'IM Fell English SC', Georgia, serif; font-size: 15px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 3px; }
 #health .bar { position: relative; height: 9px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(216, 203, 180, 0.3); box-shadow: 0 0 8px #000; }
 #health-fill, #health-trail { position: absolute; left: 1px; top: 1px; bottom: 1px; width: calc(100% - 2px); }
 #health-fill { background: linear-gradient(#c9b9a2, #8f8070); transition: background 0.3s; }
@@ -77,7 +77,7 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #btn-pause { left: calc(14px + var(--safe-l)); }
 #btn-mute { left: calc(66px + var(--safe-l)); }
 #notice {
-  position: absolute; left: 0; right: 0; top: 57%; text-align: center; font-family: 'VT323', monospace;
+  position: absolute; left: 0; right: 0; top: 57%; text-align: center; font-family: 'IM Fell English SC', Georgia, serif;
   font-size: 30px; letter-spacing: 0.25em; color: #d9472f; text-shadow: 0 0 10px #000, 0 0 3px #000; opacity: 0; transition: opacity 0.2s;
 }
 #notice.show { opacity: 1; }
@@ -163,43 +163,21 @@ body.touch #prompt { top: 64%; font-size: 13px; }
 #screen-loading.cut { background: #000; }
 #screen-loading.cut > * { opacity: 0; }
 
-/* main menu: a lab bench at night */
-#screen-start { padding: 0; background: #000; opacity: 0; transition: opacity 1.6s; }
+/* main menu: the 3D lab is the canvas (js/ui/MenuScene.js); the menu HTML is warped onto the left monitor */
+#screen-start { padding: 0; background: transparent; opacity: 0; transition: opacity 1.6s; pointer-events: none; }
 #screen-start.in { opacity: 1; }
-.lab { position: absolute; inset: 0; overflow: hidden;
-  background:
-    radial-gradient(ellipse 60% 45% at 50% 45%, rgba(60, 120, 80, 0.16), transparent 70%),
-    linear-gradient(to bottom, #07090a 0%, #0b0d0c 62%, #1a120c 62.3%, #120c08 100%); }
-.lab::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(0, 0, 0, 0.85) 100%); }
-.web { position: absolute; pointer-events: none; opacity: 0.55; z-index: 3; }
-.notebook { position: absolute; left: max(2vw, calc(10px + var(--safe-l))); bottom: 5vh; width: min(30vw, 330px); transform: rotate(-9deg); z-index: 1; }
-.notebook .page {
-  font-family: 'Reenie Beanie', cursive; font-size: clamp(15px, 2.1vw, 22px); line-height: 1.25; color: #2b2540; padding: 16px 18px 20px 30px;
-  background:
-    radial-gradient(circle at 78% 22%, rgba(110, 70, 30, 0.35), transparent 18%),
-    radial-gradient(circle at 20% 85%, rgba(90, 50, 20, 0.25), transparent 25%),
-    linear-gradient(to right, transparent 22px, rgba(180, 60, 60, 0.45) 22px 23px, transparent 23px),
-    repeating-linear-gradient(to bottom, #cfc4a6 0 calc(1.25em - 1px), rgba(70, 90, 130, 0.35) calc(1.25em - 1px) 1.25em);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); filter: brightness(0.55) sepia(0.3);
-}
-.notebook p { margin: 0 0 0.3em; }
-.notebook .date { color: #7a2020; }
-.crt { position: absolute; left: 50%; top: 47%; transform: translate(-50%, -50%); z-index: 2;
-  width: min(760px, 70vw, calc(86vh * 1.3)); aspect-ratio: 1.3; padding: clamp(14px, 2.6vw, 30px);
-  background: linear-gradient(160deg, #4a453c, #2a2620 60%, #1b1814); border-radius: 22px;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.9), inset 0 2px 0 rgba(255, 255, 255, 0.06); }
-.crt-screen { position: relative; width: 100%; height: 100%; border-radius: 26px / 34px; overflow: hidden;
-  background: radial-gradient(ellipse at center, #062012 0%, #021008 70%, #010603 100%);
-  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9), 0 0 30px rgba(116, 224, 143, 0.12); }
-.crt-screen::after { content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0, 0, 0, 0.3) 2px 3px); animation: flicker 5s infinite; }
-.crt-led { position: absolute; right: 28px; bottom: 9px; width: 7px; height: 7px; border-radius: 50%; background: #e04a2a; box-shadow: 0 0 6px #e04a2a; }
-.crt-text { position: absolute; inset: 0; padding: 5% 7%; font-family: 'VT323', ui-monospace, monospace; color: var(--phos); text-shadow: 0 0 6px var(--phos-glow);
+.on-screen, body.title #screen-settings .term-panel {
+  position: absolute; left: 0; top: 0; width: 640px; height: 480px; max-height: none; transform-origin: 0 0; pointer-events: auto;
+  padding: 34px 44px; background: radial-gradient(ellipse at center, rgba(8, 40, 20, 0.55), rgba(2, 16, 8, 0.2) 75%); border: 0; box-shadow: none; }
+.on-screen .term-menu button { font-size: 56px; }
+body.title #screen-settings .term-panel label, body.title #keybinds { font-size: 26px; }
+body.title .tabs button { font-size: 30px; }
+.crt-text { font-family: 'VT323', ui-monospace, monospace; color: var(--phos); text-shadow: 0 0 6px var(--phos-glow);
   display: flex; flex-direction: column; justify-content: center; }
-.term-title { font-family: 'VT323', ui-monospace, monospace; font-weight: normal; font-size: clamp(34px, 7.4vw, 78px); letter-spacing: 0.08em; margin: 10px 0 6px; color: var(--phos);
+body.title #screen-settings { background: transparent; padding: 0; display: block; }
+body.title #screen-settings .term-panel { overflow-y: auto; }
+.term-title { font-family: 'VT323', ui-monospace, monospace; font-weight: normal; font-size: 84px; letter-spacing: 0.08em; margin: 10px 0 6px; color: var(--phos);
   text-shadow: 0 0 14px var(--phos-glow), 2px 0 0 rgba(224, 80, 58, 0.35); }
-.hint-line { margin-top: 10px; font-size: 16px; }
 
 /* menus: commands you pick */
 .term-menu { list-style: none; padding: 0; margin: 10px 0; }
@@ -236,12 +214,32 @@ body.touch .touch-only { display: block; }
 body.touch .desktop-only { display: none !important; }
 button:disabled { opacity: 0.35; cursor: default; }
 
+/* in game: pause, game over and settings are pages of a field notebook (user: digital look only for boot and menu) */
+body:not(.title) .term-screen.overlay { background: rgba(0, 0, 0, 0.6); color: #2b2540; text-shadow: none; font-family: Georgia, serif; }
+body:not(.title) .term-panel { color: #2b2540; border: 0; padding: 22px 30px 26px 56px; transform: rotate(-0.6deg);
+  background:
+    radial-gradient(circle at 85% 12%, rgba(110, 70, 30, 0.22), transparent 16%),
+    linear-gradient(to right, transparent 38px, rgba(180, 60, 60, 0.5) 38px 39px, transparent 39px),
+    repeating-linear-gradient(to bottom, #d9cfb2 0 31px, rgba(70, 90, 130, 0.3) 31px 32px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.85); }
+body:not(.title) .term-panel h2 { font-family: 'IM Fell English SC', Georgia, serif; font-size: 40px; letter-spacing: 0.04em; color: #3a1c18; }
+body:not(.title) .term-panel .dimline { color: #5a5070; font-family: Georgia, serif; }
+body:not(.title) .term-panel .term-menu button { font: 34px/1.1 'Reenie Beanie', cursive; color: #2b2540; text-shadow: none; padding: 0 10px 0 36px; }
+body:not(.title) .term-panel .term-menu button::before { content: '\2192'; color: #8c1a10; }
+body:not(.title) .term-panel .term-menu button:hover, body:not(.title) .term-panel .term-menu button.sel { background: none; color: #8c1a10; text-decoration: underline; }
+body:not(.title) .term-panel label { font-family: Georgia, serif; font-size: 18px; }
+body:not(.title) .term-panel input[type=range], body:not(.title) .term-panel input[type=checkbox] { accent-color: #8c1a10; }
+body:not(.title) .term-panel select, body:not(.title) #keybinds button, body:not(.title) .small-btn { font: 17px Georgia, serif; background: rgba(255, 255, 255, 0.25); color: #2b2540; border: 1px solid #8a7d68; }
+body:not(.title) .tabs { border-bottom: 1px solid #8a7d68; }
+body:not(.title) .tabs button { font: 30px 'Reenie Beanie', cursive; color: #6a6070; }
+body:not(.title) .tabs button.on { background: none; color: #8c1a10; text-decoration: underline; }
+body:not(.title) #keybinds { font-family: Georgia, serif; font-size: 17px; }
+
 #rotate { position: fixed; inset: 0; z-index: 50; background: #000; display: none; place-items: center; text-align: center; color: var(--dim); font-size: 18px; line-height: 2; }
 #rotate div { font-size: 16px; }
 @media (orientation: portrait) and (pointer: coarse) { #rotate { display: grid; } }
 
 @media (max-height: 430px) {
-  .term-title { font-size: 40px !important; margin: 4px 0 !important; }
   .term-menu button { font-size: 23px; }
   .term-panel { padding: 10px 18px; }
   .term-panel h2 { font-size: 30px; margin: 4px 0 8px; }

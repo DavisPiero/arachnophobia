@@ -21,11 +21,26 @@ let failures = 0;
 // Prints only failures (and a one-line summary) so the output stays short.
 const check = (ok, msg) => { if (!ok) { console.log(`  FAIL ${msg}`); failures++; } else if (process.argv.includes('--verbose')) console.log(`  ok   ${msg}`); };
 
-for (const device of ['desktop', 'phone']) {
+// desktop and phone run side by side (halves the wall time); the menu scene is a third, short check
+const menuCheck = (async () => {
+  const ctx = await browser.newContext({ viewport: { width: 960, height: 540 } });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
+  await page.goto(`${base}index.html?mute=1&menu=1&quality=low`);
+  await page.waitForFunction(() => window.game?.state === 'title' && document.getElementById('menu-screen').style.transform.startsWith('matrix3d'), null, { timeout: 60000 }).catch(() => {});
+  const box = await page.locator('#btn-start').boundingBox();
+  check(box && box.x + box.width < 960 * 0.6, `menu buttons sit on the left monitor (${box && Math.round(box.x)})`);
+  if (process.argv.includes('--shots')) await page.screenshot({ path: 'shots/smoke-menu.png' });
+  check(errors.length === 0, `menu: no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
+  await ctx.close();
+})();
+await Promise.all(['desktop', 'phone'].map(async (device) => {
   if (process.argv.includes('--verbose')) console.log(`\n${device}`);
   const ctx = await browser.newContext(device === 'phone'
-    ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
-    : { viewport: { width: 960, height: 540 } });
+    ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+    : { viewport: { width: 640, height: 360 } });
   const page = await ctx.newPage();
   const errors = [];
   page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
@@ -199,7 +214,7 @@ for (const device of ['desktop', 'phone']) {
   check(br === 4, 'window damage reaches breach');
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await ctx.close();
-}
+}).concat(menuCheck));
 
 await browser.close();
 server?.close();

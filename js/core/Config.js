@@ -89,10 +89,10 @@ export const Config = {
   // menu music (js/audio/Music.js): seconds into assets/audio/menu-track.m4a
   music: {
     url: './assets/audio/menu-track.m4a',
-    leadIn: 78,       // starts here, a bit before the good part, fading in
-    fadeIn: 6,
+    leadIn: 76,       // starts here, well before the good part, fading in slowly (user: fade in, never cut in)
+    fadeIn: 8,
     kick: 86,         // the good part (1:26): the loading screen ends on it
-    kickFade: 0.35,   // crossfade when the end of the loading screen jumps to it
+    kickFade: 3,      // slow crossfade if the loading screen ends before the good part
     loopStart: 86,    // the menu loops 1:26 to the end of the track
     fadeOut: 2.5,     // when the game starts
   },

@@ -30,7 +30,7 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - Blender check tools (run with `Blender -b --factory-startup -P <tool> -- ...`): `blender/tools/viewmodel.py hip|aim|axe|arm_<name>`
   (studio-lit render of the first-person layout, to `shots/`), `blender/tools/clipcheck.py` (does any hand pass through the rifle?)
 
-URL switches: `mute=1`, `autostart=1` (skip the start screen), `quality=low|high`, `debug=1` (stats + free keys), `assets=0` (code-made models).
+URL switches: `mute=1`, `autostart=1` (skip the start screen), `menu=1` (straight to the 3D main menu), `quality=low|high`, `debug=1` (stats + free keys), `assets=0` (code-made models).
 
 ## Layout of the code
 

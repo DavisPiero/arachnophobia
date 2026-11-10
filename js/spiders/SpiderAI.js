@@ -157,6 +157,11 @@ export class Spider {
   // ---------------------------------------------------------------- update
   update(dt, player) {
     this.distToPlayer = this.root.position.distanceTo(player.position);
+    // on the roof, legs can dip through the thin slab: from inside the cabin the roof hides them anyway
+    const rp = this.root.position, pp = player.position, M = CABIN.wallThickness + CABIN.eaveOverhang + 0.3;
+    const onRoof = rp.y > CABIN.wallHeight - 0.2 && Math.abs(rp.x) < CABIN.halfX + M && Math.abs(rp.z) < CABIN.halfZ + M;
+    const inside = Math.abs(pp.x) < CABIN.halfX && Math.abs(pp.z) < CABIN.halfZ;
+    this.root.visible = !(onRoof && inside);
     this.flinch = Math.max(0, this.flinch - dt);
     if (this.stagger > 0) {
       // reeling from a heavy hit: no moving, no attacking

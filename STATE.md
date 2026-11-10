@@ -13,6 +13,13 @@ Session 1 (with the old session 3 folded in):
 - **Front end:** boot gate → loading log → terminal main menu (CRT, notebook, webs) with your track; settings with
   four tabs (key rebinding included) on the menu and the pause screen.
 
+Session 1b (UI notes, 2026-11-10):
+- **Main menu is a 3D lab** built in code (`js/ui/MenuScene.js`): bench, notes, photographs, old monitors, a glass panel with a
+  spider nailed behind it; depth of field and a slow drift. The menu (and settings opened from it) is warped onto the left
+  monitor. Picking begin plays a short loading log. Pause, game over and in-game settings are now notebook pages.
+- Music starts at the first key with an 8 s fade; cracks fewer and fainter; roof spiders hidden from inside; tests run
+  desktop and phone in parallel at lower resolution.
+
 **Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
 
 **Open with you:**
@@ -25,4 +32,4 @@ Session 1 (with the old session 3 folded in):
 
 **Tools:**
 - `npm test` quick check; `node tests/brightness.mjs`; `node tests/locomotion.mjs` (slow, background).
-- `index.html?mute=1&autostart=1` skips the gate, loading and music.
+- `index.html?mute=1&autostart=1` skips the gate, loading and music; `?menu=1` goes straight to the 3D menu.
