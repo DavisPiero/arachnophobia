@@ -160,12 +160,33 @@ body.touch #prompt { top: 64%; font-size: 13px; }
   animation: flicker 4s infinite; }
 @keyframes flicker { 0%, 100% { opacity: 0.9; } 47% { opacity: 0.9; } 48% { opacity: 0.6; } 49% { opacity: 1; } 70% { opacity: 0.85; } }
 #screen-loading.glitch #boot-log { transform: translateX(3px) skewX(-2deg); filter: blur(0.6px); }
+#screen-loading > * { transition: opacity 0.4s ease-in; }
 #screen-loading.cut { background: #000; }
 #screen-loading.cut > * { opacity: 0; }
 
-/* main menu: the 3D lab is the canvas (js/ui/MenuScene.js); the menu HTML is warped onto the left monitor */
-#screen-start { padding: 0; background: transparent; opacity: 0; transition: opacity 1.6s; pointer-events: none; }
+/* the menu CRT's text dissolving, right before the cut to black when BEGIN is pressed */
+#menu-screen.dissolving { animation: menuDissolve 0.5s ease-in forwards; }
+@keyframes menuDissolve {
+  0% { opacity: 1; filter: none; transform: none; }
+  40% { opacity: 1; filter: blur(0.5px) brightness(1.6); transform: translateX(2px) skewX(-1deg); }
+  100% { opacity: 0; filter: blur(2px) brightness(2.4); transform: translateX(-4px) skewX(2deg); }
+}
+
+/* main menu: the 3D lab is the canvas (js/ui/MenuScene.js); the menu HTML is warped onto the left monitor.
+   A quick CRT power-on, not a slow fade, so you reach the music-playing menu sooner (user: "boot up quickly"). */
+#screen-start { padding: 0; background: transparent; opacity: 0; transition: opacity 0.35s; pointer-events: none; }
 #screen-start.in { opacity: 1; }
+#menu-screen.on-screen { animation: crtPowerOn 0.45s ease-out; }
+@keyframes crtPowerOn {
+  0% { filter: brightness(3.5) contrast(0.2); transform: scaleY(0.03); }
+  55% { filter: brightness(1.8) contrast(1.1); transform: scaleY(1.04); }
+  100% { filter: none; transform: none; }
+}
+
+/* a full-screen fade used only for the begin -> gameplay transition (js/core/Game.js) */
+#enter-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.7s ease-in-out; }
+#enter-fade.on { opacity: 1; }
+#enter-fade.instant { transition: none; }
 .on-screen, body.title #screen-settings .term-panel {
   position: absolute; left: 0; top: 0; width: 640px; height: 480px; max-height: none; transform-origin: 0 0; pointer-events: auto;
   padding: 34px 44px; background: radial-gradient(ellipse at center, rgba(8, 40, 20, 0.55), rgba(2, 16, 8, 0.2) 75%); border: 0; box-shadow: none; }

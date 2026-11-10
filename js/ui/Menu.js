@@ -25,7 +25,18 @@ const BOOT_LOG = [
   [600, 'sensor 2: movement under the floor', 'warn'],
   [900, 'sensor 2: movement under the floor', 'warn'],
   [300, 'they are already inside the walls', 'bad'],
-  [700, 'do not let the fire go out'],
+  // the log runs down into a string of failures before the prompt (user: end it overrun with failures).
+  // The gaps are timed against assets/audio/menu-track.m4a's own build-up into the "kick" (Config.music.kick):
+  // a crude onset scan of that stretch (scratchpad analysis, not confirmed by ear) found hits clustering at
+  // roughly +8.6s/+8.8s/+9.0s into the loading screen, which is where the last three lines below land.
+  [420, 'mounting /dev/specimen2 ........ FAILED', 'bad'],
+  [260, 'mounting /dev/specimen4 ........ FAILED', 'bad'],
+  [220, 'containment: seal pressure 0.00 kPa, all enclosures', 'bad'],
+  [380, 'sensor 1: movement under the floor', 'warn'],
+  [260, 'sensor 3: movement under the floor', 'warn'],
+  [1790, 'uplink: field station not responding', 'bad'],
+  [180, 'mounting /dev/specimen1 ........ FAILED', 'bad'],
+  [281, 'do not let the fire go out'],
 ];
 
 // played again when you pick begin: the link out to the cabin
@@ -104,7 +115,7 @@ export class Menu {
     }
     while (!done || performance.now() - t0 < minSeconds * 1000) { bar(); await wait(120); }
     bar();
-    if (log === BOOT_LOG) this.logLine('login: _');
+    if (log === BOOT_LOG) this.logPrompt('login: ');
     await wait(450);
     // a hard cut to black, then the menu
     this.glitch(); await wait(120);
@@ -122,14 +133,26 @@ export class Menu {
     while (this.log.scrollHeight > this.log.clientHeight + 4 && this.log.firstChild) this.log.removeChild(this.log.firstChild);
   }
 
+  // the trailing prompt, with a real blinking terminal cursor rather than a static underscore
+  logPrompt(text) {
+    const line = document.createElement('span');
+    const t = ((performance.now() - (this.logT0 || 0)) / 1000).toFixed(6).padStart(11, ' ');
+    line.append(`[${t}] ${text}`, Object.assign(document.createElement('span'), { className: 'cursor', textContent: '_' }), '\n');
+    this.log.appendChild(line);
+  }
+
   glitch() {
     this.loadingScreen.classList.add('glitch');
     setTimeout(() => this.loadingScreen.classList.remove('glitch'), 90 + Math.random() * 80);
   }
 
-  /** Picking begin: the loading screen again, short, then into the cabin. */
+  /** Picking begin: the menu CRT dissolves, then the loading screen again (short), then into the cabin. */
   async runEnter() {
+    const menuScreen = $('menu-screen');
+    menuScreen.classList.add('dissolving');
+    await wait(420);
     this.start.classList.add('hidden');
+    menuScreen.classList.remove('dissolving');
     await this.runLoading(Promise.resolve(), ENTER_LOG, 2.4);
     this.loadingScreen.classList.add('hidden');
   }

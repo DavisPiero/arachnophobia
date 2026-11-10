@@ -22,6 +22,27 @@ Session 1b (UI notes, 2026-11-10):
 - Spiders no longer freeze when looked at (the Grinner charges instead of stopping to stare); the menu track restarts
   from 0:00 with a fade when it ends; new settings: field of view, crosshair, HUD opacity, show fps.
 
+**Main menu overhaul (2026-11-11, in progress on branch `claude/menu-overhaul`, not merged):** your brief — better
+models/materials, composition, ambient animation, lighting/post, a cinematic begin→gameplay transition, and the
+menu music. Built so far:
+- Wall spider is now the real Grinner model (code fallback kept); menu CRT bigger/closer as the focal point,
+  secondary monitors and papers pushed back; shadows, contact shadows, subtle bloom, warmer/cooler light split;
+  live waveform monitors, a second spider that scuttles the back wall irregularly, a swaying note.
+- Begin now dissolves the menu text, fades to black (not a hard cut), and fades up into the cabin instead of
+  popping. Boot log extended into a run of failures, retimed against the music's build-up into the "kick"
+  (`Config.loading.minSeconds` 7 → 9.7s); a real blinking cursor on `login:`.
+- Music: installed ffmpeg (one-time, your OK) and rebuilt the loop itself (`js/audio/Music.js`) to crossfade the
+  next pass under the current one near the end, instead of restarting from silence.
+
+**Not done / needs your steer:**
+- Phase A's other half — new Blender-made CRT/desk/notes models with real CC0 materials (the biggest, riskiest
+  piece of the brief, not started) — vs. the swap already done being enough for now.
+- "Remake the track with the drums continuing through most of the song": not deliverable as asked (no stems, no
+  reliable way to isolate drums from the finished mix); the loop crossfade above is the realistic version of
+  "more loopable." The boot-log beat-timing is a best guess from an automated scan, not confirmed by ear.
+- None of this has been tested by ear (menu music still won't decode in the headless test browser) or played
+  by hand yet.
+
 **Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
 
 **Open with you:**
