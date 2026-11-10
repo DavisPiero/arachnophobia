@@ -25,7 +25,7 @@ import { Menu } from '../ui/Menu.js';
 import { MenuScene, quadTransform, SCREEN_W, SCREEN_H } from '../ui/MenuScene.js';
 import { loadSpiderModels } from '../spiders/SpiderModel.js';
 import { Music } from '../audio/Music.js';
-import { Settings } from './Settings.js';
+import { Settings, onSettingsChange } from './Settings.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -76,6 +76,7 @@ export class Game {
     this.menu = new Menu(this.audio, this.input.keyboard);
     this.menu.onOptions = () => this.postfx.setOptions(Settings);
     this.postfx.setOptions(Settings);
+    onSettingsChange((key) => { if (key === 'fov') this.resize(); this.applyHudSettings(); });
     this.heartT = 0;
 
     // meshes that stop bullets: the cabin itself and the window boards
@@ -88,6 +89,7 @@ export class Game {
     this.time = 0;
     this.wireEvents();
     this.resize();
+    this.applyHudSettings();
     addEventListener('resize', () => this.resize());
     addEventListener('orientationchange', () => setTimeout(() => this.resize(), 200));
     document.addEventListener('visibilitychange', () => { if (document.hidden && this.state === 'playing') this.pause(); });
@@ -241,11 +243,18 @@ export class Game {
     this.renderer.setSize(w, h);
     this.camera.aspect = w / h;
     // keep a sensible horizontal view on tall/narrow screens
-    this.baseFov = w / h < 1.2 ? 80 : 72;
+    this.baseFov = Settings.fov + (w / h < 1.2 ? 8 : 0);
     this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
     this.postfx.setSize(w, h);
     this.menuScene?.resize(w, h);
+  }
+
+  applyHudSettings() {
+    const hud = document.getElementById('hud');
+    hud.style.opacity = Settings.hudOpacity;
+    document.getElementById('crosshair').style.display = Settings.crosshair ? '' : 'none';
+    document.getElementById('fps').classList.toggle('hidden', !Settings.showFps);
   }
 
   /** Main menu: the 3D lab renders, and the menu HTML (and settings, if open) is warped onto the left monitor. */
@@ -261,6 +270,10 @@ export class Game {
     const now = performance.now() / 1000;
     const dt = Math.min(0.05, this.lastT ? now - this.lastT : 0.016);
     this.lastT = now;
+    if (Settings.showFps) {
+      this.fpsN = (this.fpsN || 0) + 1; this.fpsT = (this.fpsT || 0) + dt;
+      if (this.fpsT > 0.5) { document.getElementById('fps').textContent = `${Math.round(this.fpsN / this.fpsT)} fps`; this.fpsN = 0; this.fpsT = 0; }
+    }
     this.update(dt);
     const title = this.state === 'title';
     document.body.classList.toggle('title', title);

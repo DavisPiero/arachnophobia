@@ -35,6 +35,7 @@
   <button id="btn-mute" class="desktop-only" aria-label="Mute">🔊</button>
 </div>
 
+<div id="fps" class="hidden"></div>
 <div id="touch-ui">
   <div id="zone-move"></div>
   <div id="zone-look"></div>
@@ -99,12 +100,16 @@
       <label>look speed <input type="range" id="set-look" min="0.3" max="2.5" step="0.05"></label>
       <label class="check"><input type="checkbox" id="set-invert"> invert look up/down</label>
       <label class="check"><input type="checkbox" id="set-hints"> show hints</label>
+      <label class="check"><input type="checkbox" id="set-crosshair"> crosshair</label>
+      <label>hud opacity <input type="range" id="set-hud" min="0.3" max="1" step="0.05"></label>
     </div>
     <div class="tab hidden" data-tab="graphics">
       <label>quality <select id="set-quality"><option value="auto">auto</option><option value="low">low</option><option value="high">high</option></select></label>
       <div id="quality-note" class="dimline small"></div>
       <label class="check"><input type="checkbox" id="set-effects"> film effects</label>
       <label>brightness <input type="range" id="set-brightness" min="0.7" max="1.6" step="0.05"></label>
+      <label>field of view <input type="range" id="set-fov" min="60" max="95" step="1"></label>
+      <label class="check"><input type="checkbox" id="set-fps"> show fps</label>
     </div>
     <div class="tab hidden" data-tab="audio">
       <label>master <input type="range" id="vol-master" min="0" max="1" step="0.01"></label>

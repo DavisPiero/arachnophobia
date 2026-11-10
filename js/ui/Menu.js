@@ -189,6 +189,10 @@ export class Menu {
     check('set-hints', 'hints');
     check('set-effects', 'effects', opts);
     range('set-brightness', 'brightness', opts);
+    range('set-fov', 'fov');
+    range('set-hud', 'hudOpacity');
+    check('set-crosshair', 'crosshair');
+    check('set-fps', 'showFps');
     $('set-quality').addEventListener('change', (e) => { setSetting('quality', e.target.value); this.refreshQualityNote(); });
     for (const bus of ['master', 'sfx', 'ambience', 'music']) {
       $(`vol-${bus}`).addEventListener('input', (e) => this.audio.setVolume(bus, Number(e.target.value)));
@@ -203,6 +207,10 @@ export class Menu {
     $('set-hints').checked = Settings.hints;
     $('set-effects').checked = Settings.effects;
     $('set-brightness').value = Settings.brightness;
+    $('set-fov').value = Settings.fov;
+    $('set-hud').value = Settings.hudOpacity;
+    $('set-crosshair').checked = Settings.crosshair;
+    $('set-fps').checked = Settings.showFps;
     $('set-quality').value = Settings.quality;
     for (const bus of ['master', 'sfx', 'ambience', 'music']) $(`vol-${bus}`).value = this.audio.getVolume(bus);
     $('chk-mute').checked = this.audio.muted;

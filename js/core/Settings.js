@@ -22,6 +22,10 @@ const DEFAULTS = {
   quality: 'auto',    // auto | low | high (takes effect on reload)
   effects: true,      // film grain, colour fringing, vignette
   brightness: 1,      // 0.7 .. 1.6
+  fov: 72,            // field of view, degrees (narrow screens get +8)
+  crosshair: true,
+  hudOpacity: 1,      // 0.3 .. 1
+  showFps: false,
   keys: { ...DEFAULT_KEYS },
 };
 
