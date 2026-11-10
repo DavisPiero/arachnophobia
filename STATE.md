@@ -1,7 +1,6 @@
 # State
 
-**Where we are:** milestone 5 (the playtest notes of 2026-11-10), session 1 of 6 built on branch
-`m5-session1-fixes-frontend`, not merged yet. Plan for all six sessions: `SPEC.md` "Second iteration" 5.
+**Where we are:** milestone 5 (the playtest notes of 2026-11-10), session 1 of 6 merged into main and live (2026-11-10). Plan for all six sessions: `SPEC.md` "Second iteration" 5.
 
 Session 1 (with the old session 3 folded in):
 - **Phone darkness:** hands and gun colours lifted ×3.4, a faint fill light on spiders, brighter exposure on
@@ -17,7 +16,8 @@ Session 1 (with the old session 3 folded in):
 **Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
 
 **Open with you:**
-- **Sign-off of session 1** after you play it (it is not merged).
+- **Harder now?** In 3 bot runs of 150 s the bot took damage on this build (one death) and none on the old one. Likely the
+  Grinner's charge. Tell me if early waves feel too hard.
 - **Phone darkness on your iPad:** I could not reproduce "black only on phones" (the phone tier measured the same as
   desktop); I made everything brighter. Does the iPad look right now?
 - **Still unanswered:** spider sizes (large ×1.45, a big Sac ~4 m across); squeeze speed (~5 s for a big one);

@@ -3,7 +3,8 @@
 *Session of 2026-11-10. Replaces any earlier note.*
 
 ## Repo state
-- Branch `m5-session1-fixes-frontend`, not merged. `main` is unchanged (milestone 4).
+- Session 1 merged into `main` and pushed (user asked to finish and merge). The last full `npm test` run had one
+  failure (LIGHT button) while other heavy tests shared the machine; the same tap passed on its own. Not re-run after.
 - The user's music track is committed as `assets/audio/menu-track.m4a` (re-encoded AAC 128 kbps, 1.9 MB). It will be
   public on GitHub Pages once merged.
 
