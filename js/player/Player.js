@@ -62,7 +62,7 @@ export class Player {
     const right = _v2.set(-fwd.z, 0, fwd.x);
     this.sprinting = !this.locked && !this.dead && !this.aiming && input.sprint && mv.y > 0.5;
     const speedMul = this.sprinting ? C.sprintMultiplier : this.aiming ? C.aimMoveMultiplier : 1;
-    const target = _v3.set(0, 0, 0).addScaledVector(fwd, mv.y).addScaledVector(right, mv.x).multiplyScalar(C.walkSpeed * speedMul);
+    const target = _v3.set(0, 0, 0).addScaledVector(fwd, mv.y).addScaledVector(right, mv.x).multiplyScalar(C.walkSpeed * speedMul * (this.slow ?? 1));
     const k = 1 - Math.exp(-C.accel * dt);
     this.velocity.lerp(target, k);
     if (this.locked) this.velocity.multiplyScalar(0.5);

@@ -55,9 +55,11 @@ updates within a minute or two. All paths are relative, so it works under `/arac
 |---|---|---|
 | Move | WASD | left joystick |
 | Look / aim | mouse | drag on the right half |
-| Fire | left click | Fire button |
-| Reload at the table | E | Interact button |
-| Rifle / axe | 1 / 2 | Axe button |
+| Fire / punch / swing / throw | left click | Fire button |
+| Reload at the table, rest on the cot | E | Interact button |
+| Weapons (fists, rifle at wave 3, axe 5, shotgun 7, flares 9) | 1–5 | weapon button (cycles) |
+| Inventory (remap 1–5) | I | pause → inventory |
+| Bandage | H | Bandage button |
 | Stomp | C | Stomp button |
 | Flashlight | Q | Light button |
 | Mute | M (or the speaker button) | Settings → Audio |

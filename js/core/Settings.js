@@ -6,19 +6,22 @@ const STORE_KEY = 'arachnophobia.settings.v1';
 // every rebindable action, in the order the Controls tab lists them
 export const ACTIONS = [
   ['forward', 'Move forward'], ['back', 'Move back'], ['left', 'Move left'], ['right', 'Move right'],
-  ['sprint', 'Sprint'], ['interact', 'Use / reload'], ['rifle', 'Rifle'], ['axe', 'Axe'],
-  ['stomp', 'Stomp'], ['torch', 'Flashlight'], ['pause', 'Pause'], ['mute', 'Mute'],
+  ['sprint', 'Sprint'], ['interact', 'Use / reload'],
+  ['slot1', 'Weapon 1'], ['slot2', 'Weapon 2'], ['slot3', 'Weapon 3'], ['slot4', 'Weapon 4'], ['slot5', 'Weapon 5'],
+  ['inventory', 'Inventory'], ['stomp', 'Stomp'], ['bandage', 'Bandage'], ['torch', 'Flashlight'], ['pause', 'Pause'], ['mute', 'Mute'],
 ];
 
 export const DEFAULT_KEYS = {
   forward: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', sprint: 'ShiftLeft',
-  interact: 'KeyE', rifle: 'Digit1', axe: 'Digit2', stomp: 'KeyC', torch: 'KeyQ', pause: 'KeyP', mute: 'KeyM',
+  interact: 'KeyE', slot1: 'Digit1', slot2: 'Digit2', slot3: 'Digit3', slot4: 'Digit4', slot5: 'Digit5',
+  inventory: 'KeyI', stomp: 'KeyC', bandage: 'KeyH', torch: 'KeyQ', pause: 'KeyP', mute: 'KeyM',
 };
 
 const DEFAULTS = {
   look: 1,            // look speed multiplier (mouse and touch)
   invertY: false,
   hints: true,        // short first-time prompts
+  difficulty: 'normal', // easy | normal | hard (Config.difficulty; applies to spiders that arrive from now on)
   quality: 'auto',    // auto | low | high (takes effect on reload)
   effects: true,      // film grain, colour fringing, vignette
   brightness: 1,      // 0.7 .. 1.6
@@ -27,6 +30,7 @@ const DEFAULTS = {
   hudOpacity: 1,      // 0.3 .. 1
   showFps: false,
   keys: { ...DEFAULT_KEYS },
+  slots: null,        // which weapon each of the keys 1–5 holds (the inventory sets it; null = Config.arsenal.slots)
 };
 
 function load() {
@@ -34,7 +38,9 @@ function load() {
 }
 
 const stored = load();
-export const Settings = { ...DEFAULTS, ...stored, keys: { ...DEFAULT_KEYS, ...(stored.keys || {}) } };
+// only known actions survive (older saves had 'rifle' and 'axe' keys, now 'slot1'..'slot5')
+const storedKeys = Object.fromEntries(Object.entries(stored.keys || {}).filter(([a]) => a in DEFAULT_KEYS));
+export const Settings = { ...DEFAULTS, ...stored, keys: { ...DEFAULT_KEYS, ...storedKeys } };
 
 const listeners = new Set();
 export function onSettingsChange(fn) { listeners.add(fn); return () => listeners.delete(fn); }

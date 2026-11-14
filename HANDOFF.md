@@ -1,42 +1,31 @@
 # Hand-off
 
-*Session of 2026-11-10. Replaces any earlier note.*
+*Session of 2026-11-14 (second half of session 2). Replaces any earlier note.*
 
 ## Repo state
-- Session 1 merged into `main` and pushed (user asked to finish and merge). The last full `npm test` run had one
-  failure (LIGHT button) while other heavy tests shared the machine; the same tap passed on its own. Not re-run after.
-- The user's music track is committed as `assets/audio/menu-track.m4a` (re-encoded AAC 128 kbps, 1.9 MB). It will be
-  public on GitHub Pages once merged.
+- Session 2 signed off (pre-approved by the user): `claude/waves-weapons` merged into `main`, pushed, branch deleted.
+- `npm test` passes with the new checks (fists at start, rifle locked, punch, unlock after wave 2, shotgun fire and
+  reload, flare at a window, inventory remap). `node tests/fistbot.mjs` survives waves 1–2 on normal (lowest health 59).
+  Not played by hand.
 
 ## Read first
-1. `STATE.md`: the open questions; ask them first.
-2. `SPEC.md` "Second iteration" 5: the six-session plan the user accepted (every recommendation, session 3 folded into 1).
-3. `DECISIONS.md`: the last 15 lines.
+1. `STATE.md`: the open question about broken windows comes first.
+2. `SPEC.md` "Second iteration" 5.4 (next session: the cabin).
 
-## What was built (session 1)
-- **Darkness:** `Config.render` (exposure per tier, `viewAlbedo` lift for the baked hand/gun colours, view lights,
-  `spiderFill`). The cause was not the phone tier: the baked hand and gun colours average ~3% reflectance and read as
-  black in lantern light on every tier. `tests/brightness.mjs` measures both tiers.
-- **Pause on touch:** `#hud` now sits above `#touch-ui` (z 3 over 2); the touch zones were swallowing taps.
-- **Front end:** `js/ui/Menu.js` (gate, boot log, terminal menus, settings, webs), `js/audio/Music.js`,
-  `js/core/Settings.js` (saved settings, key bindings read by `KeyboardMouse`), new markup in `index.html`, styles
-  in `css/style.css` (screens section).
-- **In play:** `HUD.notice` / `HUD.hint`, `PostFX` directional hurt and brightness/effects options, `ViewModel.bump`
-  spring, `spiderKill` recipe, Grinner `stareCharge` in `Behaviour.js`, standing lantern from `buildLanternModel`.
-
-## What went badly (tell the user plainly)
-- My first brightness test measured the sky colour behind the gun and showed no change; fixed. The numbers in STATE
-  are from the corrected test.
-- I could not reproduce "black only on phones". If the iPad still shows black models after this, it is a device
-  problem I need the iPad to find (a texture or shader failing on that GPU).
-- The menu music cannot be checked headless (the test browser has no AAC decoder). Real Chrome and Safari decode it.
+## What was built
+- `js/player/Arsenal.js` (new): unlocks by wave, the 1–5 slot map (saved in Settings), flare count.
+- `js/player/Flares.js` (new): throw at the aimed window, one pre-made light per window (no shader recompiles),
+  `flareLit`/`flareOut` events. `SpiderAI`: `flee()`; flared windows are skipped by `WaveSystem.pickWindow`.
+- `js/ui/Inventory.js` (new) + `#screen-inventory` in `index.html`.
+- `Weapon.js`: `held` is fists/rifle/axe/shotgun/flare; `ammo` per gun (`mag` is now a read-only getter); shotgun pellets.
+- `Melee.js`: `tryPunch()`, shares `axeHit(params, by)`. `AmmoTable.js`: loads the held gun; `stocks.rifle/shotgun`.
+- `ViewModel.js`: code-made shotgun (rifle space, same grips), fists (the axe-grip hand, mirrored for the left),
+  flare in hand, with punch and throw keyframes.
+- Settings keys: `slot1`–`slot5`, `inventory` replace `rifle`/`axe`. Debug keys: U (was I), G.
 
 ## Known weak spots
-- The music timing (1:18 start, jump to 1:26) is set from your description, not by listening.
-- Weapon bounce strengths were set by numbers (recoil ~2.5°), not by feel.
-- The Grinner's stare-then-charge was not tested by hand.
-- The left sleeve is still the darkest thing on screen (it is dark canvas by your earlier choice).
-
-## Testing rules (from the user)
-- Keep tests cheap: `npm test` in the background. One or two screenshots per change.
-- `node tests/locomotion.mjs` takes very long for all sizes; run it in the background.
+- Shotgun and flare are code-made, not from Blender yet (CLAUDE.md wants a generator; still to do).
+- Sounds reused: shotgun = slowed gunshot + stomp thump; flare strike = wood scrape; flare hiss = sped-up rain loop.
+- Flare light has no shadows, so a little red shows on the inside of the wall around that window.
+- Spiders driven off by a flare fade out (the stalker's vanish) instead of walking away.
+- Fists in the hip view sit low; tune `FIST_IDLE` in `ViewModel.js` if they feel lost at the screen edge.

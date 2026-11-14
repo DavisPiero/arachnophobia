@@ -4,6 +4,8 @@
 //        node tests/smoke.mjs https://davispiero.github.io/arachnophobia/   (test the live site)
 //        flags: --full (high-quality desktop, slow), --shots (save screenshots), --verbose (list every check)
 import { chromium } from 'playwright';
+import { watchdog } from '../tools/watchdog.mjs';
+const dog = watchdog(240, 'smoke');
 import { startServer } from '../tools/serve.mjs';
 import fs from 'node:fs';
 
@@ -17,6 +19,7 @@ if (!remote) {
 fs.mkdirSync('shots', { recursive: true });
 
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+dog.browser = browser;
 let failures = 0;
 // Prints only failures (and a one-line summary) so the output stays short.
 const check = (ok, msg) => { if (!ok) { console.log(`  FAIL ${msg}`); failures++; } else if (process.argv.includes('--verbose')) console.log(`  ok   ${msg}`); };
@@ -53,6 +56,31 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   check(await page.evaluate(() => window.game?.state === 'playing'), 'game starts and reaches the playing state');
   check(await page.evaluate(() => document.body.classList.contains('touch')) === (device === 'phone'), 'touch controls only on touch devices');
 
+  // the night starts with fists only; a punch lands on a runner inside; the rifle is locked until wave 3
+  const f0 = await page.evaluate(async () => {
+    const g = window.game;
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    g.waves.timer = 1e9;               // no real waves during the test: they would kill the player and stop the clock
+    const r = { held: g.weapon.held, rifleRefused: !g.weapon.select('rifle'), fistsShown: g.weapon.view.fistR.visible };
+    g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = -0.3;
+    const s = g.spiders.spawn('climber', 'north', 'medium');
+    s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(0, 0, 0.7);
+    await simWait(0.2);
+    const h0 = s.health; r.punch = g.melee.tryPunch(); await simWait(0.6);
+    r.hurt = h0 - s.health; s.die();
+    // surviving wave 2 hands over the rifle for wave 3
+    g.events.emit('waveEnd', { wave: 2, last: false });
+    r.rifleAfter = g.arsenal.has('rifle') && !g.arsenal.has('axe');
+    g.arsenal.unlockUpTo(99, false);   // everything, for the rest of the test
+    g.weapon.select('rifle'); await simWait(0.6);
+    return r;
+  });
+  check(f0.held === 'fists' && f0.fistsShown, `the night starts with fists (${f0.held})`);
+  check(f0.rifleRefused, 'the rifle is locked at the start');
+  check(f0.punch && f0.hurt > 5, `a punch hurts a spider (${f0.hurt})`);
+  check(f0.rifleAfter, 'surviving wave 2 unlocks the rifle (and not the axe)');
+
   // walk to the north window, look out, spawn spiders, shoot
   const r = await page.evaluate(async () => {
     const g = window.game;
@@ -60,7 +88,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     g.player.position.set(0, 0, -5.2); g.player.yaw = 0; g.player.pitch = -0.05;
     for (const t of ['runner', 'brute', 'climber', 'stalker']) g.spiders.spawn(t, 'north');
     // headless rendering is slow, so wait on simulated time, not wall time
-    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
     await simWait(2.5);
     const before = g.weapon.mag;
     g.weapon.tryFire();
@@ -79,7 +107,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const m2 = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
     g.player.position.set(0, 0, 1.5); g.player.yaw = 0; g.player.pitch = 0;
     g.flashlight.toggle();
     g.input.aimHeld = true;
@@ -102,7 +130,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const m3 = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
     g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = 0;
     await simWait(0.6);
     const view = g.weapon.view;
@@ -147,7 +175,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const rl = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time; while (g.time - t0 < sec) await wait(50); };
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
     const tp = g.table.position; g.player.position.set(tp.x, 0, tp.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.4;
     await wait(300);
     const stockBefore = g.table.stock;
@@ -159,6 +187,45 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   });
   check(rl.started && rl.lockedDuring, 'reload starts at the table and locks movement');
   check(rl.mag === 8 && rl.stockAfter < rl.stockBefore, `reload refills the magazine from the table (${rl.stockBefore} -> ${rl.stockAfter})`);
+
+  // shotgun (two shells, reloads from its own box), a flare at the north window, the inventory on I
+  const sg = await page.evaluate(async () => {
+    const g = window.game;
+    const wait = (ms) => new Promise((res) => setTimeout(res, ms));
+    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const r = {};
+    g.weapon.select('shotgun'); await simWait(0.6);
+    r.sgShown = g.weapon.view.shotgun.visible && !g.weapon.view.rifle.visible;
+    g.weapon.tryFire(); await simWait(0.45); g.weapon.tryFire(); await simWait(0.45);
+    r.sgAmmo = g.weapon.ammo.shotgun; r.rifleKept = g.weapon.ammo.rifle;
+    const shells = g.table.stocks.shotgun;
+    r.reload = g.table.tryStart(); await simWait(2.6);
+    r.sgAfter = g.weapon.ammo.shotgun; r.shellsUsed = shells - g.table.stocks.shotgun;
+    // a flare thrown at the north window: it burns there and the spiders keep away
+    g.player.position.set(0, 0, -4.6); g.player.yaw = 0; g.player.pitch = 0;
+    g.weapon.select('flare'); await simWait(0.6);
+    const f0 = g.arsenal.flares;
+    r.throwWhy = g.flares.tryThrow(); await simWait(0.8);
+    r.flared = g.spiders.flared.has('north'); r.flareUsed = f0 - g.arsenal.flares;
+    r.picked = g.waves.pickWindow();
+    // the inventory: I pauses and shows it; putting the axe on 1 swaps it with what was there
+    r.stateBefore = g.state; g.input.press('inventory');
+    for (let w0 = performance.now(); !g.inventory.open && performance.now() - w0 < 5000;) await wait(50);   // a busy machine may take a while to draw the next frame
+    r.invOpen = g.inventory.open && g.state === 'paused';
+    g.inventory.picked = 'axe'; g.inventory.assign(1);
+    r.slots = g.arsenal.slots.join(',');
+    g.inventory.close(); g.arsenal.resetSlots();
+    r.after = g.state;
+    g.flares.reset(); g.weapon.select('rifle'); await simWait(0.6);
+    return r;
+  });
+  check(sg.sgShown, 'the shotgun comes up in place of the rifle');
+  check(sg.sgAmmo === 0 && sg.rifleKept === 8, `two shotgun shots empty it and leave the rifle loaded (${sg.sgAmmo}, ${sg.rifleKept})`);
+  check(sg.reload && sg.sgAfter === 2 && sg.shellsUsed === 2, `the shotgun reloads two shells from the table (${sg.sgAfter}, ${sg.shellsUsed})`);
+  check(sg.throwWhy === null && sg.flared && sg.flareUsed === 1, `a flare lands at the north window (${sg.throwWhy}, ${sg.flared})`);
+  check(sg.invOpen, `I opens the inventory and pauses (game was ${sg.stateBefore})`);
+  check(sg.slots.startsWith('axe,') && sg.slots.includes('fists'), `the inventory remaps a weapon (${sg.slots})`);
+  check(sg.after === 'playing', 'closing the inventory resumes play');
   if (process.argv.includes('--shots')) await page.screenshot({ path: `shots/smoke-${device}-table.png` });
 
   if (device === 'phone') {
@@ -170,8 +237,9 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     await page.waitForFunction((z) => window.game.player.position.z < z - 0.3, z0, { timeout: 30000 }).catch(() => {});
     await page.mouse.up();
     const z1 = await page.evaluate(() => window.game.player.position.z);
-    check(z1 < z0 - 0.3, `joystick moves the player forward (${z0.toFixed(2)} -> ${z1.toFixed(2)})`);
-    const fire = await page.locator('#btn-fire').boundingBox();
+    const how = await page.evaluate(() => { const g = window.game; return `${g.state}, health ${Math.round(g.player.health)}, input ${g.input.enabled}, wave ${g.waves.phase}`; });
+    check(z1 < z0 - 0.3, `joystick moves the player forward (${z0.toFixed(2)} -> ${z1.toFixed(2)}; ${how})`);
+    const fire = await page.locator('#btn-fire').boundingBox() || { x: 0, y: 0, width: 0, height: 0 };
     const m0 = await page.evaluate(() => window.game.weapon.mag);
     await page.mouse.move(fire.x + fire.width / 2, fire.y + fire.height / 2); await page.mouse.down();
     await page.waitForTimeout(800); await page.mouse.up();
@@ -183,11 +251,12 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     check(await page.evaluate(() => window.game.input.aim), 'AIM button toggles aiming');
     await page.locator('#btn-aim').tap();
     await page.waitForFunction(() => !window.game.melee.busy, null, { timeout: 10000 }).catch(() => {});
-    // the AXE button swaps to the axe (and then reads RIFLE); FIRE swings it
+    // the weapon button (reading AXE while the rifle is up) swaps to the axe and then names the next one; FIRE swings it
+    const label0 = await page.locator('#btn-axe').textContent();
     await page.locator('#btn-axe').tap();
     await page.waitForFunction(() => window.game.weapon.ready('axe'), null, { timeout: 5000 }).catch(() => {});
     const label = await page.locator('#btn-axe').textContent();
-    check(await page.evaluate(() => window.game.weapon.ready('axe')) && label === 'RIFLE', `AXE button swaps to the axe (button now reads ${label})`);
+    check(label0 === 'AXE' && await page.evaluate(() => window.game.weapon.ready('axe')) && label === 'SHOTGUN', `weapon button swaps to the axe (${label0} -> ${label})`);
     await page.locator('#btn-fire').tap();
     await page.waitForFunction(() => window.game.melee.axeT >= 0, null, { timeout: 3000 }).catch(() => {});
     const ax = await page.evaluate(() => { const g = window.game; return { t: g.melee.axeT, st: g.state, dead: g.player.dead, rel: g.weapon.reloading, en: g.input.enabled }; });

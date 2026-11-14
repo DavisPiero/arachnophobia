@@ -43,8 +43,25 @@ export const Config = {
     muzzleLight: 60,         // peak brightness of the room light from a shot
     switchTime: 0.45,        // seconds to swap rifle <-> axe (1 / 2): half lowering, half raising
   },
-  // Axe (held with 2, swung with left click) and stomp (C). Reach is measured from the eye to the spider's body.
+  // What you can hold, in the order the inventory lists them. A weapon unlocks once you reach its wave (it is ready in
+  // the break before that wave starts). slots: the default 1–5 keys (the inventory on I remaps them).
+  arsenal: {
+    order: ['fists', 'rifle', 'axe', 'shotgun', 'flare'],
+    unlock: { fists: 1, rifle: 3, axe: 5, shotgun: 7, flare: 9 },
+    slots: ['fists', 'rifle', 'axe', 'shotgun', 'flare'],
+    names: { fists: 'Fists', rifle: 'Lever-action rifle', axe: 'Axe', shotgun: 'Shotgun', flare: 'Flares' },
+  },
+  // Double-barrelled shotgun: two shells, a spread of pellets. Reloaded at the table from its own box of shells.
+  shotgun: {
+    magSize: 2, pellets: 9, damage: 16, spread: 0.075, aimSpread: 0.7, range: 30, falloff: [8, 30],
+    fireInterval: 0.32, recoilPitch: 0.12, recoilYaw: 0.03, startShells: 12, perWaveShells: 6, reloadTime: 2.2,
+  },
+  // Flares: thrown at the window you are looking at; while one burns, spiders keep away from that window.
+  flares: { onUnlock: 2, perWave: 1, max: 3, burn: 30, range: 7, throwTime: 0.6 },
+  // Fists (held with 1, left click punches), axe (swung with left click) and stomp (C). Reach is measured from the eye to the spider's body.
   melee: {
+    // reach is from the eye to the spider's body: spiders are low, so even one at your feet is ~1.3 m away
+    fists: { damage: 14, reach: 1.75, cone: 0.85, time: 0.42, hitAt: 0.15, windowDamage: 3, knockback: 0.25 },
     axe: { damage: 45, reach: 1.75, cone: 0.62, time: 0.72, hitAt: 0.33, windowDamage: 9, knockback: 0.35 },
     stomp: { reach: 1.15, cone: 0.9, time: 0.55, hitAt: 0.24, push: 0.5, kills: ['runner'], killsSize: ['small'] },
   },
@@ -121,14 +138,32 @@ export const Config = {
     medium: { health: 1,    speed: 1,    squeeze: 1,   damage: 1 },
     large:  { health: 1.9,  speed: 0.8,  squeeze: 0.6, damage: 1.7 },
   },
+  // The night: 10 timed waves, then dawn. A wave sends spiders for waveTime seconds; the break starts once the
+  // time is up and the last of them is dead, and lasts breakTime. The wall clock runs from clockStart to dawn.
   waves: {
+    count: 10,               // survive this many and the sun comes up
     firstDelay: 18,          // seconds of quiet before wave 1
-    breakTime: 22,           // quiet between waves
+    waveTime: 90,            // 1:30 of spiders arriving
+    breakTime: 30,           // 30 s to recover between waves
     // spiders per wave = base + perWave * (wave-1); type mix unlocks over waves
     base: 4,
     perWave: 2,
-    spawnGap: [2.5, 7],      // seconds between spawns within a wave (random range)
+    spawnGap: [2.5, 7],      // seconds between spawns within a wave (random range); squeezed to fit waveTime
     stalkerWatchTime: [10, 22],
+    clockStart: 22,          // 10 pm on the wall clock at the start of the night
+    clockDawn: 6,            // 6 am: the last wave survived
+  },
+  // Healing. Bandages: one per wave survived, carry at most `max`, used with H. The cot: once per break, hold USE.
+  heal: {
+    bandage: { max: 3, amount: 35, time: 1.6 },   // health back, seconds it takes (you can still walk, slowly)
+    bed: { time: 4, radius: 1.3 },                 // seconds lying down; how close to the cot you must stand
+    bandageMove: 0.5,                              // walk speed x this while bandaging
+  },
+  // Settings → Gameplay → difficulty. Multiplies spiders per wave and the damage they do.
+  difficulty: {
+    easy:   { count: 0.7, playerDamage: 0.6, windowDamage: 0.7 },
+    normal: { count: 1,   playerDamage: 1,   windowDamage: 1 },
+    hard:   { count: 1.3, playerDamage: 1.35, windowDamage: 1.25 },
   },
   eyes: {
     maxPairs: 6,

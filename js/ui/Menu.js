@@ -178,7 +178,12 @@ export class Menu {
     else this.select(this.pause, 0);
   }
   showOver(v, stats) {
-    if (stats) $('over-stats').textContent = `You held out until wave ${stats.wave}. Spiders killed: ${stats.kills}.`;
+    if (stats) {
+      $('over-title').textContent = stats.dawn ? 'Dawn.' : 'They got in.';
+      $('over-stats').textContent = stats.dawn
+        ? `The sun is up and they are gone. You survived all ${stats.wave} waves. Spiders killed: ${stats.kills}.`
+        : `You held out until wave ${stats.wave}. Spiders killed: ${stats.kills}.`;
+    }
     this.over.classList.toggle('hidden', !v);
     if (v) this.select(this.over, 0);
   }
@@ -216,6 +221,7 @@ export class Menu {
     range('set-hud', 'hudOpacity');
     check('set-crosshair', 'crosshair');
     check('set-fps', 'showFps');
+    $('set-difficulty').addEventListener('change', (e) => setSetting('difficulty', e.target.value));
     $('set-quality').addEventListener('change', (e) => { setSetting('quality', e.target.value); this.refreshQualityNote(); });
     for (const bus of ['master', 'sfx', 'ambience', 'music']) {
       $(`vol-${bus}`).addEventListener('input', (e) => this.audio.setVolume(bus, Number(e.target.value)));
@@ -235,6 +241,7 @@ export class Menu {
     $('set-crosshair').checked = Settings.crosshair;
     $('set-fps').checked = Settings.showFps;
     $('set-quality').value = Settings.quality;
+    $('set-difficulty').value = Settings.difficulty;
     for (const bus of ['master', 'sfx', 'ambience', 'music']) $(`vol-${bus}`).value = this.audio.getVolume(bus);
     $('chk-mute').checked = this.audio.muted;
     this.refreshQualityNote();
@@ -275,7 +282,7 @@ export class Menu {
   // ---------------------------------------------------------------- keyboard: arrows move the selection, Enter picks
 
   visibleMenu() {
-    for (const s of [this.settings, this.pause, this.over, this.start]) if (!s.classList.contains('hidden')) return s;
+    for (const s of [this.settings, $('screen-inventory'), this.pause, this.over, this.start]) if (!s.classList.contains('hidden')) return s;
     return null;
   }
   select(screen, i) {

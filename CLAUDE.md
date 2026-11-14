@@ -25,12 +25,13 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - `npm run assets` — rebuild every `.glb` from the Blender generators (Blender runs in the background, no window)
 - `npm test` — headless smoke test (desktop + phone viewport), fails on console errors
 - `node tools/shot.mjs "index.html?mute=1&autostart=1" shots/x.png [--mobile] [--wait=ms] [--eval=js]`
-- `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,down,...]` — every first-person pose in one headless session
+- `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,fists,punch,shotgun,flare,flarelit,...]` — every first-person pose in one headless session
+- `node tests/fistbot.mjs [waves=2] [easy|normal|hard]` — a bot plays the fists-only start fast (steps the clock itself)
 - `ASSET_FAST=1 npm run assets <name>` — quick small bake for iterating on shapes (never commit a fast build)
 - Blender check tools (run with `Blender -b --factory-startup -P <tool> -- ...`): `blender/tools/viewmodel.py hip|aim|axe|arm_<name>`
   (studio-lit render of the first-person layout, to `shots/`), `blender/tools/clipcheck.py` (does any hand pass through the rifle?)
 
-URL switches: `mute=1`, `autostart=1` (skip the start screen), `menu=1` (straight to the 3D main menu), `quality=low|high`, `debug=1` (stats + free keys), `assets=0` (code-made models).
+URL switches: `mute=1`, `autostart=1` (skip the start screen), `menu=1` (straight to the 3D main menu), `quality=low|high`, `debug=1` (stats + free keys; G unlocks every weapon, N ends the wave), `assets=0` (code-made models).
 
 ## Layout of the code
 

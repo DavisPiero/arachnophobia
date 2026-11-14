@@ -7,6 +7,7 @@
 // Hits: where the shot lands (body or leg) sets the spray and the jolt; brutes stagger every quarter of their health.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
+import { Settings } from '../core/Settings.js';
 import { CABIN, terrainHeight, WINDOWS } from '../world/Layout.js';
 import { createSpiderVisual } from './SpiderModel.js';
 import { SpiderVoice } from '../audio/SpiderVoice.js';
@@ -32,7 +33,7 @@ export class Spider {
     // a sized copy of the species' numbers: health, speeds and damage scale with size
     const c = Config.spiders[type];
     this.cfg = { ...c, health: c.health * sz.health, speed: c.speed * sz.speed, climbSpeed: c.climbSpeed * sz.speed,
-      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage, playerDamage: c.playerDamage * sz.damage };
+      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage * diff().windowDamage, playerDamage: c.playerDamage * sz.damage * diff().playerDamage };
     this.health = this.cfg.health;
     this.visual = createSpiderVisual(type, mgr.quality, { collision: mgr.collision, size });
     this.root = this.visual.root;
@@ -80,7 +81,7 @@ export class Spider {
     return p.length() <= 1.15 ? 'body' : 'leg';
   }
 
-  /** by: 'bullet' | 'axe' | 'stomp' */
+  /** by: 'bullet' | 'axe' | 'fists' | 'stomp' */
   takeHit(dmg, point, dir, { by = 'bullet' } = {}) {
     if (!this.alive) return;
     const before = this.health;
@@ -93,7 +94,7 @@ export class Spider {
     if (!body) rig.hitLeg?.(point);
     // knockback along the shot, on the ground or floor only (on a wall it would leave the surface)
     if ((this.surface === 'ground' || this.surface === 'floor') && this.type !== 'brute') {
-      const push = GORE.knockback * (body ? 1 : 0.4) * (by === 'axe' ? 1.6 : 1) / Math.max(0.6, this.cfg.scale);
+      const push = GORE.knockback * (body ? 1 : 0.4) * (by === 'axe' ? 1.6 : by === 'fists' ? 1.3 : 1) / Math.max(0.6, this.cfg.scale);
       this.root.position.x += dir.x * push; this.root.position.z += dir.z * push;
       if (this.state === 'inside') this.collide();
     }
@@ -104,7 +105,7 @@ export class Spider {
       rig.jolt?.(1.4);
       this.voice?.hit();
     }
-    const sound = by === 'axe' ? 'axeChop' : by === 'stomp' ? 'stompSquish' : 'bulletImpactFlesh';
+    const sound = by === 'axe' ? 'axeChop' : by === 'fists' ? 'stompSquish' : by === 'stomp' ? 'stompSquish' : 'bulletImpactFlesh';
     this.mgr.audio?.play(sound, { position: point, volume: body ? 0.95 : 0.7, exterior: this.state !== 'inside' });
     this.mgr.gore?.spray(point, dir, body ? 1 : 0.35);
     if (body && Math.random() < 0.5) this.splatHere(point, 0.28);
@@ -145,6 +146,14 @@ export class Spider {
   releaseSlot() {
     if (this.window && this.slot >= 0) { this.mgr.slots[this.window.id][this.slot] = null; }
     this.slot = -1;
+  }
+
+  /** A flare is burning at this spider's window: it backs off into the dark and comes again at another window. */
+  flee() {
+    if (!this.alive || this.fleeing || this.state === 'enter' || this.state === 'inside' || this.state === 'dying') return;
+    this.fleeing = true;
+    this.releaseSlot();
+    this.startVanish();
   }
 
   startVanish() {
@@ -310,12 +319,14 @@ export class Spider {
 
   // --- window attack ---
   arriveAtWindow() {
+    if (this.mgr.flared.has(this.window.id)) { this.flee(); return; }
     if (this.window.stage >= 4) { this.goInside(); return; }
     this.tryTakeSlot();
   }
 
   tryTakeSlot() {
     const w = this.window;
+    if (this.mgr.flared.has(w.id)) { this.flee(); return; }
     if (w.stage >= 4 && (this.surface === 'glass' || this.type === 'brute')) { this.goInside(); return; }
     const slots = this.mgr.slots[w.id];
     let idx = -1;
@@ -457,8 +468,10 @@ export class Spider {
   }
 
   reappear() {
-    this.vanishes++;
     const mgr = this.mgr;
+    const fled = this.fleeing;
+    this.fleeing = false;
+    if (!fled) this.vanishes++;
     // somewhere else, later
     this.visual.root.visible = false;
     this.state = 'hidden';
@@ -466,9 +479,11 @@ export class Spider {
       if (!this.alive || this.removed) return;
       this.visual.root.visible = true;
       this.fade = 1; this.visual.setOpacity(1);
-      const others = WINDOWS.filter((w) => w.id !== this.window.id);
+      let others = WINDOWS.filter((w) => w.id !== this.window.id);
+      const dark = others.filter((w) => !mgr.flared.has(w.id));
+      if (dark.length) others = dark;
       this.window = mgr.windows.byId[others[Math.floor(Math.random() * others.length)].id];
-      if (this.vanishes >= 2) {
+      if (fled || this.type !== 'stalker' || this.vanishes >= 2) {
         this.state = 'approach';
         this.routeIndex = Math.floor(Math.random() * 3);
         this.follow(groundRoute(this.window.id, this.routeIndex, { zigzag: 0.2, fromT: 0.55 }), () => this.arriveAtWindow());
@@ -521,6 +536,12 @@ export class SpiderManager {
     this.timers = [];
     this.targets = [];
     this.gore = null;         // set by the game (js/fx/Gore.js)
+    this.flared = new Set();  // ids of windows with a flare burning (js/player/Flares.js): spiders keep away
+    events.on('flareLit', ({ window }) => {
+      this.flared.add(window);
+      for (const s of this.spiders) if (s.alive && s.window?.id === window) s.flee();
+    });
+    events.on('flareOut', ({ window }) => this.flared.delete(window));
     // stalkers flee from light near them
     events.on('lightning', () => { for (const s of this.spiders) if (s.state === 'watch' && Math.random() < 0.8) s.startVanish(); });
     events.on('muzzleFlash', ({ position }) => {
@@ -537,6 +558,7 @@ export class SpiderManager {
     this.spiders = [];
     this.timers = [];
     for (const id in this.slots) this.slots[id] = [null, null, null];
+    this.flared.clear();
     this.gore?.clear();
   }
 
@@ -615,3 +637,5 @@ const _d = new THREE.Vector3(), _f = new THREE.Vector3(), _x = new THREE.Vector3
 const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
 const _hitScale = new THREE.Vector3(1.7, 2.4, 1.4);
 const _h = new THREE.Vector3();
+
+function diff() { return Config.difficulty[Settings.difficulty] || Config.difficulty.normal; }

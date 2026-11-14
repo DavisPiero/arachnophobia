@@ -130,10 +130,11 @@ Every loaded model has a code-made fallback.
 5. Notes from the milestone 4 playtest (2026-11-10), in six sessions:
    1. Bugs and quick wins, front end: phone darkness, pause button, chair gone, table lantern, glass, beam, fog,
       text and hints, hit feedback, health bar, bounce, kill sounds, Grinner; loading screen, music, terminal menu,
-      settings. *(this session)*
+      settings. *(done)*
    2. Waves and weapons: 10 timed waves (1:30 each, 30 s to recover) to dawn, a wall clock, fists, a new weapon every
       two waves (fists, rifle at 3, axe at 5, shotgun at 7, flares at 9), inventory on I (pauses; remap weapons to 1–5),
       bandages (one per wave survived, up to 3, used with H), bed heal once per break, difficulty.
+      *(done 2026-11-14. The shotgun and the flare are code-made for now; a Blender generator for them is still to do.)*
    3. *(merged into 1)*
    4. Cabin: a placement tool, a bigger cabin (~10 × 13 m) in two rooms with a door you can barricade, the table and
       the bed in different rooms, benches, decorations, better materials, a log tray by the stove.

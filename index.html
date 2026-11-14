@@ -27,7 +27,7 @@
   <div id="prompt"></div>
   <svg id="reload-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="track"/><circle cx="20" cy="20" r="16" class="bar"/></svg>
   <div id="ammo"><span id="ammo-mag">8</span><span class="sep">|</span><span id="ammo-stock">40</span><div class="label">loaded · on table</div></div>
-  <div id="health"><div class="label">health</div><div class="bar"><div id="health-trail"></div><div id="health-fill"></div></div></div>
+  <div id="health"><div class="label">health<span id="bandages"></span></div><div class="bar"><div id="health-trail"></div><div id="health-fill"></div></div></div>
   <div id="message"></div>
   <div id="notice"></div>
   <div id="hint"></div>
@@ -44,8 +44,9 @@
   <button id="btn-fire">FIRE</button>
   <button id="btn-aim">AIM</button>
   <button id="btn-torch">LIGHT</button>
-  <button id="btn-axe">AXE</button><!-- swaps rifle <-> axe; the label shows what you would switch to -->
+  <button id="btn-axe">AXE</button><!-- the next weapon you own; the label shows what you would switch to -->
   <button id="btn-stomp">STOMP</button>
+  <button id="btn-bandage" class="hidden">BANDAGE</button><!-- shown while you carry one; the label shows how many -->
 </div>
 
 <!-- 1. boot gate: the first tap/click also unlocks sound (browsers need a gesture before audio can play) -->
@@ -77,15 +78,30 @@
         <h2>PAUSED</h2>
     <ul class="term-menu">
       <li><button id="btn-resume">resume</button></li>
+      <li><button id="btn-inventory-pause">inventory</button></li>
       <li><button id="btn-settings-pause">settings</button></li>
       <li><button id="btn-restart">restart</button></li>
     </ul>
   </div>
 </div>
 
+ <!-- inventory (I): the game pauses; weapons in order, locked ones greyed; pick one, then a number to remap it -->
+<div id="screen-inventory" class="screen term-screen overlay hidden">
+  <div class="term-panel">
+    <h2>INVENTORY</h2>
+    <ul id="inv-list" class="term-menu"></ul>
+    <div id="inv-slots"></div>
+    <p id="inv-help" class="dimline"></p>
+    <ul class="term-menu">
+      <li><button id="btn-inv-hold">hold it</button></li>
+      <li><button id="btn-inv-done">done</button></li>
+    </ul>
+  </div>
+</div>
+
 <div id="screen-over" class="screen term-screen overlay hidden">
   <div class="term-panel">
-        <h2>They got in.</h2>
+        <h2 id="over-title">They got in.</h2>
     <p id="over-stats" class="dimline"></p>
     <ul class="term-menu"><li><button id="btn-again">try again</button></li></ul>
   </div>
@@ -100,6 +116,7 @@
     <div class="tab" data-tab="gameplay">
       <label>look speed <input type="range" id="set-look" min="0.3" max="2.5" step="0.05"></label>
       <label class="check"><input type="checkbox" id="set-invert"> invert look up/down</label>
+      <label>difficulty <select id="set-difficulty"><option value="easy">easy</option><option value="normal">normal</option><option value="hard">hard</option></select></label>
       <label class="check"><input type="checkbox" id="set-hints"> show hints</label>
       <label class="check"><input type="checkbox" id="set-crosshair"> crosshair</label>
       <label>hud opacity <input type="range" id="set-hud" min="0.3" max="1" step="0.05"></label>

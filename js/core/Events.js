@@ -7,12 +7,16 @@
 //   'windowDamaged'  { id, stage, health }      stage: 0 intact, 1 cracked, 2 shattered, 3 boards splintering, 4 breached
 //   'windowBreached' { id }
 //   'spiderSpawned'  { spider }
-//   'spiderKilled'   { spider, point, by }      by: 'bullet' | 'axe' | 'stomp'
-//   'axeHit'         { spider } | { window }    Melee: the axe connected
+//   'spiderKilled'   { spider, point, by }      by: 'bullet' | 'axe' | 'fists' | 'stomp'
+//   'axeHit'         { spider, by } | { window } Melee: the axe or a fist connected
+//   'weaponUnlocked' { name, slot }             Arsenal: a new weapon is yours (in the break before its wave)
+//   'flareLit' / 'flareOut' { window }          Flares: a flare burns at a window; spiders keep away from it
 //   'stompHit'       { spider }
 //   'playerHurt'     { amount, health }
-//   'waveStart'      { wave }
-//   'waveEnd'        { wave }
+//   'waveStart'      { wave, last }
+//   'waveEnd'        { wave, last }             last: the final wave of the night
+//   'dawn'           { wave }                   the last wave survived; Game shows the dawn screen
+//   'restStart' / 'restEnd' { ok }              lying on the cot (Healing)
 //   'reloadStart' / 'reloadEnd'
 //   'dryFire'                                  the trigger clicked on an empty tube
 //   'gameOver'       { wave, kills }
