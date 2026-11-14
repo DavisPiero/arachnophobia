@@ -11,7 +11,8 @@ export class HUD {
     this.isTouch = isTouch;
     this.root = $('hud');
     this.mag = $('ammo-mag'); this.stock = $('ammo-stock'); this.ammo = $('ammo');
-    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail');
+    this.ammoLabel = this.ammo.querySelector('.label'); this.ammoSep = this.ammo.querySelector('.sep');
+    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages');
     this.prompt = $('prompt');
     this.ring = $('reload-ring'); this.ringBar = this.ring.querySelector('.bar');
     this.message = $('message');
@@ -31,8 +32,17 @@ export class HUD {
   /** The key (desktop) or button (touch) for an action, as a little key cap. */
   key(action, touchName) { return `<span class="key">${this.isTouch ? touchName : keyLabel(Settings.keys[action])}</span>`; }
 
-  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held }) {
-    this.set('held', held, (v) => { this.ammo.classList.toggle('dim', v === 'axe'); });
+  /** ammoMode: 'gun' (loaded | on table), 'melee' (the last gun's numbers, dimmed), 'flare' (flares left), 'none'. */
+  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, healT = -1 }) {
+    this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? ` · ${n} bandage${n > 1 ? 's' : ''} ${this.key('bandage', '')}`.replace(/<span class="key"><\/span>/, '') : ''; });
+    this.ring.classList.toggle('heal', healT >= 0);
+    this.set('ammoMode', ammoMode + unit, () => {
+      this.ammo.classList.toggle('dim', ammoMode === 'melee');
+      this.ammo.classList.toggle('hidden', ammoMode === 'none');
+      const flare = ammoMode === 'flare';
+      this.ammoSep.style.display = this.stock.style.display = flare ? 'none' : '';
+      this.ammoLabel.textContent = flare ? 'flares' : unit === 'shells' ? 'shells · on table' : 'loaded · on table';
+    });
     this.set('mag', mag, (v) => { this.mag.textContent = v; this.ammo.classList.toggle('empty', v === 0); });
     this.set('stock', stock, (v) => { this.stock.textContent = v; });
     const prev = this._last.health;
@@ -51,8 +61,8 @@ export class HUD {
       this.prompt.innerHTML = prompt.can ? `${this.key('interact', 'USE')}${ptext}` : ptext;
       this.prompt.classList.add('show');
     });
-    this.ring.classList.toggle('show', reloading);
-    if (reloading) this.ringBar.style.strokeDashoffset = String(100.5 * (1 - reloadT));
+    this.ring.classList.toggle('show', reloading || healT >= 0);
+    if (reloading || healT >= 0) this.ringBar.style.strokeDashoffset = String(100.5 * (1 - (reloading ? reloadT : healT)));
     this.set('muted', muted, (v) => { this.muteBtn.textContent = v ? '🔇' : '🔊'; });
     if (this.msgTimer > 0) { this.msgTimer -= dt; if (this.msgTimer <= 0) this.message.classList.remove('show'); }
     if (this.noticeTimer > 0) { this.noticeTimer -= dt; if (this.noticeTimer <= 0) this.noticeEl.classList.remove('show'); }

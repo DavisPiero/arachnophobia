@@ -1,5 +1,5 @@
 // Desktop controls: WASD / arrows move, mouse looks (pointer lock), click fires,
-// keys come from Settings.keys (defaults: E use, 1 rifle, 2 axe, C stomp, Q flashlight, Shift sprint, M mute, P pause); right mouse aims, Esc pauses (the browser releases pointer lock, which we treat as pause).
+// keys come from Settings.keys (defaults: E use, 1–5 weapon slots, I inventory, C stomp, H bandage, Q flashlight, Shift sprint, M mute, P pause); right mouse aims, Esc pauses (the browser releases pointer lock, which we treat as pause).
 import { Config } from '../core/Config.js';
 import { Settings } from '../core/Settings.js';
 
@@ -18,9 +18,8 @@ export class KeyboardMouse {
       if (this.capture) { e.preventDefault(); this.capture(e.code); return; } // Settings → Controls is listening for a key
       this.keys.add(e.code);
       const K = Settings.keys;
-      for (const a of ['interact', 'rifle', 'axe', 'stomp', 'mute', 'torch', 'pause']) if (e.code === K[a]) input.press(a);
-      if (e.code === 'Numpad1') input.press('rifle');
-      if (e.code === 'Numpad2') input.press('axe');
+      for (const a of ['interact', 'slot1', 'slot2', 'slot3', 'slot4', 'slot5', 'inventory', 'stomp', 'bandage', 'mute', 'torch', 'pause']) if (e.code === K[a]) input.press(a);
+      if (/^Numpad[1-5]$/.test(e.code)) input.press('slot' + e.code.slice(6));
       if (e.code === 'Enter' || e.code === 'Space') input.press('start');
       this.update();
     });
@@ -54,7 +53,7 @@ export class KeyboardMouse {
   requestLock() {
     try {
       const p = this.canvas.requestPointerLock({ unadjustedMovement: true });
-      if (p && p.catch) p.catch(() => { try { this.canvas.requestPointerLock(); } catch (_) {} });
+      if (p && p.catch) p.catch(() => { try { this.canvas.requestPointerLock()?.catch?.(() => {}); } catch (_) {} });
     } catch (_) { /* not available (e.g. headless) */ }
   }
   exitLock() { if (document.pointerLockElement) document.exitPointerLock(); }

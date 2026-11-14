@@ -4,6 +4,8 @@
 // on both tiers, at the same small viewport, and compares them.
 // Usage: node tests/brightness.mjs [--shots]
 import { chromium } from 'playwright';
+import { watchdog } from '../tools/watchdog.mjs';
+const dog = watchdog(240, 'brightness');
 import { startServer } from '../tools/serve.mjs';
 import fs from 'node:fs';
 
@@ -11,6 +13,7 @@ const port = 8900 + Math.floor(Math.random() * 90);
 const server = await startServer(port);
 const base = `http://localhost:${port}/`;
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+dog.browser = browser;
 
 // floors: below these a region reads as black on a dim phone screen
 // set 2026-11-10 just under the fixed values (gun 15, spider 22.5, room 16); before the fix: gun 4.7, spider 19, room 14

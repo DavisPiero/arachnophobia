@@ -1,58 +1,32 @@
 # State
 
-**Where we are:** milestone 5 (the playtest notes of 2026-11-10), session 1 of 6 merged into main and live (2026-11-10). Plan for all six sessions: `SPEC.md` "Second iteration" 5.
+**Where we are:** milestone 5 (the playtest notes of 2026-11-10). Sessions 1, 1b, the main menu overhaul and
+**session 2 (waves and weapons)** are merged into `main` and pushed. Plan for all six sessions: `SPEC.md` "Second
+iteration" 5.
 
-Session 1 (with the old session 3 folded in):
-- **Phone darkness:** hands and gun colours lifted ×3.4, a faint fill light on spiders, brighter exposure on
-  phones. Measured by `node tests/brightness.mjs` (gun 4.7 → 15, spider 19 → 23).
-- **Pause works on touch** (the invisible touch zones were on top of it), big, top-left; no mute button on touch.
-- **Room:** chair gone, a hurricane lantern on the ammo table, glass no longer reflects the flashlight, beam ~45 m,
-  desktop fog darker with distance.
-- **Text and feedback:** NO AMMO, "Wave N survived", four one-time hints, hits flood red from their side, health bar
-  with a damage trail, heartbeat at low health, weapon bounce, new kill sound. Grinner stares, then charges.
-- **Front end:** boot gate → loading log → terminal main menu (CRT, notebook, webs) with your track; settings with
-  four tabs (key rebinding included) on the menu and the pause screen.
+**Session 2 (2026-11-14), what is in:**
+- **10 timed waves to dawn** (1:30 of spiders, then 30 s), a wall clock 10 pm → 6 am, a "Dawn." win screen.
+- **Bandages** (one per wave survived, max 3, H) and **the cot** (full heal once per break). **Difficulty** easy/normal/hard.
+- **Weapons unlock as the night goes on:** fists from the start, rifle for wave 3, axe 5, shotgun 7, flares 9. Each
+  arrives in the break before its wave, named on the "survived" banner.
+- **Fists** punch left/right (hold to keep punching). **Shotgun**: two shells, a spread; shells have their own box on
+  the ammo table. **Flares**: throw at the window you look at; while it burns (30 s) spiders keep away from it.
+- **Inventory on I** (touch: pause → inventory): pauses, lists weapons (locked ones greyed), remaps keys 1–5.
 
-Session 1b (UI notes, 2026-11-10):
-- **Main menu is a 3D lab** built in code (`js/ui/MenuScene.js`): bench, notes, photographs, old monitors, a glass panel with a
-  spider nailed behind it; depth of field and a slow drift. The menu (and settings opened from it) is warped onto the left
-  monitor. Picking begin plays a short loading log. In-game screens stay terminal (notebook style tried, reverted).
-- Music starts at the first key with an 8 s fade; cracks fewer and fainter; roof spiders hidden from inside; tests run
-  desktop and phone in parallel at lower resolution.
-- Spiders no longer freeze when looked at (the Grinner charges instead of stopping to stare); the menu track restarts
-  from 0:00 with a fade when it ends; new settings: field of view, crosshair, HUD opacity, show fps.
-
-**Main menu overhaul (2026-11-11, in progress on branch `claude/menu-overhaul`, not merged):** your brief — better
-models/materials, composition, ambient animation, lighting/post, a cinematic begin→gameplay transition, and the
-menu music. Built so far:
-- Wall spider is now the real Grinner model (code fallback kept); menu CRT bigger/closer as the focal point,
-  secondary monitors and papers pushed back; shadows, contact shadows, subtle bloom, warmer/cooler light split;
-  live waveform monitors, a second spider that scuttles the back wall irregularly, a swaying note.
-- Begin now dissolves the menu text, fades to black (not a hard cut), and fades up into the cabin instead of
-  popping. Boot log extended into a run of failures, retimed against the music's build-up into the "kick"
-  (`Config.loading.minSeconds` 7 → 9.7s); a real blinking cursor on `login:`.
-- Music: installed ffmpeg (one-time, your OK) and rebuilt the loop itself (`js/audio/Music.js`) to crossfade the
-  next pass under the current one near the end, instead of restarting from silence.
-
-**Not done / needs your steer:**
-- Phase A's other half — new Blender-made CRT/desk/notes models with real CC0 materials (the biggest, riskiest
-  piece of the brief, not started) — vs. the swap already done being enough for now.
-- "Remake the track with the drums continuing through most of the song": not deliverable as asked (no stems, no
-  reliable way to isolate drums from the finished mix); the loop crossfade above is the realistic version of
-  "more loopable." The boot-log beat-timing is a best guess from an automated scan, not confirmed by ear.
-- None of this has been tested by ear (menu music still won't decode in the headless test browser) or played
-  by hand yet.
-
-**Next:** session 2: 10 timed waves to dawn, wall clock, fists and weapon unlocks, inventory on I, bandages, bed heal.
+**Next:** session 3 of the plan is merged into 1, so **session 4: the cabin** (placement tool, bigger cabin in two rooms,
+door, benches, log tray). Read `SPEC.md` 5.4 first.
 
 **Open with you:**
-- **Harder now?** In 3 bot runs of 150 s the bot took damage on this build (one death) and none on the old one. Likely the
-  Grinner's charge. Tell me if early waves feel too hard.
-- **Phone darkness on your iPad:** I could not reproduce "black only on phones" (the phone tier measured the same as
-  desktop); I made everything brighter. Does the iPad look right now?
-- **Still unanswered:** spider sizes (large ×1.45, a big Sac ~4 m across); squeeze speed (~5 s for a big one);
-  sleeves when aiming; phone double-tap.
+- **Windows are all broken by wave 3.** With fists only, spiders have to get in before you can fight them, so the bot
+  ends wave 2 with every window breached, and nothing repairs them until session 5 (repair costs time and a log).
+  The rifle then never gets to "shoot them at the glass". Options: bring window repair forward, or let windows mend
+  between waves for now. Your call.
+- **Guesses to confirm:** weapons unlock in the break *before* their wave; fist damage 14 (a medium climber takes 5);
+  shotgun 9 pellets × 16; flares 2 on unlock, +1 a wave; a flare lands on the ground outside the window (it does not
+  break the glass); spiders driven off by a flare fade into the dark rather than walking away.
+- From before: a wave never ends while spiders live; bandage heals 35; cot 4 s; easy/hard = 0.7× / 1.3× spiders.
+- **Still unanswered:** phone darkness on your iPad; spider sizes; squeeze speed; sleeves when aiming; phone double-tap.
 
 **Tools:**
-- `npm test` quick check; `node tests/brightness.mjs`; `node tests/locomotion.mjs` (slow, background).
-- `index.html?mute=1&autostart=1` skips the gate, loading and music; `?menu=1` goes straight to the 3D menu.
+- `npm test` quick check; `node tests/fistbot.mjs` (fists-only waves 1–2, ~1 min); `node tests/brightness.mjs`.
+- `?debug=1`: **G** unlocks every weapon, **N** ends the current wave, **U** puts a runner inside in front of you.

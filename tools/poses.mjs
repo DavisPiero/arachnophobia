@@ -1,7 +1,9 @@
 // Headless screenshots of every first-person pose in one session (cheaper than one browser per shot).
 // Usage: node tools/poses.mjs [outDir=shots/poses] [--mobile] [--only=name,name]
-// Poses: hip, aim, lever, reload, axehold (axe held at rest), axe1/axe/axe3 (wind-up, strike, follow-through), stomp, kill. Drives the game through window.game; never opens a window.
+// Poses: fists, punch, shotgun, sgaim, sgreload, flare, throw, hip, aim, lever, reload, axehold (axe held at rest), axe1/axe/axe3 (wind-up, strike, follow-through), stomp, kill. Drives the game through window.game; never opens a window.
 import { chromium } from 'playwright';
+import { watchdog } from './watchdog.mjs';
+const dog = watchdog(300, 'poses');
 import { startServer } from './serve.mjs';
 import fs from 'node:fs';
 
@@ -13,6 +15,7 @@ fs.mkdirSync(out, { recursive: true });
 const port = 8200 + Math.floor(Math.random() * 500);
 const server = await startServer(port);
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
+dog.browser = browser;
 const ctx = await browser.newContext(mobile
   ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
   : { viewport: { width: 1280, height: 720 } });
@@ -30,13 +33,34 @@ await freeze();
 await page.waitForTimeout(300);
 await page.evaluate(() => { const g = window.game; g.player.position.set(0.3, 0, 1.8); g.player.yaw = 0.35; g.player.pitch = -0.08; });
 
+const hold = (name) => page.evaluate((n) => { const g = window.game; g.weapon.held = g.weapon.want = n; g.weapon.drawK = 1; }, name);
 const poses = {
+  fists: async () => { await hold('fists'); await step(0.5, 10); },
+  punch: async () => { await hold('fists'); await step(0.5, 10); await page.evaluate(() => window.game.melee.tryPunch()); await step(0.15, 5); },
+  shotgun: async () => { await hold('shotgun'); await step(0.5, 10); },
+  sgaim: async () => { await hold('shotgun'); await page.evaluate(() => { window.game.input.aimHeld = true; }); await step(0.6, 12); await page.evaluate(() => { window.game.input.aimHeld = false; }); },
+  sgreload: async () => {
+    await hold('shotgun'); await step(0.5, 10);
+    await page.evaluate(() => { const g = window.game; g.weapon.ammo.shotgun = 0; const p = g.table.position; g.player.position.set(p.x, 0, p.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.35; g.table.tryStart(); });
+    await step(1.0, 20);
+  },
+  flare: async () => { await hold('flare'); await step(0.5, 10); },
+  throw: async () => {
+    await hold('flare');
+    await page.evaluate(() => { const g = window.game; g.player.position.set(0, 0, -4.4); g.player.yaw = 0; g.player.pitch = 0; });
+    await step(0.5, 10); await page.evaluate(() => window.game.flares.tryThrow()); await step(0.27, 6);
+  },
+  flarelit: async () => {
+    await hold('flare');
+    await page.evaluate(() => { const g = window.game; g.player.position.set(0, 0, -4.4); g.player.yaw = 0; g.player.pitch = -0.1; });
+    await step(0.5, 10); await page.evaluate(() => window.game.flares.tryThrow()); await step(1.2, 20);
+  },
   hip: async () => { await step(0.5, 10); },
   aim: async () => { await page.evaluate(() => { window.game.input.aimHeld = true; }); await step(0.6, 12); await page.evaluate(() => { window.game.input.aimHeld = false; }); },
   lever: async () => { await step(0.6, 12); await page.evaluate(() => window.game.weapon.tryFire()); await step(0.2, 6); },
   reload: async () => {
     await step(0.6, 12);
-    await page.evaluate(() => { const g = window.game; g.weapon.mag = 3; const p = g.table.position; g.player.position.set(p.x, 0, p.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.35; g.table.tryStart(); });
+    await page.evaluate(() => { const g = window.game; g.weapon.ammo.rifle = 3; const p = g.table.position; g.player.position.set(p.x, 0, p.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.35; g.table.tryStart(); });
     await step(1.2, 24);
   },
   axehold: async () => { await page.evaluate(() => window.game.weapon.select('axe')); await step(0.8, 16); },
@@ -67,7 +91,7 @@ const poses = {
 };
 for (const [name, run] of Object.entries(poses)) {
   if (only.length && !only.includes(name)) continue;
-  await page.evaluate(() => { const g = window.game; g.restart(); g.player.position.set(0.3, 0, 1.8); g.player.yaw = 0.35; g.player.pitch = -0.08; });
+  await page.evaluate(() => { const g = window.game; g.restart(); g.arsenal.unlockUpTo(99, false); g.weapon.held = g.weapon.want = 'rifle'; g.player.position.set(0.3, 0, 1.8); g.player.yaw = 0.35; g.player.pitch = -0.08; });
   await run();
   await page.screenshot({ path: `${out}/${name}${mobile ? '-phone' : ''}.png` });
   if (args.includes('--debug')) console.log(name, JSON.stringify(await page.evaluate(() => window.game.spiders.spiders.map((s) => ({ t: s.type, st: s.state, a: s.alive, hp: s.health, p: s.root.position.toArray().map((x) => +x.toFixed(2)), vis: s.root.visible, fade: s.fade, dT: s.deadT?.toFixed(2) })))));

@@ -26,6 +26,7 @@ export class TouchControls {
     this.btnAim = ui.querySelector('#btn-aim');
     this.btnAxe = ui.querySelector('#btn-axe');
     this.btnStomp = ui.querySelector('#btn-stomp');
+    this.btnBandage = ui.querySelector('#btn-bandage');
 
     const opts = { passive: false };
     // --- joystick ---
@@ -107,7 +108,7 @@ export class TouchControls {
     const tap = (el, fn) => el.addEventListener('pointerdown', (e) => { if (!this.enabled) return; e.preventDefault(); e.stopPropagation(); fn(); }, opts);
     tap(this.btnTorch, () => input.press('torch'));
     // melee: a short flash on press so the tap reads
-    for (const [el, action] of [[this.btnAxe, 'swap'], [this.btnStomp, 'stomp']]) {
+    for (const [el, action] of [[this.btnAxe, 'swap'], [this.btnStomp, 'stomp'], [this.btnBandage, 'bandage']]) {
       tap(el, () => { input.press(action); el.classList.add('down'); setTimeout(() => el.classList.remove('down'), 160); });
     }
     tap(this.btnAim, () => { this.aim = !this.aim; this.btnAim.classList.toggle('on', this.aim); });
@@ -116,11 +117,12 @@ export class TouchControls {
     ui.addEventListener('touchmove', (e) => e.preventDefault(), opts);
     ui.addEventListener('contextmenu', (e) => e.preventDefault());
   }
-  /** The swap button names the weapon it would switch to. */
-  setHeld(held) {
-    if (this._held === held || !this.btnAxe) return;
-    this._held = held;
-    this.btnAxe.textContent = held === 'axe' ? 'RIFLE' : 'AXE';
+  /** The weapon button names the weapon it would switch to; hidden while you own only one. */
+  setNextWeapon(label) {
+    if (this._next === label || !this.btnAxe) return;
+    this._next = label;
+    this.btnAxe.classList.toggle('hidden', !label);
+    if (label) this.btnAxe.textContent = label;
   }
   setTorchOn(v) { this.btnTorch.classList.toggle('on', v); }
   setKnob(dx, dy) { this.knob.style.transform = `translate(${dx}px, ${dy}px)`; }
@@ -137,5 +139,12 @@ export class TouchControls {
   setInteractAvailable(v, label) {
     this.btnInteract.classList.toggle('available', v);
     if (label) this.btnInteract.textContent = label;
+  }
+  /** The BANDAGE button shows only while you carry one, with the count. */
+  setBandages(n) {
+    if (this._band === n) return;
+    this._band = n;
+    this.btnBandage.classList.toggle('hidden', n <= 0);
+    this.btnBandage.textContent = n > 1 ? `BANDAGE ${n}` : 'BANDAGE';
   }
 }

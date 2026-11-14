@@ -1,4 +1,6 @@
-// First-person view: gloved hands, the lever-action rifle and the axe, and how they move.
+// First-person view: gloved hands, the lever-action rifle, the shotgun, the axe, a flare and bare fists, and how
+// they move. The shotgun and the flare are code-made for now (no Blender generator yet); the fists reuse the
+// gloved hand that grips the axe, without the axe, mirrored for the left hand.
 // They are drawn in the weapon's own scene (on top of the world, never clipping walls).
 //
 // Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb), with code-made fallbacks.
@@ -52,6 +54,26 @@ const AXE_KEYS = [
   [1.0, ...AXE_IDLE],
 ];
 
+// Fists (right hand; the left is the same, mirrored): guard, and a punch straight out. Same format as AXE_KEYS.
+const FIST_IDLE = [[0.17, -0.2, -0.42], [0.05, 0.9, -0.4], [-1, 0.05, 0.1]];
+const PUNCH_KEYS = [
+  [0.0, ...FIST_IDLE],
+  [0.12, [0.23, -0.29, -0.38], [0.1, 0.8, -0.2], [-1, 0.05, 0.1]],
+  [0.36, [0.05, -0.12, -0.74], [0.0, 0.35, -0.95], [-1, 0, 0]],
+  [0.55, [0.08, -0.15, -0.66], [0.0, 0.45, -0.9], [-1, 0, 0]],
+  [1.0, ...FIST_IDLE],
+];
+// The flare in the right hand at rest, and the throw (released at FLARE_RELEASE).
+const FLARE_IDLE = [[0.24, -0.27, -0.46], [-0.1, 0.75, -0.65], [-0.95, 0.1, -0.2]];
+const THROW_KEYS = [
+  [0.0, ...FLARE_IDLE],
+  [0.3, [0.3, -0.02, -0.25], [0.1, 0.9, 0.4], [-0.9, 0.1, 0.3]],
+  [0.55, [0.08, -0.08, -0.7], [0.0, 0.4, -0.9], [-1, 0, 0]],
+  [0.8, [0.12, -0.45, -0.5], [0.0, 0.5, -0.8], [-1, 0, 0]],
+  [1.0, ...FLARE_IDLE],
+];
+export const FLARE_RELEASE = 0.5;
+
 export class ViewModel {
   constructor() {
     this.P = RIFLE_DEFAULTS;
@@ -70,6 +92,25 @@ export class ViewModel {
     this.axe = new THREE.Group();           // grip at the origin, handle along -z
     this.axe.visible = false;
     this.root.add(this.axe);
+    this.shotgun = new THREE.Group();       // same "rifle space" as the rifle, so the same grips and sight line fit
+    this.shotgun.visible = false;
+    this.barrels = new THREE.Group();       // breaks open on its hinge for a reload
+    this.barrels.position.set(0, 0.012, -0.05);
+    this.shotgun.add(this.barrels);
+    this.shotMuzzle = new THREE.Object3D();
+    this.shotMuzzle.position.set(0, 0.018, -0.67);   // barrels space
+    this.barrels.add(this.shotMuzzle);
+    this.root.add(this.shotgun);
+    this.fistR = new THREE.Group();          // posed like the axe grip, no axe
+    this.fistMirror = new THREE.Group();     // scale.x = -1: the left fist is the right one, mirrored
+    this.fistMirror.scale.x = -1;
+    this.fistL = new THREE.Group();
+    this.fistMirror.add(this.fistL);
+    this.fistR.visible = this.fistMirror.visible = false;
+    this.root.add(this.fistR, this.fistMirror);
+    this.flare = new THREE.Group();          // a road flare in the right hand
+    this.flare.visible = false;
+    this.root.add(this.flare);
     this.axeForearm = new THREE.Vector3(0.35, -0.45, 0.82).normalize();   // hands.json forearm.axe (axe space)
     this.shoulder = new THREE.Vector3(0.32, -0.5, 0.12);                  // camera space: where the right arm comes from
     // spent cases flying out of the action
@@ -115,6 +156,24 @@ export class ViewModel {
     const axe = new THREE.Group();
     axe.add(mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.62, 8), wood, 0, 0, -0.22, Math.PI / 2));
     axe.add(mesh(new THREE.BoxGeometry(0.018, 0.13, 0.05), steel, 0, -0.04, -0.49));
+    // the shotgun, in rifle space (receiver at the origin, wrist at z 0.105, forend at z -0.25, rib on the sight line)
+    const blued = new THREE.MeshStandardMaterial({ color: 0x1c1d20, roughness: 0.35, metalness: 0.7 });
+    const sgWood = new THREE.MeshStandardMaterial({ color: 0x3a2312, roughness: 0.55 });
+    this.shotgun.add(mesh(new THREE.BoxGeometry(0.046, 0.058, 0.11), blued, 0, 0.004, 0.0));
+    this.shotgun.add(mesh(new THREE.BoxGeometry(0.034, 0.058, 0.28), sgWood, 0, -0.085, 0.19, 0.42));   // stock: drops away below the eye
+    this.shotgun.add(mesh(new THREE.BoxGeometry(0.008, 0.03, 0.05), blued, 0, -0.035, 0.04));          // trigger guard
+    for (const x of [-0.0115, 0.0115]) this.barrels.add(mesh(new THREE.CylinderGeometry(0.0112, 0.0118, 0.66, 10), blued, x, 0.018, -0.33, Math.PI / 2));
+    this.barrels.add(mesh(new THREE.BoxGeometry(0.008, 0.006, 0.64), blued, 0, 0.032, -0.33));        // rib
+    this.barrels.add(mesh(new THREE.SphereGeometry(0.0028, 6, 4), brass, 0, 0.036, -0.65));            // bead
+    this.barrels.add(mesh(new THREE.BoxGeometry(0.042, 0.03, 0.2), sgWood, 0, -0.004, -0.2));          // forend
+    for (const x of [-0.0115, 0.0115]) this.barrels.add(mesh(new THREE.TorusGeometry(0.0112, 0.0018, 4, 10), blued, x, 0.018, -0.66));
+    // the flare: a red paper tube with a cap
+    const red = new THREE.MeshStandardMaterial({ color: 0x7a1a12, roughness: 0.75 });
+    const cap = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.6 });
+    this.flareStick = new THREE.Group();
+    this.flareStick.add(mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.24, 10), red, 0, 0, -0.06, Math.PI / 2));
+    this.flareStick.add(mesh(new THREE.CylinderGeometry(0.0145, 0.0145, 0.03, 10), cap, 0, 0, -0.19, Math.PI / 2));
+    this.flare.add(this.flareStick);
     const round = mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.064, 8), brass, 0, 0, -0.032, Math.PI / 2);
     this.setParts({
       body, lever: new THREE.Group().add(lever, leverBar), hammer: new THREE.Group().add(hammer),
@@ -177,11 +236,27 @@ export class ViewModel {
     if (this.armLoad && this.roundInHand && this.roundInHand.parent !== this.armLoad) this.armLoad.add(this.roundInHand);
     if (p.axe) swap(this.axe, 'axeMesh', p.axe);
     if (p.armAxe) swap(this.axe, 'armAxe', p.armAxe);
+    if (p.armR || p.armL || p.armAxe) this.cloneArms();
     if (p.caseMesh) {
       for (const c of this.cases) this.root.remove(c.obj);
       this.cases = [];
       for (let i = 0; i < 3; i++) { const obj = p.caseMesh(); obj.visible = false; this.root.add(obj); this.cases.push({ obj, v: new THREE.Vector3(), spin: new THREE.Vector3(), t: 9 }); }
     }
+  }
+
+  /** The shotgun, the fists and the flare borrow the rifle's and the axe's arm meshes (shared geometry). */
+  cloneArms() {
+    const swap = (holder, key, src) => {
+      if (!src) return;
+      if (this[key]) holder.remove(this[key]);
+      const o = src.clone(); o.position.set(0, 0, 0); o.rotation.set(0, 0, 0); o.visible = true;
+      this[key] = o; holder.add(o);
+    };
+    swap(this.shotgun, 'sgArmR', this.armR);
+    swap(this.barrels, 'sgArmL', this.armL);
+    swap(this.fistR, 'fistArmR', this.armAxe);
+    swap(this.fistL, 'fistArmL', this.armAxe);
+    swap(this.flare, 'flareArm', this.armAxe);
   }
 
   applyPivots() {
@@ -195,6 +270,8 @@ export class ViewModel {
     if (this.hammerMesh) this.hammerMesh.position.copy(hp).negate();
     if (this.armR) this.armR.position.copy(v3(P.grips.right)).sub(lp);
     if (this.armL) this.armL.position.copy(v3(P.grips.left));
+    if (this.sgArmR) this.sgArmR.position.copy(v3(P.grips.right));
+    if (this.sgArmL) this.sgArmL.position.copy(v3(P.grips.left)).sub(this.barrels.position);
     this.muzzle.position.copy(v3(P.muzzle));
     this.gate = v3(P.loadingGate);
     this.eject = v3(P.ejectPort);
@@ -239,8 +316,10 @@ export class ViewModel {
     const stompDown = s.stompT >= 0 ? Math.min(ramp(s.stompT, 0, 0.12), 1 - ramp(s.stompT, 0.6, 1)) * 0.6 : 0;
     const held = s.held || 'rifle', draw = s.drawK ?? 1;
     const holdDown = 1 - smooth(draw);
-    const down = held === 'rifle' ? Math.max(stompDown, holdDown) : 1;
-    this.rifle.visible = down < 0.98;
+    const gunHeld = held === 'rifle' || held === 'shotgun';
+    const down = gunHeld ? Math.max(stompDown, holdDown) : 1;
+    this.rifle.visible = held === 'rifle' && down < 0.98;
+    this.shotgun.visible = held === 'shotgun' && down < 0.98;
 
     const sx = s.swayX * steady, sy = s.swayY * steady;
     const sightY = this.P.sights.lineY;
@@ -249,7 +328,7 @@ export class ViewModel {
     const hx = lerp(H.pos[0], 0, a), hy = lerp(H.pos[1], -sightY - 0.001, a), hz = lerp(H.pos[2], this.P.view.aimZ, a);
     // the lever kick: the rifle dips slightly as the lever is thrown
     const lv = leverCurve(s.leverT / 0.5);
-    const g = this.rifle;
+    const g = held === 'shotgun' ? this.shotgun : this.rifle;
     g.position.set(
       hx + sx - r * 0.12 + sp * 0.03,
       hy + s.bob + sy + r * 0.05 - s.kick * 0.014 * (1 - a * 0.5) - sp * 0.07 - lv * 0.008 - down * 0.4,
@@ -263,6 +342,8 @@ export class ViewModel {
       r * 0.95 + sp * 0.25,
     );
     g.rotation.x += B[2]; g.rotation.z += B[3];
+    // the shotgun breaks open on its hinge for a reload
+    this.barrels.rotation.x = held === 'shotgun' && s.reloading ? -0.55 * reloadCurve(s.reloadT) : 0;
     // lever and hammer
     const P = this.P;
     const leverAng = THREE.MathUtils.degToRad(P.lever.openAngle) * Math.max(lv, s.reloading ? leverReload(s.reloadT) : 0);
@@ -286,6 +367,39 @@ export class ViewModel {
       this.axe.rotateX(B[2]); this.axe.rotateZ(B[3]);
     }
 
+    // fists: a guard, and punches left and right in turn
+    const fists = held === 'fists' && holdDown < 0.98;
+    this.fistR.visible = this.fistMirror.visible = fists;
+    if (fists) {
+      const pt = s.punchT >= 0 && s.punchT < 1 ? s.punchT : 0;
+      const ad = Math.max(holdDown, stompDown);
+      for (const [grp, side] of [[this.fistR, 1], [this.fistL, 0]]) {
+        // the hand not punching pulls back a little (guard)
+        const mine = s.punchSide === side ? pt : 0, other = s.punchSide === side ? 0 : pt;
+        poseKeys(grp, PUNCH_KEYS, mine);
+        grp.position.z += Math.sin(Math.PI * Math.min(1, other * 1.4)) * 0.05;
+        this.armToShoulder(grp, grp.children[0]);
+        grp.position.x += sx * 0.5 + ad * 0.06;
+        grp.position.y += s.bob + sy * 0.5 - ad * 0.5 - sp * 0.08 + B[0];
+        grp.position.z += B[1];
+        grp.rotateX(B[2] * 0.6);
+      }
+    }
+    // the flare: held at rest, thrown overhand; a fresh one comes up after the throw (none left: the hand stays down)
+    const fl = held === 'flare' && holdDown < 0.98;
+    this.flare.visible = fl;
+    if (fl) {
+      const tt = s.throwT >= 0 && s.throwT < 1 ? s.throwT : 0;
+      poseKeys(this.flare, THROW_KEYS, tt);
+      this.armToShoulder(this.flare, this.flareArm);
+      const empty = (s.flares ?? 1) <= 0 && tt === 0;
+      this.flareStick.visible = !empty && !(tt > FLARE_RELEASE && tt < 0.9);
+      const ad = Math.max(holdDown, stompDown, empty ? 0.6 : 0);
+      this.flare.position.y += s.bob + sy * 0.5 - ad * 0.5 - sp * 0.06 + B[0];
+      this.flare.position.x += sx * 0.5; this.flare.position.z += B[1];
+      this.flare.rotateX(B[2] - ad * 0.4);
+    }
+
     // spent cases
     for (const c of this.cases) {
       if (c.t > 0.7) { c.obj.visible = false; continue; }
@@ -297,7 +411,7 @@ export class ViewModel {
   }
 
   updateLoading(s) {
-    const show = s.reloading && s.reloadT > 0.08 && s.reloadT < 0.9;
+    const show = s.reloading && (s.held || 'rifle') === 'rifle' && s.reloadT > 0.08 && s.reloadT < 0.9;
     if (this.armL) this.armL.visible = !show;
     if (!this.armLoad) return;
     this.armLoad.visible = show;
@@ -314,6 +428,14 @@ export class ViewModel {
     // the round points into the gate (forward and slightly inward)
     this.armLoad.rotation.set(0.15, -0.35, 0.2);
     if (this.roundInHand) this.roundInHand.visible = push < 0.98 && drop < 0.01 || k < 0.4;
+  }
+
+  /** Turn a gripping arm around its (imaginary) handle so the forearm points back to the shoulder. */
+  armToShoulder(grp, arm) {
+    if (!arm) return;
+    const d = _a.subVectors(this.shoulder, grp.position).applyQuaternion(_qa.copy(grp.quaternion).invert());
+    const f = this.axeForearm;
+    arm.rotation.set(0, 0, Math.atan2(d.y, d.x) - Math.atan2(f.y, f.x));
   }
 
   poseAxe(t) {
@@ -345,6 +467,18 @@ export class ViewModel {
     c.t = 0;
     c.obj.visible = true;
   }
+}
+
+/** Pose a group from keyframes like AXE_KEYS at t (0..1). */
+function poseKeys(grp, keys, t) {
+  let i = 0;
+  while (i < keys.length - 2 && t > keys[i + 1][0]) i++;
+  const A = keys[i], B = keys[i + 1];
+  const k = smooth((t - A[0]) / (B[0] - A[0]));
+  grp.position.lerpVectors(_a.fromArray(A[1]), _b.fromArray(B[1]), k);
+  toolQ(_d.fromArray(A[2]), _e.fromArray(A[3]), _qa);
+  toolQ(_d.fromArray(B[2]), _e.fromArray(B[3]), _qb);
+  grp.quaternion.slerpQuaternions(_qa, _qb, k);
 }
 
 // 0..1 lever opening over one cycle (x = fraction of the 0.5 s cycle since the shot)

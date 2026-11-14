@@ -1,4 +1,5 @@
-// Melee: the axe (2 to hold it, left click / FIRE to swing) and the stomp (C / STOMP).
+// Melee: fists (left click / FIRE punches, left and right in turn), the axe (left click / FIRE to swing) and the
+// stomp (C / STOMP). Fists and the axe share the hit rules below; only their numbers differ (Config.melee).
 //
 // Axe: held in the right hand; a swing chops across the view (~0.7 s, no ammo). It hits the nearest spider within reach
 // in front of you: inside the cabin, or at a window you are standing at. Through intact glass it only cracks the glass
@@ -24,12 +25,12 @@ export class Melee {
   }
 
   reset() {
-    this.axeT = -1; this.stompT = -1; this.hitDone = false;
-    this.weapon.axeT = -1; this.weapon.stompT = -1; this.weapon.busy = false;
+    this.axeT = -1; this.stompT = -1; this.punchT = -1; this.punchSide = 0; this.hitDone = false;
+    this.weapon.axeT = -1; this.weapon.stompT = -1; this.weapon.punchT = -1; this.weapon.busy = false;
     this.player.dip = 0;
   }
 
-  get busy() { return this.axeT >= 0 || this.stompT >= 0; }
+  get busy() { return this.axeT >= 0 || this.stompT >= 0 || this.punchT >= 0; }
 
   canStart() { return !this.busy && !this.weapon.reloading && !this.player.dead; }
 
@@ -37,6 +38,14 @@ export class Melee {
     if (!this.canStart() || !this.weapon.ready('axe')) return false;
     this.axeT = 0; this.hitDone = false;
     this.audio.play('axeSwing', { volume: 0.9, delay: 0.14 });
+    return true;
+  }
+
+  /** A punch: left and right hands take turns. */
+  tryPunch() {
+    if (!this.canStart() || !this.weapon.ready('fists')) return false;
+    this.punchT = 0; this.hitDone = false; this.punchSide = 1 - this.punchSide;
+    this.audio.play('axeSwing', { volume: 0.4, rate: 1.6, delay: 0.05 });
     return true;
   }
 
@@ -52,21 +61,26 @@ export class Melee {
       if (!this.hitDone && this.axeT * M.axe.time >= M.axe.hitAt) { this.hitDone = true; this.axeHit(); }
       if (this.axeT >= 1) this.axeT = -1;
     }
+    if (this.punchT >= 0) {
+      this.punchT += dt / M.fists.time;
+      if (!this.hitDone && this.punchT * M.fists.time >= M.fists.hitAt) { this.hitDone = true; this.axeHit(M.fists, 'fists'); }
+      if (this.punchT >= 1) this.punchT = -1;
+    }
     if (this.stompT >= 0) {
       this.stompT += dt / M.stomp.time;
       if (!this.hitDone && this.stompT * M.stomp.time >= M.stomp.hitAt) { this.hitDone = true; this.stompHit(); }
       if (this.stompT >= 1) this.stompT = -1;
     }
     this.weapon.axeT = this.axeT; this.weapon.stompT = this.stompT;
+    this.weapon.punchT = this.punchT; this.weapon.punchSide = this.punchSide;
     this.weapon.busy = this.busy;
     this.poseBoot();
   }
 
   // ------------------------------------------------------------------ axe
-  axeHit() {
+  axeHit(A = M.axe, by = 'axe') {
     const eye = this.camera.getWorldPosition(_eye);
     const fwd = this.camera.getWorldDirection(_fwd);
-    const A = M.axe;
     // nearest spider in reach and in front
     let best = null, bestD = Infinity;
     for (const s of this.spiders.spiders) {
@@ -82,30 +96,31 @@ export class Melee {
       const c = best.visual.hitbox.getWorldPosition(_c);
       const win = this.windowBetween(eye, c);
       if (win === 'wall') best = null;
-      else if (win && win.stage === 0) { this.hitGlass(win, c); return; }
+      else if (win && win.stage === 0) { this.hitGlass(win, c, A); return; }
     }
     if (best) {
       const c = best.visual.hitbox.getWorldPosition(_c);
       const dir = _to.subVectors(c, eye).normalize();
-      best.takeHit(A.damage, c, dir, { by: 'axe' });
-      this.player.shake = Math.max(this.player.shake, 0.35);
-      this.events.emit('axeHit', { spider: best });
+      best.takeHit(A.damage, c, dir, { by });
+      if (by === 'fists' && best.alive) { best.flinch = Math.max(best.flinch || 0, 0.35); best.visual.rig.jolt?.(0.6); }
+      this.player.shake = Math.max(this.player.shake, by === 'fists' ? 0.25 : 0.35);
+      this.events.emit('axeHit', { spider: best, by });
       return;
     }
     // nothing alive in reach: did we hit glass or wood?
     const glass = this.glassInFront(eye, fwd, A.reach);
-    if (glass && glass.win.stage === 0) { this.hitGlass(glass.win, glass.point); return; }
+    if (glass && glass.win.stage === 0) { this.hitGlass(glass.win, glass.point, A); return; }
     this.ray.set(eye, fwd); this.ray.far = A.reach;
     const wood = this.ray.intersectObjects(this.weapon.worldMeshes, false)[0];
     if (wood) {
-      this.audio.play('bulletImpactWood', { position: wood.point, volume: 0.6, rate: 0.7, exterior: false });
-      this.player.shake = Math.max(this.player.shake, 0.25);
+      this.audio.play('bulletImpactWood', { position: wood.point, volume: by === 'fists' ? 0.35 : 0.6, rate: by === 'fists' ? 0.5 : 0.7, exterior: false });
+      this.player.shake = Math.max(this.player.shake, by === 'fists' ? 0.15 : 0.25);
     }
   }
 
-  hitGlass(win, point) {
-    this.windows.damage(win.id, M.axe.windowDamage, point);
-    this.audio.play('glassCrack', { position: win.center, volume: 0.8 });
+  hitGlass(win, point, A = M.axe) {
+    this.windows.damage(win.id, A.windowDamage, point);
+    this.audio.play(A === M.axe ? 'glassCrack' : 'glassTap', { position: win.center, volume: 0.8 });
     this.player.shake = Math.max(this.player.shake, 0.3);
     this.events.emit('axeHit', { window: win });
   }

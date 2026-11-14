@@ -69,6 +69,12 @@ export const FURNITURE = {
 //  east:  open clearing, nearly flat, long sightline to a dead tree line at x ~ 32
 //  west:  slope falling to a creek at x ~ -18, then rising again
 //  south: forest, gentle rise (no window, only sounds come from here)
+// Where you stand to rest on the cot (FURNITURE.cot: north-west corner, along the west wall): beside its middle.
+export const BED = { position: new THREE.Vector3(-CABIN.halfX + 0.05 + 0.8 + 0.35, 0, -CABIN.halfZ + 0.08 + 1.97 / 2) };
+
+// The wall clock: on the south wall above the ammo table, so you see it every time you reload.
+export const WALL_CLOCK = { position: new THREE.Vector3(-1.65, 2.2, CABIN.halfZ - 0.03), radius: 0.17 };
+
 export function terrainHeight(x, z) {
   const r = Math.hypot(x, z);
   const nearFade = smooth(8, 12.5, r); // 0 at the cabin, 1 from 12.5 m out

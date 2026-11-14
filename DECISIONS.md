@@ -122,3 +122,22 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-11 — BOOT_LOG's failure run retimed against a crude onset scan of the track's build-up into the kick
   (scratchpad analysis, not confirmed by ear — no AAC decoder in the headless test browser, per the existing note
   above); `loading.minSeconds` raised 7 → 9.7s to fit the retimed log and land the menu reveal near the kick.
+- 2026-11-14 — Menu overhaul loose ends closed on my recommendation: no Blender CRT/desk models for now (polish on the
+  menu is premature while play is unfinished; the code-made lab stays), and "remake the track with continuing drums" is
+  dropped as not deliverable (the loop crossfade stands in for it).
+- 2026-11-14 — Session 2 split in two halves. First half: timed waves (1:30 of spiders, then the break starts once the
+  time is up and the last spider is dead, 30 s), 10 waves to a dawn win screen. A wave never ends while spiders live.
+- 2026-11-14 — Wall clock above the ammo table (10 pm → 6 am), code-made; you see it every reload.
+- 2026-11-14 — Bandages: none at the start, +1 per wave survived (max 3), H heals 35 over 1.6 s while walking at half
+  speed. The cot (existing, north-west) heals fully once per break, 4 s lying still; a wave starting gets you up.
+- 2026-11-14 — Difficulty (easy/normal/hard) in Settings → Gameplay scales spiders per wave and their damage; spiders
+  already in the night keep the numbers they arrived with.
+- 2026-11-14 — Rifle from the start (user's call): fists only for waves 1–2 would leave nothing that reaches the windows.
+- 2026-11-14 — Reversed: fists from the start after all (user's call), back to the spec's unlocks (rifle 3, axe 5, shotgun 7, flares 9). Sign-off and push pre-approved for when the second half is done.
+- 2026-11-14 — Weapons unlock in the break before their wave (rifle after surviving wave 2, etc.), announced on the "survived" banner, so you can try them before the wave.
+- 2026-11-14 — Fists: punches alternate hands, 14 damage, 0.42 s; reach measured eye-to-body like the axe (1.75 m) so they reach spiders on the floor. No brutes before wave 3 (fists only).
+- 2026-11-14 — Shotgun: double barrel, 2 shells, 9 pellets x 16 damage with falloff past 8 m; its own box of shells on the ammo table (12 to start, +6 a wave, piling up before you have it). Code-made model for now.
+- 2026-11-14 — Flares: 2 when they unlock, +1 a wave (max 3). Thrown at the window you look at (within 7 m), burn 30 s on the ground outside; spiders at or heading for it back off into the dark and come again at another window.
+- 2026-11-14 — Slots 1–5 default fists, rifle, axe, shotgun, flares; the inventory (I, or pause → inventory on touch) remaps them and the map is saved in the browser. Touch: the weapon button cycles what you own.
+- 2026-11-14 — Rebindable keys: "Rifle"/"Axe" became "Weapon 1–5" and "Inventory"; old saved rifle/axe bindings are dropped. Debug: U spawns a runner inside (was I), G unlocks everything.
+- 2026-11-15 — Every headless script has a hard time limit (`tools/watchdog.mjs`: smoke 4 min, bots/poses 5, shot 2) after a smoke run hung for 10 hours; the smoke test holds real waves off and waits on states, not fixed delays.

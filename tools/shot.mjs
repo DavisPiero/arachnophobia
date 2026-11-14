@@ -3,6 +3,8 @@
 // Example: node tools/shot.mjs "index.html?mute=1&autostart=1" shots/game.png --wait=4000
 // Prints console errors from the page. Exit code 1 if any page error happened.
 import { chromium } from 'playwright';
+import { watchdog } from './watchdog.mjs';
+const dog = watchdog(120, 'shot');
 import { startServer } from './serve.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,6 +19,7 @@ const port = 8200 + Math.floor(Math.random() * 500);
 
 const server = await startServer(port);
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
+dog.browser = browser;
 const ctx = await browser.newContext(mobile
   ? { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }
   : { viewport: { width: 1280, height: 720 } });
