@@ -60,7 +60,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const f0 = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     g.waves.timer = 1e9;               // no real waves during the test: they would kill the player and stop the clock
     const r = { held: g.weapon.held, rifleRefused: !g.weapon.select('rifle'), fistsShown: g.weapon.view.fistR.visible };
     g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = -0.3;
@@ -88,7 +88,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     g.player.position.set(0, 0, -5.2); g.player.yaw = 0; g.player.pitch = -0.05;
     for (const t of ['runner', 'brute', 'climber', 'stalker']) g.spiders.spawn(t, 'north');
     // headless rendering is slow, so wait on simulated time, not wall time
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     await simWait(2.5);
     const before = g.weapon.mag;
     g.weapon.tryFire();
@@ -107,7 +107,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const m2 = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     g.player.position.set(0, 0, 1.5); g.player.yaw = 0; g.player.pitch = 0;
     g.flashlight.toggle();
     g.input.aimHeld = true;
@@ -130,7 +130,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const m3 = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     g.player.position.set(0, 0, 1.6); g.player.yaw = 0; g.player.pitch = 0;
     await simWait(0.6);
     const view = g.weapon.view;
@@ -175,7 +175,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const rl = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     const tp = g.table.position; g.player.position.set(tp.x, 0, tp.z - 0.95); g.player.yaw = Math.PI; g.player.pitch = -0.4;
     await wait(300);
     const stockBefore = g.table.stock;
@@ -192,7 +192,7 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
   const sg = await page.evaluate(async () => {
     const g = window.game;
     const wait = (ms) => new Promise((res) => setTimeout(res, ms));
-    const simWait = async (sec) => { const t0 = g.time, w0 = performance.now(); while (g.time - t0 < sec && performance.now() - w0 < sec * 4000 + 5000) await wait(50); };
+    const simWait = async (sec) => { for (let i = 0, n = Math.ceil(sec * 30); i < n; i++) { g.update(1 / 30); if (i % 10 === 9) await wait(0); } };   // steps the clock itself: a busy machine cannot stall it
     const r = {};
     g.weapon.select('shotgun'); await simWait(0.6);
     r.sgShown = g.weapon.view.shotgun.visible && !g.weapon.view.rifle.visible;

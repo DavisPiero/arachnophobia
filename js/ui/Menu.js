@@ -165,8 +165,18 @@ export class Menu {
   showMain() {
     this.loadingScreen.classList.add('hidden');
     this.start.classList.remove('hidden');
-    requestAnimationFrame(() => this.start.classList.add('in'));
+    requestAnimationFrame(() => { this.start.classList.add('in'); this.crtGlitch($('menu-screen')); });
     this.select(this.start, 0);
+  }
+
+  /** The menu monitor glitching as it powers on or changes screen (css .crt-glitch). Only on the 3D menu. */
+  crtGlitch(el) {
+    if (!el || !document.body.classList.contains('title')) return;
+    el.classList.remove('crt-glitch');
+    void el.offsetWidth;                       // restart the animation
+    el.classList.add('crt-glitch');
+    clearTimeout(el.glitchTimer);
+    el.glitchTimer = setTimeout(() => el.classList.remove('crt-glitch'), 700);
   }
 
   // ---------------------------------------------------------------- the other screens
@@ -193,11 +203,13 @@ export class Menu {
     from.classList.add('hidden');
     this.refreshSettings();
     this.settings.classList.remove('hidden');
+    this.crtGlitch(this.settings.querySelector('.term-panel'));
   }
   closeSettings() {
     this.stopListening();
     this.settings.classList.add('hidden');
     if (this.settingsFrom) { this.settingsFrom.classList.remove('hidden'); this.select(this.settingsFrom, 0); }
+    if (this.settingsFrom === this.start) this.crtGlitch($('menu-screen'));
   }
 
   // ---------------------------------------------------------------- settings

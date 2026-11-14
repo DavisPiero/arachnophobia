@@ -1,6 +1,6 @@
 // First-person view: gloved hands, the lever-action rifle, the shotgun, the axe, a flare and bare fists, and how
-// they move. The shotgun and the flare are code-made for now (no Blender generator yet); the fists reuse the
-// gloved hand that grips the axe, without the axe, mirrored for the left hand.
+// they move. The shotgun and the flare are code-made for now (no Blender generator yet); the fists are the closed
+// fist from the hands generator (arm_fist_r), mirrored for the left hand.
 // They are drawn in the weapon's own scene (on top of the world, never clipping walls).
 //
 // Models come from the Blender pipeline (rifle.glb, hands.glb, axe.glb), with code-made fallbacks.
@@ -54,13 +54,16 @@ const AXE_KEYS = [
   [1.0, ...AXE_IDLE],
 ];
 
-// Fists (right hand; the left is the same, mirrored): guard, and a punch straight out. Same format as AXE_KEYS.
-const FIST_IDLE = [[0.17, -0.2, -0.42], [0.05, 0.9, -0.4], [-1, 0.05, 0.1]];
+// Fists (right hand; the left is the same, mirrored). The wrist stays straight: the knuckles always point along the
+// line from the shoulder through the fist, so a key only gives where the fist is and which way the palm faces.
+// Guard: low in the corner, knuckles up and forward, palm turned in (thumb up). The jab goes out towards the crosshair
+// and turns palm-down as it lands (0.36 = Config.melee.fists.hitAt / time), then comes back to the guard.
+const FIST_IDLE = [[0.15, -0.165, -0.36], [-0.35, -0.94, 0]];
 const PUNCH_KEYS = [
   [0.0, ...FIST_IDLE],
-  [0.12, [0.23, -0.29, -0.38], [0.1, 0.8, -0.2], [-1, 0.05, 0.1]],
-  [0.36, [0.05, -0.12, -0.74], [0.0, 0.35, -0.95], [-1, 0, 0]],
-  [0.55, [0.08, -0.15, -0.66], [0.0, 0.45, -0.9], [-1, 0, 0]],
+  [0.12, [0.17, -0.19, -0.3], [-0.45, -0.9, 0]],
+  [0.36, [0.07, -0.1, -0.47], [0.05, -1, 0]],
+  [0.55, [0.085, -0.115, -0.43], [-0.1, -1, 0]],
   [1.0, ...FIST_IDLE],
 ];
 // The flare in the right hand at rest, and the throw (released at FLARE_RELEASE).
@@ -101,7 +104,7 @@ export class ViewModel {
     this.shotMuzzle.position.set(0, 0.018, -0.67);   // barrels space
     this.barrels.add(this.shotMuzzle);
     this.root.add(this.shotgun);
-    this.fistR = new THREE.Group();          // posed like the axe grip, no axe
+    this.fistR = new THREE.Group();          // the closed fist (hands.glb arm_fist_r): knuckles -z, back of the hand +y
     this.fistMirror = new THREE.Group();     // scale.x = -1: the left fist is the right one, mirrored
     this.fistMirror.scale.x = -1;
     this.fistL = new THREE.Group();
@@ -113,6 +116,7 @@ export class ViewModel {
     this.root.add(this.flare);
     this.axeForearm = new THREE.Vector3(0.35, -0.45, 0.82).normalize();   // hands.json forearm.axe (axe space)
     this.shoulder = new THREE.Vector3(0.32, -0.5, 0.12);                  // camera space: where the right arm comes from
+    this.fistShoulder = new THREE.Vector3(0.15, -0.22, 0.16);             // the punching arm's line starts higher (a real shoulder)
     // spent cases flying out of the action
     this.cases = [];
     this.caseIdx = 0;
@@ -153,6 +157,10 @@ export class ViewModel {
       g.add(sl);
       return g;
     };
+    // fallback fist, in the Blender fist's frame: knuckles towards -z, the sleeve straight back along +z to the shoulder
+    const fistFb = new THREE.Group();
+    fistFb.add(new THREE.Mesh(new THREE.BoxGeometry(0.084, 0.072, 0.076), glove));
+    fistFb.add(mesh(new THREE.CylinderGeometry(0.036, 0.045, 0.8, 10), cloth, 0, 0, 0.45, Math.PI / 2));
     const axe = new THREE.Group();
     axe.add(mesh(new THREE.CylinderGeometry(0.012, 0.015, 0.62, 8), wood, 0, 0, -0.22, Math.PI / 2));
     axe.add(mesh(new THREE.BoxGeometry(0.018, 0.13, 0.05), steel, 0, -0.04, -0.49));
@@ -178,7 +186,7 @@ export class ViewModel {
     this.setParts({
       body, lever: new THREE.Group().add(lever, leverBar), hammer: new THREE.Group().add(hammer),
       armR: arm([0.32, -0.36, 0.88]), armL: arm([-0.42, -0.5, 0.76]), armLoad: arm([-0.55, -0.45, 0.7]), armAxe: arm([0.18, -0.9, 0.38]),
-      axe, round, caseMesh: () => mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.044, 8), brass, 0, 0, 0, Math.PI / 2),
+      axe, fist: fistFb, round, caseMesh: () => mesh(new THREE.CylinderGeometry(0.0062, 0.0062, 0.044, 8), brass, 0, 0, 0, Math.PI / 2),
     });
   }
 
@@ -211,6 +219,7 @@ export class ViewModel {
     if (hands && pick(hands, 'arm_grip_r')) {
       parts.armR = mk(hands, 'arm_grip_r'); parts.armL = mk(hands, 'arm_support_l');
       parts.armLoad = mk(hands, 'arm_load_l'); parts.armAxe = mk(hands, 'arm_axe_r');
+      if (pick(hands, 'arm_fist_r')) parts.fist = mk(hands, 'arm_fist_r');
     }
     if (axe && pick(axe, 'axe')) parts.axe = mk(axe, 'axe');
     if (Object.keys(parts).length) this.setParts(parts);
@@ -236,7 +245,8 @@ export class ViewModel {
     if (this.armLoad && this.roundInHand && this.roundInHand.parent !== this.armLoad) this.armLoad.add(this.roundInHand);
     if (p.axe) swap(this.axe, 'axeMesh', p.axe);
     if (p.armAxe) swap(this.axe, 'armAxe', p.armAxe);
-    if (p.armR || p.armL || p.armAxe) this.cloneArms();
+    if (p.fist) this.fistPart = p.fist;
+    if (p.armR || p.armL || p.armAxe || p.fist) this.cloneArms();
     if (p.caseMesh) {
       for (const c of this.cases) this.root.remove(c.obj);
       this.cases = [];
@@ -244,7 +254,7 @@ export class ViewModel {
     }
   }
 
-  /** The shotgun, the fists and the flare borrow the rifle's and the axe's arm meshes (shared geometry). */
+  /** The shotgun and the flare borrow the rifle's and the axe's arm meshes; the two fists share one (shared geometry). */
   cloneArms() {
     const swap = (holder, key, src) => {
       if (!src) return;
@@ -254,8 +264,8 @@ export class ViewModel {
     };
     swap(this.shotgun, 'sgArmR', this.armR);
     swap(this.barrels, 'sgArmL', this.armL);
-    swap(this.fistR, 'fistArmR', this.armAxe);
-    swap(this.fistL, 'fistArmL', this.armAxe);
+    swap(this.fistR, 'fistArmR', this.fistPart);
+    swap(this.fistL, 'fistArmL', this.fistPart);
     swap(this.flare, 'flareArm', this.armAxe);
   }
 
@@ -376,9 +386,8 @@ export class ViewModel {
       for (const [grp, side] of [[this.fistR, 1], [this.fistL, 0]]) {
         // the hand not punching pulls back a little (guard)
         const mine = s.punchSide === side ? pt : 0, other = s.punchSide === side ? 0 : pt;
-        poseKeys(grp, PUNCH_KEYS, mine);
+        this.poseFist(grp, mine);
         grp.position.z += Math.sin(Math.PI * Math.min(1, other * 1.4)) * 0.05;
-        this.armToShoulder(grp, grp.children[0]);
         grp.position.x += sx * 0.5 + ad * 0.06;
         grp.position.y += s.bob + sy * 0.5 - ad * 0.5 - sp * 0.08 + B[0];
         grp.position.z += B[1];
@@ -436,6 +445,17 @@ export class ViewModel {
     const d = _a.subVectors(this.shoulder, grp.position).applyQuaternion(_qa.copy(grp.quaternion).invert());
     const f = this.axeForearm;
     arm.rotation.set(0, 0, Math.atan2(d.y, d.x) - Math.atan2(f.y, f.x));
+  }
+
+  /** A fist at punch time t (0..1): position and palm direction from PUNCH_KEYS, knuckles along shoulder -> fist. */
+  poseFist(grp, t) {
+    let i = 0;
+    while (i < PUNCH_KEYS.length - 2 && t > PUNCH_KEYS[i + 1][0]) i++;
+    const A = PUNCH_KEYS[i], B = PUNCH_KEYS[i + 1];
+    const k = smooth((t - A[0]) / (B[0] - A[0]));
+    grp.position.lerpVectors(_a.fromArray(A[1]), _b.fromArray(B[1]), k);
+    const palm = _e.fromArray(A[2]).lerp(_d.fromArray(B[2]), k);
+    toolQ(_d.subVectors(grp.position, this.fistShoulder), palm, grp.quaternion);
   }
 
   poseAxe(t) {

@@ -19,8 +19,8 @@
 - `js/ui/Inventory.js` (new) + `#screen-inventory` in `index.html`.
 - `Weapon.js`: `held` is fists/rifle/axe/shotgun/flare; `ammo` per gun (`mag` is now a read-only getter); shotgun pellets.
 - `Melee.js`: `tryPunch()`, shares `axeHit(params, by)`. `AmmoTable.js`: loads the held gun; `stocks.rifle/shotgun`.
-- `ViewModel.js`: code-made shotgun (rifle space, same grips), fists (the axe-grip hand, mirrored for the left),
-  flare in hand, with punch and throw keyframes.
+- `ViewModel.js`: code-made shotgun (rifle space, same grips), flare in hand, punch and throw keyframes. Fists:
+  see the 2026-11-15 note below.
 - Settings keys: `slot1`–`slot5`, `inventory` replace `rifle`/`axe`. Debug keys: U (was I), G.
 
 ## Known weak spots
@@ -28,4 +28,11 @@
 - Sounds reused: shotgun = slowed gunshot + stomp thump; flare strike = wood scrape; flare hiss = sped-up rain loop.
 - Flare light has no shadows, so a little red shows on the inside of the wall around that window.
 - Spiders driven off by a flare fade out (the stalker's vanish) instead of walking away.
-- Fists in the hip view sit low; tune `FIST_IDLE` in `ViewModel.js` if they feel lost at the screen edge.
+
+## 2026-11-15 (branch `claude/fists-menu-glitch`, not merged: waiting for the user's look)
+- Fists remade: `hands.json` pose `fist` + `arm_fist_r` in `hands.glb`; `ViewModel.poseFist` aims the knuckles along
+  `fistShoulder` -> fist (straight wrist); `FIST_IDLE` / `PUNCH_KEYS` give position + palm direction only.
+- Menu: `Menu.crtGlitch(el)` + `.crt-glitch` in `style.css` replace the CRT bounce (which knocked the panel off the
+  monitor). Plays on power-on and on menu <-> settings.
+- Tests: every headless script has a time limit (`tools/watchdog.mjs`); the smoke test steps the game clock itself
+  (79 s, and machine load no longer breaks it).
