@@ -169,21 +169,52 @@ body.touch #prompt { top: 64%; font-size: 13px; }
 
 /* the menu CRT's text dissolving, right before the cut to black when BEGIN is pressed */
 #menu-screen.dissolving { animation: menuDissolve 0.5s ease-in forwards; }
+#menu-screen.dissolving > * { animation: menuDissolveTear 0.5s steps(1, end) forwards; }
 @keyframes menuDissolve {
-  0% { opacity: 1; filter: none; transform: none; }
-  40% { opacity: 1; filter: blur(0.5px) brightness(1.6); transform: translateX(2px) skewX(-1deg); }
-  100% { opacity: 0; filter: blur(2px) brightness(2.4); transform: translateX(-4px) skewX(2deg); }
+  0% { opacity: 1; filter: none; }
+  40% { opacity: 1; filter: blur(0.5px) brightness(1.6); }
+  100% { opacity: 0; filter: blur(2px) brightness(2.4); }
 }
+@keyframes menuDissolveTear { 0% { transform: none; } 30% { transform: translateX(6px); } 55% { transform: translateX(-10px) skewX(3deg); } 80% { transform: translateX(14px); } }
 
 /* main menu: the 3D lab is the canvas (js/ui/MenuScene.js); the menu HTML is warped onto the left monitor.
    A quick CRT power-on, not a slow fade, so you reach the music-playing menu sooner (user: "boot up quickly"). */
 #screen-start { padding: 0; background: transparent; opacity: 0; transition: opacity 0.35s; pointer-events: none; }
 #screen-start.in { opacity: 1; }
-#menu-screen.on-screen { animation: crtPowerOn 0.45s ease-out; }
-@keyframes crtPowerOn {
-  0% { filter: brightness(3.5) contrast(0.2); transform: scaleY(0.03); }
-  55% { filter: brightness(1.8) contrast(1.1); transform: scaleY(1.04); }
-  100% { filter: none; transform: none; }
+/* CRT glitch (Menu.crtGlitch): the menu powering on, or switching between menu and settings. The panel itself is
+   warped onto the monitor by an inline transform, so the glitch never animates its transform (that would knock it off
+   the screen): only clip, brightness and colour on the panel, and sideways tears on the rows inside it. */
+.crt-glitch { animation: crtGlitch 0.62s steps(1, end); }
+.crt-glitch > *, .crt-glitch li { animation: crtTear 0.62s steps(1, end); }
+.crt-glitch > *:nth-child(2n), .crt-glitch li:nth-child(2n) { animation-name: crtTearB; }
+@keyframes crtGlitch {
+  0% { clip-path: inset(49.6% 0 49.6% 0); filter: brightness(4) contrast(0.4); }
+  7% { clip-path: inset(47% 0 47% 0); filter: brightness(3); }
+  13% { clip-path: inset(0); filter: brightness(1.9) contrast(1.3); }
+  19% { clip-path: inset(28% 0 50% 0); filter: brightness(1.4); }
+  25% { clip-path: inset(0); filter: brightness(0.35); }
+  31% { clip-path: inset(0); filter: brightness(1.7); }
+  39% { clip-path: inset(60% 0 16% 0); filter: brightness(1.2); }
+  45% { clip-path: inset(0); filter: brightness(1.05); }
+  68% { filter: brightness(1.35); }
+  73%, 100% { clip-path: inset(0); filter: none; }
+}
+@keyframes crtTear {
+  0% { transform: none; text-shadow: none; }
+  13% { transform: translateX(-16px) skewX(-6deg); text-shadow: -4px 0 rgba(255, 40, 40, 0.85), 4px 0 rgba(40, 200, 255, 0.85); }
+  25% { transform: translateX(7px); text-shadow: 3px 0 rgba(255, 40, 40, 0.7), -3px 0 rgba(40, 200, 255, 0.7); }
+  39% { transform: translateX(-3px); text-shadow: -2px 0 rgba(255, 40, 40, 0.6), 2px 0 rgba(40, 200, 255, 0.6); }
+  52% { transform: translateX(2px); text-shadow: 1px 0 rgba(255, 40, 40, 0.5), -1px 0 rgba(40, 200, 255, 0.5); }
+  68% { transform: translateX(-5px); text-shadow: -2px 0 rgba(255, 40, 40, 0.6), 2px 0 rgba(40, 200, 255, 0.6); }
+  73%, 100% { transform: none; text-shadow: inherit; }
+}
+@keyframes crtTearB {
+  0% { transform: none; }
+  13% { transform: translateX(12px); text-shadow: 4px 0 rgba(255, 40, 40, 0.85), -4px 0 rgba(40, 200, 255, 0.85); }
+  25% { transform: translateX(-9px) skewX(5deg); text-shadow: -3px 0 rgba(255, 40, 40, 0.7), 3px 0 rgba(40, 200, 255, 0.7); }
+  39% { transform: none; }
+  52% { transform: translateX(-4px); text-shadow: -1px 0 rgba(255, 40, 40, 0.5), 1px 0 rgba(40, 200, 255, 0.5); }
+  73%, 100% { transform: none; text-shadow: inherit; }
 }
 
 /* a full-screen fade used only for the begin -> gameplay transition (js/core/Game.js) */

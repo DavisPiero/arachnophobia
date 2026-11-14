@@ -5,6 +5,8 @@ Parameters: assets/params/hands.json. Output: hands.glb with
   arm_axe_r      the same hand round the axe handle
   arm_support_l  left hand cradling the rifle forend from below
   arm_load_l     left hand pinching a cartridge (base at the origin, bullet towards -z)
+  arm_fist_r     a closed fist for punching: knuckles towards -z, back of the hand up (+y), wrist straight, forearm
+                 straight back along +z; origin in the middle of the fist (the game aims it, see ViewModel FIST_IDLE)
 and `_lod1` copies. One baked atlas.
 
 How a hand is made:
@@ -162,7 +164,15 @@ def skeleton(P, pose, thumb_at=None):
         out['fingers'].append(j); out['normals'].append(n); out['radii'].append(radii)
     T = S['thumb']
     cmc = V(*T['cmc'])
-    if kind == 'grip':
+    if kind == 'fist':
+        # the thumb folds across the outside of the index and middle fingers' middle bones (never tucked inside)
+        idx, mid = out['fingers'][0], out['fingers'][1]
+        on = ((idx[1] + idx[2]) / 2) * pose.get('thumbOnIndex', 0.6) + ((mid[1] + mid[2]) / 2) * (1 - pose.get('thumbOnIndex', 0.6))
+        centre = V(*pose['centre'])
+        out_dir = (on - centre).normalized()
+        target = on + out_dir * (out['radii'][0][1] + T['radius'] * pose.get('thumbOut', 0.85))
+        thumb = fabrik(cmc, T['lengths'], target, cmc + V(*pose.get('thumbPole', [0.06, -0.03, 0.03])))
+    elif kind == 'grip':
         # thumb tip rests over the index finger's middle bone, on the far side of the handle
         idx = out['fingers'][0]
         mid = (idx[1] + idx[2]) / 2
@@ -573,6 +583,10 @@ def place_matrix(sk, pose, left):
     """Hand frame -> GAME space (rotation 3x3, translation). The handle (grips) or the round (pinch) goes along GAME -z
     (or +z with thumb: 'back') through the origin, and the hand turns round it until its forearm line points along
     pose['forearm']. The wrist stays straight; pose['wrist'] = [bend up, bend sideways] in degrees adds a natural bend."""
+    if pose['kind'] == 'fist':
+        # fixed frame: finger direction (hand +z) -> GAME -z, back of the hand (hand +y) -> GAME +y; origin = mid-fist
+        Rm = Matrix(((-1, 0, 0), (0, 1, 0), (0, 0, -1)))
+        return Rm, -(Rm @ V(*pose['centre']))
     if pose['kind'] == 'grip':
         C0, a, R = sk['handle']
         if left:
@@ -686,6 +700,11 @@ def build_arm(P, mats, name, pose, left):
     if tback.x < 0 and tback.y < 0:
         tback = -tback
     parts.append(tube_along(name + '_thumb', th[1:], [T['radius'] * 1.08, T['radius'], T['radius'] * 0.9], tback, flat=0.84))
+    if pose['kind'] == 'fist':
+        # the flesh of the palm and the finger pads fill the ring the curled fingers make (no hole through the fist)
+        fy, fz = pose.get('fill', [-0.024, 0.074])
+        parts.append(tube_along(name + '_fill', [V(0.027, fy + 0.002, fz - 0.004), V(0.0, fy, fz), V(-0.027, fy + 0.003, fz - 0.008)],
+                                [0.0115, 0.0125, 0.0105], V(0, 1, 0), flat=0.8, tip=False))
     glove = C.join(parts, name + '_glove_hi')
     remesh(glove, P['budget']['voxel'], 5)
     pieces = [glove, guard(P, sk, name + '_guard')]     # (finger pads dropped: they floated off fingers pressed onto the stock)
@@ -721,6 +740,8 @@ def build_arm(P, mats, name, pose, left):
     # --- the sleeve: its own straight frame along the forearm, so the canvas and the knit ribs run along the arm
     wp = wrist_path(f_l if left else f_r)
     Ra, oa = arm_matrix(f_l, wp[1] + f_l * 0.006)        # the sleeve comes right down to the wrist
+    if 'sleeve' in pose:                # the fist's arm: long enough to reach the shoulder when it punches, slimmer at the wrist
+        P = dict(P, sleeve=dict(P['sleeve'], **pose['sleeve']))
     sl_hi = sleeve(P, name + '_sleeve_hi', hi=True)
     sl_lo = sleeve(P, name + '_sleeve_lo', hi=False)
     for o in (sl_hi, sl_lo):
@@ -739,7 +760,8 @@ def build(P):
     mats = materials(P)
     poses = P['poses']
     arms = [('arm_grip_r', poses['grip'], False), ('arm_axe_r', poses['axe'], False),
-            ('arm_support_l', poses['support'], True), ('arm_load_l', poses['load'], True)]
+            ('arm_support_l', poses['support'], True), ('arm_load_l', poses['load'], True),
+            ('arm_fist_r', poses['fist'], False)]
     pairs, report, groups = [], [], []
     for name, pose, left in arms:
         prs, (Rm, t) = build_arm(P, mats, name, pose, left)

@@ -62,7 +62,7 @@ if pose.startswith('arm_'):
         if n != pose:
             hide.append(o)
     eye = Vector(tuple(float(v) for v in (argv[2] if len(argv) > 2 else '0.25,0.12,0.2').split(',')))
-    if pose != 'arm_load_l':
+    if pose not in ('arm_load_l', 'arm_fist_r'):
         hp = json.load(open(os.path.join(ROOT, 'assets', 'params', 'hands.json')))['poses']
         k = {'arm_grip_r': 'grip', 'arm_axe_r': 'axe', 'arm_support_l': 'support'}[pose]
         rx, ry, cy = hp[k]['rx'], hp[k]['ry'], hp[k].get('cy', 0.0)

@@ -13,6 +13,9 @@ iteration" 5.
   the ammo table. **Flares**: throw at the window you look at; while it burns (30 s) spiders keep away from it.
 - **Inventory on I** (touch: pause → inventory): pauses, lists weapons (locked ones greyed), remaps keys 1–5.
 
+**Merged 2026-11-15:** new fists (real closed-fist model, straight wrist, jab) and a CRT
+glitch power-on for the menu monitor instead of the bounce.
+
 **Next:** session 3 of the plan is merged into 1, so **session 4: the cabin** (placement tool, bigger cabin in two rooms,
 door, benches, log tray). Read `SPEC.md` 5.4 first.
 
