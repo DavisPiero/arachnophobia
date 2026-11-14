@@ -29,7 +29,7 @@
 - Flare light has no shadows, so a little red shows on the inside of the wall around that window.
 - Spiders driven off by a flare fade out (the stalker's vanish) instead of walking away.
 
-## 2026-11-15 (branch `claude/fists-menu-glitch`, not merged: waiting for the user's look)
+## 2026-11-15 (fists and menu glitch, signed off and merged)
 - Fists remade: `hands.json` pose `fist` + `arm_fist_r` in `hands.glb`; `ViewModel.poseFist` aims the knuckles along
   `fistShoulder` -> fist (straight wrist); `FIST_IDLE` / `PUNCH_KEYS` give position + palm direction only.
 - Menu: `Menu.crtGlitch(el)` + `.crt-glitch` in `style.css` replace the CRT bounce (which knocked the panel off the
