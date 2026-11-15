@@ -172,7 +172,7 @@ export class Spider {
     const rp = this.root.position, pp = player.position, M = CABIN.wallThickness + CABIN.eaveOverhang + 0.3;
     const onRoof = rp.y > CABIN.wallHeight - 0.2 && Math.abs(rp.x) < CABIN.halfX + M && Math.abs(rp.z) < CABIN.halfZ + M;
     const inside = Math.abs(pp.x) < CABIN.halfX && Math.abs(pp.z) < CABIN.halfZ;
-    this.root.visible = !(onRoof && inside);
+    this.root.visible = this.alive && !(onRoof && inside);   // a dead one stays hidden (this used to bring the body back, frozen, until removed)
     const inCabin = Math.abs(rp.x) < CABIN.halfX + 0.05 && Math.abs(rp.z) < CABIN.halfZ + 0.05;
     this.visual.fillK = inCabin ? 1 : Config.render.spiderFillOutside;
     this.flinch = Math.max(0, this.flinch - dt);

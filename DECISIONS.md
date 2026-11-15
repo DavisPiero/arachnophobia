@@ -180,3 +180,4 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-15 — Healed (bandage done, or up from the cot): small red crosses rise around the middle, the health bar glows, "Patched up".
 - 2026-11-15 — Rest on the cot is 7.5 s: the view tips down and rolls into bed, fades to black ~5 s with a random tip and three drifting Z's, fades up and sits back up.
 - 2026-11-15 — Interaction range widened (user: had to stand right next to things and look straight at them): reach +0.4–0.5 m on every object, look tolerance 0.14 → 0.32 rad. Boot title is just ARACHNOPHOBIA. Settings stay on the menu monitor (the panel animation was overriding its warp).
+- 2026-11-15 — Dead spiders vanish at once: the roof-visibility line in SpiderAI.update was turning a dead spider's body back on, frozen, until it was removed.
