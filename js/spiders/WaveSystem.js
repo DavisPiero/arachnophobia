@@ -1,4 +1,4 @@
-// The night: a quiet start, then Config.waves.count timed waves of spiders with growing size and variety.
+// The night: a quiet start, then timed waves (as many as the game mode says; Waves mode never ends) of spiders with growing size and variety.
 // Each wave sends spiders for waveTime seconds; once that time is up and the last of them is dead, a break of
 // breakTime starts. Surviving the last wave brings the dawn ('dawn' event). Surviving a wave restocks the ammo table.
 import { Config } from '../core/Config.js';
@@ -13,6 +13,7 @@ export class WaveSystem {
     this.events = events;
     this.quality = quality;
     this.player = player;
+    this.rules = Config.modes.survival;
     this.reset();
   }
   reset() {
@@ -26,6 +27,10 @@ export class WaveSystem {
     this.kills = 0;
     this.spawnedThisWave = [];
   }
+  /** Which game mode's rules the waves follow (Config.modes). */
+  setMode(id) { this.rules = Config.modes[id] || Config.modes.survival; }
+  get endless() { return !isFinite(this.rules.count); }
+
   get betweenWaves() { return this.phase === 'calm'; }
   /** True from the start of a break until the next wave (the first quiet before wave 1 does not count). */
   get inBreak() { return this.phase === 'calm' && this.wave > 0; }
@@ -33,9 +38,11 @@ export class WaveSystem {
   /** The night's progress as a time of day in hours (22 = 10 pm ... 30 = 6 am), for the wall clock.
    *  Planned length: first delay + every wave and break; the clock never passes dawn before the last wave ends. */
   get clockHours() {
-    const total = WV.firstDelay + WV.count * WV.waveTime + (WV.count - 1) * WV.breakTime;
+    const n = WV.clockWaves;
+    const total = WV.firstDelay + n * WV.waveTime + (n - 1) * this.rules.breakTime;
     const span = (WV.clockDawn + 24 - WV.clockStart);
-    const k = this.phase === 'dawn' ? 1 : Math.min(0.995, this.elapsed / total);
+    // endless: the hands just keep turning
+    const k = this.phase === 'dawn' ? 1 : this.endless ? this.elapsed / total : Math.min(0.995, this.elapsed / total);
     return WV.clockStart + span * k;
   }
 
@@ -90,7 +97,7 @@ export class WaveSystem {
         this.queue = this.composition(this.wave);
         this.spawnTimer = 0.5;
         this.spawnedThisWave = [];
-        this.events.emit('waveStart', { wave: this.wave, last: this.wave === WV.count });
+        this.events.emit('waveStart', { wave: this.wave, last: this.wave === this.rules.count });
       }
       return;
     }
@@ -113,10 +120,10 @@ export class WaveSystem {
     } else if (timeUp && this.spawnedThisWave.every((s) => !s?.alive)) {
       // time is up and the last of them is dead: survived
       this.queue = [];
-      this.events.emit('waveEnd', { wave: this.wave, last: this.wave >= WV.count });
-      if (this.wave >= WV.count) { this.phase = 'dawn'; this.events.emit('dawn', { wave: this.wave }); return; }
+      this.events.emit('waveEnd', { wave: this.wave, last: this.wave >= this.rules.count });
+      if (this.wave >= this.rules.count) { this.phase = 'dawn'; this.events.emit('dawn', { wave: this.wave }); return; }
       this.phase = 'calm';
-      this.timer = WV.breakTime;
+      this.timer = this.rules.breakTime;
     }
   }
 }

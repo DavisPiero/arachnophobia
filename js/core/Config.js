@@ -159,13 +159,12 @@ export const Config = {
     medium: { health: 1,    speed: 1,    squeeze: 1,   damage: 1 },
     large:  { health: 1.9,  speed: 0.95, squeeze: 0.6, damage: 1.7 },   // speed was 0.8: the big ones were too slow (user)
   },
-  // The night: 10 timed waves, then dawn. A wave sends spiders for waveTime seconds; the break starts once the
+  // The night: timed waves, then (in Survival) dawn after Config.modes.survival.count of them. A wave sends spiders for waveTime seconds; the break starts once the
   // time is up and the last of them is dead, and lasts breakTime. The wall clock runs from clockStart to dawn.
   waves: {
-    count: 10,               // survive this many and the sun comes up
     firstDelay: 18,          // seconds of quiet before wave 1
     waveTime: 90,            // 1:30 of spiders arriving
-    breakTime: 30,           // 30 s to recover between waves
+    clockWaves: 10,          // the wall clock goes from clockStart to clockDawn over this many waves
     // spiders per wave = base + perWave * (wave-1); type mix unlocks over waves
     base: 4,
     perWave: 2,
@@ -173,6 +172,12 @@ export const Config = {
     stalkerWatchTime: [10, 22],
     clockStart: 22,          // 10 pm on the wall clock at the start of the night
     clockDawn: 6,            // 6 am: the last wave survived
+  },
+  // The two game modes (picked on the main menu, or ?mode=waves|survival). count: waves until dawn (Infinity = it
+  // never ends); breakTime: seconds between waves. Survival is still the one night for now; SURVIVAL.md is the plan.
+  modes: {
+    survival: { name: 'Survival', count: 10, breakTime: 30 },
+    waves:    { name: 'Waves', count: Infinity, breakTime: 15 },   // always in action (user, 2026-11-15)
   },
   // Healing. Bandages: one per wave survived, carry at most `max`, used with H. The cot: once per break, hold USE.
   heal: {

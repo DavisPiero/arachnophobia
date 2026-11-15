@@ -24,6 +24,7 @@ const result = await page.evaluate(async ({ waves, difficulty }) => {
   const g = window.game;
   g.loop = () => {};                          // stop rendering: the bot drives the clock
   const { Settings } = await import('./js/core/Settings.js');
+  const { MED_TABLE } = await import('./js/world/Layout.js');
   Settings.difficulty = difficulty;
   g.waves.timer = 2;
   const log = [];
@@ -40,9 +41,15 @@ const result = await page.evaluate(async ({ waves, difficulty }) => {
     minHealth = Math.min(minHealth, g.player.health);
     if ((think -= dt) > 0) continue;
     think = 0.1;
-    if (g.player.health < 60 && g.healing.bandages > 0 && g.healing.tryBandage() === true) bandages++;
     const inside = g.spiders.spiders.filter((s) => s.alive && s.state === 'inside');
-    if (!inside.length) { g.player.position.set(0, 0, 0.5); continue; }
+    if (!inside.length) {
+      // nothing inside: bandage up at the medical table if hurt (it only works there), else wait in the middle
+      if (g.player.health < 60 && g.healing.bandages > 0 && !g.healing.busy) {
+        g.player.position.set(MED_TABLE.position.x, 0, MED_TABLE.position.z - 0.8);
+        if (g.healing.tryBandage() === 'ok') bandages++;
+      } else if (!g.healing.busy) g.player.position.set(0, 0, 0.5);
+      continue;
+    }
     const p = g.player.position;
     inside.sort((a, b) => a.root.position.distanceTo(p) - b.root.position.distanceTo(p));
     const s = inside[0], sp = s.root.position;

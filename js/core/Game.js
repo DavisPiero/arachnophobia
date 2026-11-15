@@ -55,6 +55,7 @@ export class Game {
     this.canvas = canvas;
     this.state = 'boot';
     this.debug = params.has('debug');
+    this.mode = 'survival';   // 'survival' | 'waves' (Config.modes); set by the menu button or ?mode=
     this.events = events;
 
     // --- renderer, scene, camera ---
@@ -136,6 +137,7 @@ export class Game {
       e.preventDefault();
       if (this.state !== 'title' || this.entering) return;
       this.entering = true;
+      this.setMode(e.currentTarget.dataset.mode);
       this.audio.unlock();
       this.music.stop();
       if (!isTouch) this.input.keyboard.requestLock();
@@ -149,6 +151,7 @@ export class Game {
       requestAnimationFrame(() => requestAnimationFrame(() => { fade.classList.remove('instant'); fade.classList.remove('on'); }));
     };
     $('btn-start').addEventListener('click', begin);
+    $('btn-waves').addEventListener('click', begin);
     $('btn-resume').addEventListener('click', () => this.resume());
     $('btn-inventory-pause').addEventListener('click', () => { this.menu.showPause(false); this.inventory.show(); });
     $('btn-restart').addEventListener('click', () => { this.restart(); this.resume(); });
@@ -180,7 +183,7 @@ export class Game {
       if (nw) { this.hud.flash(`Wave ${wave} survived`, `${nw.title} · ${nw.sub}`, 5); return; }
       this.hud.flash(`Wave ${wave} survived`, `+${Config.logs.perWave} logs · a bandage`, 4);
       if (wave === 1) this.hud.hint('logs', `Take a log from the stack by the stove (${this.hud.key('interact', 'USE')}): feed the fire, or nail it over a window. Never enough for both.`, 8);
-      if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the ammo table. Or rest on the cot once a break.`, 7);
+      if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the medical table, beside the ammo. Or rest on the cot once a break.`, 7);
     });
     events.on('healed', () => this.hud.healBurst());
     events.on('fireFed', () => this.hud.toast('The fire takes it'));
@@ -214,6 +217,7 @@ export class Game {
       await loaded;
       this.state = 'title';
       this.menu.ready();
+      this.setMode(params.get('mode'));
       this.loop();
       this.start(false);
       return;
@@ -235,6 +239,12 @@ export class Game {
     this.menu.ready();
     this.menu.showMain();
     this.loop();
+  }
+
+  /** Pick the game mode for the run that is about to start. Unknown names fall back to survival. */
+  setMode(id) {
+    this.mode = Config.modes[id] ? id : 'survival';
+    this.waves.setMode(this.mode);
   }
 
   start(fromGesture = true) {
@@ -283,8 +293,8 @@ export class Game {
     this.input.keyboard.exitLock();
     document.body.classList.remove('playing');
     const dawn = this.waves.phase === 'dawn';
-    this.menu.showOver(true, { wave: this.waves.wave, kills: this.kills, dawn });
-    events.emit('gameOver', { wave: this.waves.wave, kills: this.kills, dawn });
+    this.menu.showOver(true, { wave: this.waves.wave, kills: this.kills, dawn, mode: this.mode });
+    events.emit('gameOver', { wave: this.waves.wave, kills: this.kills, dawn, mode: this.mode });
   }
 
   restart() {
@@ -496,7 +506,7 @@ export class Game {
     const W = this.waves, C = Config.waves, mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
     if (W.phase === 'wave') {
       const left = C.waveTime - W.waveT;
-      return `Wave ${W.wave} of ${C.count} · ${left > 0 ? `${mmss(left)} left` : 'the last of them'}`;
+      return `Wave ${W.wave}${W.endless ? '' : ` of ${W.rules.count}`} · ${left > 0 ? `${mmss(left)} left` : 'the last of them'}`;
     }
     if (W.phase === 'calm') return `${W.wave ? 'Break' : 'Quiet'} · wave ${W.wave + 1} in ${mmss(Math.max(0, W.timer))}`;
     return null;
