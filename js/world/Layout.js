@@ -74,6 +74,9 @@ export const STOVE = {
   interactRadius: 1.7,   // from the door, on the floor
 };
 
+// The wood stack along the north wall, west of the stove: take one log at a time from here.
+export const WOODPILE = { position: new THREE.Vector3(CABIN.halfX - FURNITURE.stove.inset - 1.05, 0, -CABIN.halfZ + 0.3), interactRadius: 1.5 };
+
 // Ground height outside. Flat (CABIN.groundY) near the cabin, then each side has its own shape:
 //  north: dense forest, ground rises gently away from the cabin
 //  east:  open clearing, nearly flat, long sightline to a dead tree line at x ~ 32

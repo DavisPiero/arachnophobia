@@ -13,7 +13,7 @@ export class HUD {
     this.root = $('hud');
     this.mag = $('ammo-mag'); this.stock = $('ammo-stock'); this.ammo = $('ammo');
     this.ammoLabel = this.ammo.querySelector('.label'); this.ammoSep = this.ammo.querySelector('.sep');
-    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages'); this.logsEl = $('logs');
+    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages');
     this.prompt = $('prompt'); this.clockEl = $('clock-read');
     this.ring = $('reload-ring'); this.ringBar = this.ring.querySelector('.bar');
     this.message = $('message');
@@ -36,8 +36,7 @@ export class HUD {
   key(action, touchName) { return `<span class="key">${this.isTouch ? touchName : keyLabel(Settings.keys[action])}</span>`; }
 
   /** ammoMode: 'gun' (loaded | on table), 'melee' (the last gun's numbers, dimmed), 'flare' (flares left), 'none'. */
-  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, logs = 0, healT = -1 }) {
-    this.set('logs', logs, (n) => { this.logsEl.innerHTML = `<i class="sup" title="logs">${ICONS.logs}</i>${n}`; });
+  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, healT = -1 }) {
     // less text (session B): a small picture and a number for each supply
     this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? `<i class="sup" title="bandages">${ICONS.bandage}</i>${n}` : ''; });
     this.ring.classList.toggle('heal', healT >= 0);

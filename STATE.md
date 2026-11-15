@@ -2,7 +2,7 @@
 
 **Where we are:** the horror rework (SPEC "Second iteration" 7). A done. **B+C (merged, your call) done**
 (2026-11-15, merged into main): planks off the middle, softer window jump, harder board hits, stove fire light, logs for
-the fire or the planks, scroll-wheel weapons, a slight lens bulge, the new inventory with pictures, less text, a bigger
+the fire or the planks, scroll-wheel weapons, a slight lens bulge, the new inventory (slots, drag to reorder), less text, a bigger
 clock you can read, the long table with bandages on it, and a placement tool.
 
 **Next:** D (warmth reads the fire, lanterns that go out, gunshots draw spiders), E (creatures, needs your references),
@@ -18,7 +18,7 @@ F (weapons, sounds, a fire crackle).
   `dev/place.html` (run `npm start`, open http://localhost:8173/dev/place.html, drag, Save).
 - **Bandages only at the table** (SPEC said "heal there"). H away from the table now says "bandages are on the table".
   Keep it, or let H work anywhere again?
-- **Log numbers (guesses):** 3 at the start, +3 a wave, 55 s a log, one log a plank.
+- **Logs:** you carry one at a time from the stack (floats in front of you for now; hands later?). Numbers still guesses: 3 at the start, +3 a wave, 55 s a log. The stack does not shrink yet.
 - **Phones:** lower the fists' guard so a spider 2 m ahead is not hidden? (Recommendation: yes.) Which device?
 - **"Targeting lights":** lanterns that spiders go for and put out, which you relight? (my guess, for D)
 - **Faces:** send the references before session E. **Cabin:** is the two-room cabin still wanted?
