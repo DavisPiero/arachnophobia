@@ -34,7 +34,9 @@ const menuCheck = (async () => {
   await page.goto(`${base}index.html?mute=1&menu=1&quality=low`);
   await page.waitForFunction(() => window.game?.state === 'title' && document.getElementById('menu-screen').style.transform.startsWith('matrix3d'), null, { timeout: 60000 }).catch(() => {});
   const box = await page.locator('#btn-start').boundingBox();
+  const box2 = await page.locator('#btn-settings-menu').boundingBox(), panel = await page.locator('#menu-screen').boundingBox();
   check(box && box.x + box.width < 960 * 0.6, `menu buttons sit on the left monitor (${box && Math.round(box.x)})`);
+  check(box2 && panel && box2.y + box2.height <= panel.y + panel.height + 1, `all three menu entries fit on the monitor (${box2 && Math.round(box2.y + box2.height)} of ${panel && Math.round(panel.y + panel.height)})`);
   if (process.argv.includes('--shots')) await page.screenshot({ path: 'shots/smoke-menu.png' });
   check(errors.length === 0, `menu: no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await ctx.close();
@@ -314,6 +316,23 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     return { stage: w.stage, boards: w.boards.length, fallen: w.boards.filter((b) => b.fallen).length, firstBoard };
   });
   check(br.stage === 4 && br.fallen === br.boards, 'window boards torn off one by one reach breach');
+
+  // game modes: Waves never ends, Survival (for now) ends in dawn after its last wave
+  const modes = await page.evaluate(() => {
+    const g = window.game, W = g.waves;
+    const endWave = (mode) => {
+      for (const s of g.spiders.spiders) if (s.alive) s.die();
+      g.setMode(mode); W.wave = 10; W.phase = 'wave'; W.waveT = 999; W.spawnedThisWave = [];
+      W.update(0.01);
+      return { phase: W.phase, timer: W.timer };
+    };
+    const waves = endWave('waves');
+    W.timer = 0; W.update(0.01);
+    const next = W.wave;
+    return { waves, next, survival: endWave('survival'), buttons: !!document.getElementById('btn-waves') };
+  });
+  check(modes.waves.phase === 'calm' && modes.waves.timer === 15 && modes.next === 11, `Waves mode goes on past wave 10 with 15 s breaks (${JSON.stringify(modes.waves)}, next ${modes.next})`);
+  check(modes.survival.phase === 'dawn' && modes.buttons, `Survival still ends in dawn; the menu has both modes (${modes.survival.phase})`);
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await ctx.close();
 }).concat(menuCheck));

@@ -1,37 +1,29 @@
 # Hand-off
 
-*Session of 2026-11-15 (horror rework, B+C merged and done). Replaces any earlier note.*
+*Session of 2026-11-15 (assessment, survival plan, S0 modes). Replaces any earlier note.*
 
 ## Repo state
-- `claude/horror-bc` merged into `main` and pushed (user: "merge and push when done"); branch deleted.
-- `npm test` passes (73 s). `node tests/fistbot.mjs 2` survives both waves, health 72 then 38 (planks break 1.6x faster now).
-- Logs, nailing, bandaging at the table, the clock reading and the inventory checked headless. Not played by hand.
+- `claude/assessment-fixes` merged into `main` and pushed (user: "when done, merge and push"); branch deleted.
+- `npm test` passes, including two new mode checks and "all three menu entries fit on the monitor".
+- Checked headless: the menu shows survival / waves / settings; clicking waves reaches play in Waves mode.
+  Not played by hand.
 
 ## Read first
-1. `STATE.md` (open questions come first).
-2. `SPEC.md` "Second iteration" 7, B+C.
+1. `STATE.md` (open questions come first; seven are about survival).
+2. `SURVIVAL.md` (the plan; S1 is next).
 
 ## What was built
-- `Config.windows.boardSpots` replaces `boards`: plank heights from -1 (bottom) to 1 (top); now two low, two high.
-  `WindowSystem.addBoard(w)` nails the lowest fallen plank back on and emits `windowRepaired`.
-- `Config.linger.damage` 14 → 6.
-- `js/systems/Firewood.js` (new): log stock, stove fuel, `prompt()` / `tryStart()` / `update()`, jobs 'feed' and 'board'.
-  Wired in `Game.js` after the table and the cot in the USE order. HUD shows "· N logs" in the health label.
-- `Layout.STOVE` (door position, reach). `Lighting.js`: stove PointLight (always present, intensity 0 when out, so the
-  shader light count never changes), door slits and a halo; `setFire(level)`. Exposed through `World.js`.
-- `Config.fire`, `Config.logs`.
-
-- Session B/C second half: scroll wheel (`KeyboardMouse.js`, action 'swapBack'), `Config.windows.spiderDamage`, lens
-  in `PostFX.js` (`Config.render.lens`), `js/ui/Icons.js` + new `Inventory.js` cards, HUD supply pictures,
-  `Game.clockReading()` + `#clock-read`, long table (`placement.js` → `Layout.AMMO_TABLE`, middle legs, bandage rolls),
-  `Game.tablePrompt()` (bandage at the table), `Healing.atTable`, `dev/place.html` + POST `/save-placement` in serve.mjs.
-
-- Follow-up: `Inventory.js` rewritten (grid + detail, pointer drag calls `arsenal.assign`); `Firewood.carrying`, `held` mesh on the camera, `Layout.WOODPILE`. HUD no longer shows logs.
-
-- Inventory tabs + sprite icons (`Icons.icon(name)`), `Layout.MED_TABLE` / `WOODPILE`, `cabin.interactables` (own cloned materials), `Game.currentPrompt()` / `updateHighlight()`.
+- `Config.modes` (`survival`: 10 waves, 30 s breaks; `waves`: endless, 15 s breaks). `Config.waves.count` and
+  `breakTime` are gone; `clockWaves` sets how fast the wall clock turns.
+- `WaveSystem.setMode(id)`, `.rules`, `.endless`. `Game.mode`, `Game.setMode(id)`; the menu buttons carry
+  `data-mode`; `?mode=` works with `autostart=1`.
+- Menu: `#btn-start` is now "survival", new `#btn-waves`.
+- Fixes: the bandage hint names the medical table; `tests/fistbot.mjs` bandages (at the medical table).
 
 ## Known weak spots
-- The wood stack by the stove does not shrink with your log count.
-- No fire sound yet (crackle wanted with F's sound batch, or sooner).
-- Planks nailed back on a breached window: a spider already squeezing in is checked, but not tested under load.
-- Earlier ones still stand: legs through the gaps, hard flashlight disc on planks, long waves, code-made shotgun/flare.
+- Survival and Waves differ only in wave count and break length so far.
+- Waves past wave 10 only grows the spider count (capped by how many may be alive at once); nothing else escalates.
+- `Game.js` is over 600 lines and was not split; do it when Survival gets its own rules (S1–S2).
+- The user does not want balance bots or difficulty tuning proposed.
+- Earlier ones still stand: wood stack does not shrink, no fire sound, hard flashlight disc, wall texture seam,
+  code-made shotgun and flare.

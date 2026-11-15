@@ -1,6 +1,6 @@
 // Healing: bandages and the cot. Numbers: Config.heal.
-// Bandages: you start with none and get one for every wave survived (at most bandage.max). They lie on the ammo table
-// and you bandage up there (session C): H, the touch BANDAGE button or USE at the table wraps one over bandage.time
+// Bandages: you start with none and get one for every wave survived (at most bandage.max). They lie on the medical
+// table beside the ammo table and you bandage up there: H, the touch BANDAGE button or USE at that table wraps one over bandage.time
 // seconds; the health comes back as it is wrapped.
 // The cot: once per break between waves, stand by it and hold USE to lie down for bed.time seconds; you get up at full
 // health. Not during a wave (the spiders do not wait), and only once per break.

@@ -43,7 +43,8 @@ export class Menu {
     this.loading = $('loading-text');
     this.onOptions = null;      // game sets this: called when a graphics option changes
     this.settingsFrom = null;   // the screen to go back to
-    this.startBtn.disabled = true;
+    this.wavesBtn = $('btn-waves');
+    this.startBtn.disabled = this.wavesBtn.disabled = true;
     decode($('boot-text'), 'ARACHNOPHOBIA', 1000).then(() => $('boot-tap').classList.add('show'));
 
     // stop clicks on menus from reaching the game
@@ -109,7 +110,7 @@ export class Menu {
   /** Progress from the real loader: the progress bar shows it; the log tells its own story. */
   setLoading() {}
 
-  ready() { this.startBtn.disabled = false; this.loading.textContent = ''; }
+  ready() { this.startBtn.disabled = this.wavesBtn.disabled = false; this.loading.textContent = ''; }
 
   showMain() {
     this.loadingScreen.classList.add('hidden');
@@ -141,7 +142,7 @@ export class Menu {
       $('over-title').textContent = stats.dawn ? 'Dawn.' : 'They got in.';
       $('over-stats').textContent = stats.dawn
         ? `The sun is up and they are gone. You survived all ${stats.wave} waves. Spiders killed: ${stats.kills}.`
-        : `You held out until wave ${stats.wave}. Spiders killed: ${stats.kills}.`;
+        : `${stats.mode === 'waves' ? 'Waves. ' : ''}You held out until wave ${stats.wave}. Spiders killed: ${stats.kills}.`;
     }
     this.over.classList.toggle('hidden', !v);
     if (v) this.select(this.over, 0);

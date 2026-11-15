@@ -10,6 +10,15 @@ creatures themselves, how they move, sudden lunges, freezes and faces. Not cheap
 
 The core loop: **listen → pick a window → look and shoot → run low → cross the room to reload → listen again.**
 
+## Two game modes (2026-11-15)
+
+The main menu offers **Survival** and **Waves** (`Config.modes`).
+- **Waves**: the cabin only, and it never ends. Waves keep growing, a weapon arrives every two waves, breaks are 15 s,
+  the wall clock keeps turning, and the death screen says the wave you reached.
+- **Survival**: for now the one night described below (10 waves to dawn, 30 s breaks). It is becoming days in a crater
+  and nights at the cabin: gathering, upgrades, weapons found in chests, a fenced lab, dens and tunnels. The plan, its
+  steps (S0 done) and the open questions are in `SURVIVAL.md`.
+
 ## Pillars
 
 1. **Darkness outside.** The night itself gets darker with distance; outside you see eyes, and the rest only in
@@ -166,7 +175,7 @@ The long-term goal is a semi-open-world survival horror; behaviours and assets s
 
 ## Later (wanted, not scheduled)
 
-Crouch, score and saves, story/intro, recorded audio, a day/night survival cycle. (Barricade repair and more weapons
+Crouch, score, story/intro, recorded audio. (The day/night survival cycle and saves now have a plan: `SURVIVAL.md`.) (Barricade repair and more weapons
 moved into milestone 5.)
 
 ## Not building
