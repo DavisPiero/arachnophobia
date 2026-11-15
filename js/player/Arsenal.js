@@ -61,11 +61,11 @@ export class Arsenal {
   list() { return AR.order.map((name) => ({ name, label: AR.names[name], unlocked: this.has(name), wave: AR.unlock[name], slot: this.slotOf(name) })); }
 
   /** The weapon after `current` in slot order (touch: the weapon button cycles). */
-  next(current) {
+  next(current, step = 1) {
     const owned = this.slots.filter((w) => w && this.has(w));
     for (const w of AR.order) if (this.has(w) && !owned.includes(w)) owned.push(w);
     if (!owned.length) return current;
     const i = owned.indexOf(current);
-    return owned[(i + 1) % owned.length];
+    return owned[(Math.max(0, i) + step + owned.length) % owned.length];
   }
 }

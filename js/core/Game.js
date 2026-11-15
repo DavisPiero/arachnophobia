@@ -5,7 +5,7 @@ import { Config } from './Config.js';
 import { Quality, isTouch } from './Quality.js';
 import { events } from './Events.js';
 import { buildWorld } from '../world/World.js';
-import { LANTERN, WINDOWS } from '../world/Layout.js';
+import { LANTERN, WINDOWS, WALL_CLOCK } from '../world/Layout.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { Director } from '../audio/Director.js';
 import { Input } from '../input/Input.js';
@@ -30,9 +30,12 @@ import { Menu } from '../ui/Menu.js';
 import { MenuScene, quadTransform, SCREEN_W, SCREEN_H } from '../ui/MenuScene.js';
 import { loadSpiderModels } from '../spiders/SpiderModel.js';
 import { Music } from '../audio/Music.js';
+import { Firewood } from '../systems/Firewood.js';
 import { Settings, onSettingsChange } from './Settings.js';
 
 const params = new URLSearchParams(location.search);
+
+const _clockTo = new THREE.Vector3(), _clockFwd = new THREE.Vector3();
 
 export class Game {
   constructor(canvas) {
@@ -77,6 +80,7 @@ export class Game {
     this.waves = new WaveSystem({ spiders: this.spiders, events, quality: Quality, player: this.player });
     this.flares = new Flares({ scene: this.scene, camera: this.camera, windows: this.windows, weapon: this.weapon, arsenal: this.arsenal, audio: this.audio, events, player: this.player });
     this.healing = new Healing({ player: this.player, weapon: this.weapon, waves: this.waves, audio: this.audio, events });
+    this.firewood = new Firewood({ player: this.player, weapon: this.weapon, windows: this.windows, spiders: this.spiders, lighting: this.world.lighting, audio: this.audio, events });
     this.clock = new WallClock(this.scene);
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
@@ -86,6 +90,8 @@ export class Game {
     this.menu = new Menu(this.audio, this.input.keyboard);
     this.menu.onOptions = () => this.postfx.setOptions(Settings);
     this.inventory = new Inventory({ arsenal: this.arsenal, weapon: this.weapon, keyboard: this.input.keyboard, isTouch });
+    this.healing.atTable = () => this.table.inReach();
+    this.inventory.supplies = () => ({ bandages: this.healing.bandages, logs: this.firewood.logs });
     this.inventory.onClose = () => { this.input.endFrame(); this.resume(); };
     this.postfx.setOptions(Settings);
     onSettingsChange((key) => { if (key === 'fov') this.resize(); this.applyHudSettings(); });
@@ -144,7 +150,7 @@ export class Game {
     events.on('spiderKilled', () => { this.kills++; });
     events.on('waveStart', ({ wave, last }) => {
       this.hud.flash(last ? 'The last wave' : `Wave ${wave}`, wave === 1 ? 'They are coming. Listen for where.' : last ? 'Hold on until dawn.' : '', 3);
-      if (wave === 1) this.hud.hint('fists', 'Only your fists for now. Let them break in, then meet them: punch with the left mouse button / FIRE, stomp the small ones.', 7);
+      if (wave === 1) this.hud.hint('fists', isTouch ? 'Only your fists for now. FIRE punches, STOMP the small ones.' : `Only your fists for now. Click to punch, ${this.hud.key('stomp', '')} to stomp the small ones.`, 7);
       if (wave === 3) this.hud.hint('windows', 'Shoot through the gaps between the boards.');
     });
     events.on('weaponUnlocked', ({ name, slot }) => {
@@ -159,15 +165,16 @@ export class Game {
       if (last) return;   // dawn has its own screen
       const nw = this.newWeapon; this.newWeapon = null;
       if (nw) { this.hud.flash(`Wave ${wave} survived`, `${nw.title} · ${nw.sub}`, 5); return; }
-      this.hud.flash(`Wave ${wave} survived`, (this.arsenal.has('rifle') ? 'Fresh rounds on the table · ' : '') + 'a bandage · you can rest on the cot', 4);
-      if (wave === 1) this.hud.hint('heal', `Between waves: press ${this.hud.key('bandage', 'BANDAGE')} to bandage up, or rest on the cot once to heal fully.`, 7);
+      this.hud.flash(`Wave ${wave} survived`, `+${Config.logs.perWave} logs · a bandage`, 4);
+      if (wave === 1) this.hud.hint('logs', `Logs: feed the stove, or nail planks back on a window (${this.hud.key('interact', 'USE')}). Never enough for both.`, 8);
+      if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the ammo table. Or rest on the cot once a break.`, 7);
     });
     events.on('dawn', () => { this.dawnTimer = 3; this.hud.flash('Dawn', 'The light is coming up through the trees.', 3); });
     events.on('dryFire', () => {
       this.hud.notice('NO AMMO', 'Reload at the ammo table');
       this.hud.hint('reload', `Your rounds are on the ammo table. Stand at it and press ${this.hud.key('interact', 'USE')} to reload.`, 6);
     });
-    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', 'A board is gone. Get there before they tear through.'); });
+    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', `A plank is gone. A log nails it back on: stand at the window and press ${this.hud.key('interact', 'USE')}.`); });
     events.on('windowBreached', ({ id }) => {
       const w = WINDOWS.find((x) => x.id === id);
       this.hud.flash(`The ${w.label.toLowerCase()} window is broken`, '', 3);
@@ -278,6 +285,7 @@ export class Game {
     this.gore.clear();
     this.waves.reset();
     this.healing.reset();
+    this.firewood.reset();
     this.dawnTimer = 0;
     this.kills = 0;
     this.overTimer = 0;
@@ -343,11 +351,15 @@ export class Game {
     }
 
     if (playing) {
-      if (input.consume('interact') && !this.healing.busy) { if (!this.table.tryStart() && !this.table.prompt()) this.healing.tryBed(); }
+      if (input.consume('interact') && !this.healing.busy && !this.firewood.busy) {
+        if (this.tablePrompt()?.bandage) this.healing.tryBandage();
+        else if (!this.table.tryStart() && !this.table.prompt() && !this.healing.tryBed() && !this.healing.bedPrompt()) this.firewood.tryStart();
+      }
       if (input.consume('bandage')) {
         const r = this.healing.tryBandage();
         if (r === 'none') this.hud.notice('NO BANDAGES', 'You get one for every wave you survive');
         else if (r === 'full') this.hud.notice('NOT HURT');
+        else if (r === 'table') this.hud.notice('BANDAGES ARE ON THE TABLE');
       }
       for (let n = 1; n <= 5; n++) if (input.consume('slot' + n)) {
         const w = this.arsenal.atSlot(n), name = this.arsenal.slots[n - 1];
@@ -355,6 +367,7 @@ export class Game {
         else if (name) this.hud.notice(Config.arsenal.names[name].toUpperCase(), `Comes at wave ${Config.arsenal.unlock[name]}`);
       }
       if (input.consume('swap')) this.weapon.select(this.arsenal.next(this.weapon.want));
+      if (input.consume('swapBack')) this.weapon.select(this.arsenal.next(this.weapon.want, -1));
       if (input.consume('inventory')) { this.openInventory(); input.endFrame(); return; }
       // left click / FIRE uses whatever is in your hands; holding it keeps punching or swinging the axe
       const fire = input.consume('fire');
@@ -377,6 +390,7 @@ export class Game {
     if (simulate) {
       this.table.update(dt);
       this.healing.update(dt);
+      this.firewood.update(dt);
       this.melee.update(dt);
       this.flares.update(dt);
       const calmBefore = this.waves.phase === 'calm' ? this.waves.timer : null;
@@ -428,7 +442,10 @@ export class Game {
     this.audio.update(dt);
 
     // HUD
-    const prompt = playing ? (this.table.prompt() || this.healing.bedPrompt()) : null;
+    const prompt = playing ? (this.tablePrompt() || this.healing.bedPrompt() || this.firewood.prompt()) : null;
+    this.hud.setClock(playing ? this.clockReading() : null);
+    const bandageMeshes = this.world.cabin.ammoTable.bandages || [];
+    bandageMeshes.forEach((m, i) => { m.visible = i < this.healing.bandages; });
     this.input.touch.setInteractAvailable(!!prompt?.can, this.table.reloading ? '…' : 'USE');
     const want = this.weapon.want, flareHeld = want === 'flare';
     const anyGun = this.arsenal.has('rifle') || this.arsenal.has('shotgun');
@@ -437,12 +454,37 @@ export class Game {
       mag: flareHeld ? this.arsenal.flares : this.weapon.ammo[shownGun], stock: this.table.stocks[shownGun], health: this.player.health,
       ammoMode: flareHeld ? 'flare' : this.weapon.isGun(want) ? 'gun' : anyGun ? 'melee' : 'none', unit: shownGun === 'shotgun' ? 'shells' : 'rounds',
       prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted, held: want,
-      bandages: this.healing.bandages, healT: this.healing.bandageT >= 0 ? this.healing.bandageT : this.healing.bedT,
+      bandages: this.healing.bandages, logs: this.firewood.logs,
+      healT: this.healing.bandageT >= 0 ? this.healing.bandageT : this.healing.bedT >= 0 ? this.healing.bedT : this.firewood.progress,
     });
     const next = this.arsenal.next(want);
     this.input.touch.setNextWeapon(next !== want ? TOUCH_NAMES[next] : null);
     this.input.touch.setBandages(this.healing.bandages);
     input.endFrame();
+  }
+
+  /** What the wall clock tells you when you look at it (within 7 m, near the middle of the view), or null. */
+  clockReading() {
+    const eye = this.camera.position;
+    const to = _clockTo.copy(WALL_CLOCK.position).sub(eye);
+    const d = to.length();
+    if (d > 7 || to.normalize().dot(this.camera.getWorldDirection(_clockFwd)) < 0.985 - 0.02 * WALL_CLOCK.radius / Math.max(1, d)) return null;
+    const W = this.waves, C = Config.waves, mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    if (W.phase === 'wave') {
+      const left = C.waveTime - W.waveT;
+      return `Wave ${W.wave} of ${C.count} · ${left > 0 ? `${mmss(left)} left` : 'the last of them'}`;
+    }
+    if (W.phase === 'calm') return `${W.wave ? 'Break' : 'Quiet'} · wave ${W.wave + 1} in ${mmss(Math.max(0, W.timer))}`;
+    return null;
+  }
+
+  /** The table's prompt; when there is nothing to load and you are hurt, it offers a bandage instead. */
+  tablePrompt() {
+    const p = this.table.prompt();
+    if (!p || p.can || this.table.reloading) return p;
+    const h = this.healing;
+    if (h.bandages > 0 && !h.busy && this.player.health < Config.player.maxHealth) return { text: `Bandage up · ${h.bandages} left`, can: true, bandage: true };
+    return p;
   }
 
   // ---------------- debug helpers (?debug=1) ----------------

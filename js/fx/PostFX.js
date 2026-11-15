@@ -1,6 +1,9 @@
 // Rendering pipeline: world -> first-person gun (own depth) -> tone mapping -> a restrained "camera" look:
-// faint film grain, slight chromatic aberration toward the edges, vignette, red pain edges when hurt.
+// a slight barrel lens distortion ("optics compensation": the middle bulges a little, the edges pull in; radial-only
+// Brown-Conrady, the usual game post-process form), faint film grain, slight chromatic aberration toward the edges,
+// vignette, red pain edges when hurt.
 import * as THREE from 'three';
+import { Config } from '../core/Config.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
@@ -19,25 +22,33 @@ const LookShader = {
     uFxScale: { value: 1 },
     uLowHealth: { value: 0 },
     uAspect: { value: 1 },
+    uLens: { value: 0 },      // barrel strength (Config.render.lens); 0 = off
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
     void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
   fragmentShader: /* glsl */`
     uniform sampler2D tDiffuse;
-    uniform float uTime, uGrain, uAberration, uVignette, uHurt, uLowHealth, uAspect, uBrightness, uFxScale;
+    uniform float uTime, uGrain, uAberration, uVignette, uHurt, uLowHealth, uAspect, uBrightness, uFxScale, uLens;
     uniform vec2 uHurtDir;
     varying vec2 vUv;
     float hash(vec2 p) { p = fract(p * vec2(443.897, 441.423)); p += dot(p, p.yx + 19.19); return fract((p.x + p.y) * p.x); }
     void main() {
-      vec2 c = vUv - 0.5;
+      vec2 uv0 = vUv - 0.5;
+      // barrel distortion: sample further out the further from the centre, scaled so the corners stay on screen
+      vec2 ca = uv0 * vec2(uAspect, 1.0);
+      float k = uLens * uFxScale;
+      float rc2 = 0.25 * (uAspect * uAspect + 1.0);            // corner radius squared
+      vec2 duv = uv0 * (1.0 + k * dot(ca, ca)) / (1.0 + k * rc2);
+      vec2 suv = duv + 0.5;
+      vec2 c = suv - 0.5;
       float r2 = dot(c * vec2(uAspect, 1.0), c * vec2(uAspect, 1.0));
       // chromatic aberration grows toward the edges
       vec2 off = c * uAberration * uFxScale * (0.4 + r2 * 3.0);
       vec3 col;
-      col.r = texture2D(tDiffuse, vUv + off).r;
-      col.g = texture2D(tDiffuse, vUv).g;
-      col.b = texture2D(tDiffuse, vUv - off).b;
+      col.r = texture2D(tDiffuse, suv + off).r;
+      col.g = texture2D(tDiffuse, suv).g;
+      col.b = texture2D(tDiffuse, suv - off).b;
       // vignette
       float vig = smoothstep(0.95, 0.15, r2 * uVignette * 2.2);
       col *= mix(mix(1.0, 0.35, uFxScale), 1.0, vig);
@@ -54,7 +65,7 @@ const LookShader = {
       col = mix(col, vec3(0.3, 0.0, 0.0), edge * clamp(uLowHealth * 0.45 * pulse, 0.0, 0.6));
       // film grain: stronger in the shadows, like a sensor
       float lum = dot(col, vec3(0.299, 0.587, 0.114));
-      float g = hash(vUv * 1000.0 + fract(uTime * 13.7)) - 0.5;
+      float g = hash(suv * 1000.0 + fract(uTime * 13.7)) - 0.5;
       col += g * uGrain * uFxScale * (1.2 - lum);
       gl_FragColor = vec4(max(col, 0.0), 1.0);
     }`,
@@ -79,6 +90,7 @@ export class PostFX {
     this.composer.addPass(new OutputPass());
     this.look = new ShaderPass(LookShader);
     this.composer.addPass(this.look);
+    this.look.uniforms.uLens.value = Config.render.lens;
     if (quality.tier === 'low') { this.look.uniforms.uAberration.value = 0.0012; this.look.uniforms.uGrain.value = 0.04; }
   }
   setSize(w, h) { this.composer.setSize(w, h); this.look.uniforms.uAspect.value = w / h; }

@@ -13,7 +13,7 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
   (ambientCG, fetched by `node tools/fetch-textures.mjs` into git-ignored `blender/textures/`, listed in
   `blender/textures.md`); only the baked results are committed. Every loaded asset keeps a code-made fallback behind the
   same function name, so a missing or broken file never breaks the game. Sounds are still synthesised for now.
-- **Shared positions live in `js/world/Layout.js`.** Never hard-code cabin, window, table or route positions elsewhere.
+- **Shared positions live in `js/world/Layout.js`** (the ones the placement tool moves come from `js/world/placement.js`). Never hard-code cabin, window, table or route positions elsewhere.
 - **Tuning numbers live in `js/core/Config.js`.** Ammo, damage, speeds, wave sizes.
 - **Mobile is first-class.** Every feature must work with touch controls and on the `low` quality tier.
 - **Mute when testing.** Use `?mute=1`. Never leave a server or browser running. Screenshots go to `shots/` (git-ignored) via `node tools/shot.mjs`.
@@ -27,6 +27,7 @@ Read `SPEC.md` (what makes it good, what is not in yet), `STATE.md` (where we ar
 - `node tools/shot.mjs "index.html?mute=1&autostart=1" shots/x.png [--mobile] [--wait=ms] [--eval=js]`
 - `node tools/poses.mjs [shots/poses] [--mobile] [--only=hip,aim,fists,punch,shotgun,flare,flarelit,...]` — every first-person pose in one headless session
 - `node tests/fistbot.mjs [waves=2] [easy|normal|hard]` — a bot plays the fists-only start fast (steps the clock itself)
+- `dev/place.html` (with `npm start`) — placement tool: drag the table, clock and lantern; Save writes `js/world/placement.js`
 - `ASSET_FAST=1 npm run assets <name>` — quick small bake for iterating on shapes (never commit a fast build)
 - Blender check tools (run with `Blender -b --factory-startup -P <tool> -- ...`): `blender/tools/viewmodel.py hip|aim|axe|arm_<name>`
   (studio-lit render of the first-person layout, to `shots/`), `blender/tools/clipcheck.py` (does any hand pass through the rifle?)

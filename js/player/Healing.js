@@ -1,6 +1,7 @@
 // Healing: bandages and the cot. Numbers: Config.heal.
-// Bandages: you start with none and get one for every wave survived (carry at most bandage.max). H (or the touch
-// BANDAGE button) wraps one over bandage.time seconds while you walk slowly; the health comes back as it is wrapped.
+// Bandages: you start with none and get one for every wave survived (at most bandage.max). They lie on the ammo table
+// and you bandage up there (session C): H, the touch BANDAGE button or USE at the table wraps one over bandage.time
+// seconds; the health comes back as it is wrapped.
 // The cot: once per break between waves, stand by it and hold USE to lie down for bed.time seconds; you get up at full
 // health. Not during a wave (the spiders do not wait), and only once per break.
 import { Config } from '../core/Config.js';
@@ -37,6 +38,7 @@ export class Healing {
     if (this.busy || p.dead || this.weapon.reloading) return 'busy';
     if (this.bandages <= 0) return 'none';
     if (p.health >= Config.player.maxHealth) return 'full';
+    if (this.atTable && !this.atTable()) return 'table';
     this.bandages--;
     this.bandageT = 0;
     this.healed = 0;

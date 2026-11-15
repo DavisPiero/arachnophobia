@@ -1,34 +1,33 @@
 # Hand-off
 
-*Session of 2026-11-15 (horror rework, session A). Replaces any earlier note.*
+*Session of 2026-11-15 (horror rework, B+C merged and done). Replaces any earlier note.*
 
 ## Repo state
-- Branch `claude/horror-a` merged into `main` and pushed (user pre-approved "merge and push when done").
-- `npm test` passes (desktop + phone, 72 s). `node tests/brightness.mjs` passes with the new outside check.
-- `node tests/fistbot.mjs`: survives waves 1–2, health 64 at the end (baseline before: 100). Windows now hold
-  97–240 s against a bot that does not fight at the windows.
-- `node tests/locomotion.mjs` fails its pop limit, as it did before this session (0.87% → ~1.0%; knees 0.37% → 0.30%).
-- Not played by hand.
+- `claude/horror-bc` merged into `main` and pushed (user: "merge and push when done"); branch deleted.
+- `npm test` passes (73 s). `node tests/fistbot.mjs 2` survives both waves, health 72 then 38 (planks break 1.6x faster now).
+- Logs, nailing, bandaging at the table, the clock reading and the inventory checked headless. Not played by hand.
 
 ## Read first
 1. `STATE.md` (open questions come first).
-2. `SPEC.md` "Second iteration" 7 (sessions B–F).
+2. `SPEC.md` "Second iteration" 7, B+C.
 
 ## What was built
-- `WindowSystem.js` rewritten: no glass, `WC.boards` planks outside (`BOARD_Z`), per-plank health, `stage` = planks
-  gone (4 = breached), `gapAt()` for later grab-through. `windowDamaged` carries `before`.
-- `SpiderCollision.js`: plank boxes per window (surface 'glass', solid while `blocked(id)`), attic/overhang solid
-  (`underRoof`). `SpiderRig.js`: `_clips()` checks joints 1–4; fold tried in the same frame; `air` pose for leaps.
-- `SpiderAI.js`: `startLeap/updateLeap` (state 'leap'), leap choice in `updateInside`, quick first attack, strike
-  carries the body; `SpiderManager.updateLinger/windowJump` (`Config.linger`). `Behaviour.js`: `startAttack({inside})`,
-  `crouchHold`, shorter stops near the player.
-- `Weapon.js`: a plank in the ray blocks the shot when the spider is outside. `Melee.js`: no glass hits.
-- `SpiderModel.js`: fill light per spider (`visual.fillK`, set each draw); `Config.render.spiderFillOutside`.
-- `css/style.css`: `#hint` at the top.
+- `Config.windows.boardSpots` replaces `boards`: plank heights from -1 (bottom) to 1 (top); now two low, two high.
+  `WindowSystem.addBoard(w)` nails the lowest fallen plank back on and emits `windowRepaired`.
+- `Config.linger.damage` 14 → 6.
+- `js/systems/Firewood.js` (new): log stock, stove fuel, `prompt()` / `tryStart()` / `update()`, jobs 'feed' and 'board'.
+  Wired in `Game.js` after the table and the cot in the USE order. HUD shows "· N logs" in the health label.
+- `Layout.STOVE` (door position, reach). `Lighting.js`: stove PointLight (always present, intensity 0 when out, so the
+  shader light count never changes), door slits and a halo; `setFire(level)`. Exposed through `World.js`.
+- `Config.fire`, `Config.logs`.
+
+- Session B/C second half: scroll wheel (`KeyboardMouse.js`, action 'swapBack'), `Config.windows.spiderDamage`, lens
+  in `PostFX.js` (`Config.render.lens`), `js/ui/Icons.js` + new `Inventory.js` cards, HUD supply pictures,
+  `Game.clockReading()` + `#clock-read`, long table (`placement.js` → `Layout.AMMO_TABLE`, middle legs, bandage rolls),
+  `Game.tablePrompt()` (bandage at the table), `Healing.atTable`, `dev/place.html` + POST `/save-placement` in serve.mjs.
 
 ## Known weak spots
-- Spider legs reach through the gaps into the room, and some leg segments pass through planks (not checked by a test).
-- The flashlight makes a hard bright disc on planks at arm's length.
-- Waves run long (wave 1 took 243 s in the bot) because spiders sit at windows longer; boarding up (C) and the
-  player punching through gaps should change this. Check after C.
-- Shotgun and flare are still code-made.
+- The wood stack by the stove does not shrink with your log count.
+- No fire sound yet (crackle wanted with F's sound batch, or sooner).
+- Planks nailed back on a breached window: a spider already squeezing in is checked, but not tested under load.
+- Earlier ones still stand: legs through the gaps, hard flashlight disc on planks, long waves, code-made shotgun/flare.

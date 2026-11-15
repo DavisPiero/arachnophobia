@@ -525,7 +525,7 @@ export function buildCabin(quality) {
     return x >= RUG.minX && x <= RUG.maxX && z >= RUG.minZ && z <= RUG.maxZ ? 'rug' : 'wood';
   }
 
-  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies }, windowFrames, candle: ammoTable.candle };
+  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies, bandages: ammoTable.bandages }, windowFrames, candle: ammoTable.candle };
 }
 
 function cloneMat(m) {
@@ -559,7 +559,9 @@ function buildAmmoTable(M, shadows) {
     const a = z0 + (i / 4) * S.z, c = z0 + ((i + 1) / 4) * S.z - 0.004;
     b.boxMM('furn', x0, x1, top - 0.045, top, a, c, {});
   }
-  for (const x of [x0 + 0.08, x1 - 0.08]) for (const z of [z0 + 0.07, z1 - 0.07]) b.box('furn', 0.075, top - 0.045, 0.075, x, (top - 0.045) / 2, z, { grain: 'y' });
+  const legXs = [x0 + 0.08, x1 - 0.08];
+  if (S.x > 2) legXs.push(P.x);   // a long table needs a middle pair
+  for (const x of legXs) for (const z of [z0 + 0.07, z1 - 0.07]) b.box('furn', 0.075, top - 0.045, 0.075, x, (top - 0.045) / 2, z, { grain: 'y' });
   b.boxMM('furn', x0 + 0.1, x1 - 0.1, top - 0.16, top - 0.045, z0 + 0.05, z0 + 0.075, {});
   b.boxMM('furn', x0 + 0.1, x1 - 0.1, top - 0.16, top - 0.045, z1 - 0.075, z1 - 0.05, {});
   for (const x of [x0 + 0.05, x1 - 0.075]) b.boxMM('furn', x, x + 0.025, top - 0.16, top - 0.045, z0 + 0.1, z1 - 0.1, { grain: 'z' });
@@ -661,7 +663,22 @@ function buildAmmoTable(M, shadows) {
     candle.light = light; candle.sprite = model.userData.glow; candle.model = model;
   }
 
-  return { group, supplies, candle };
+  // bandage rolls at the west end of the table: one shown per bandage you have (Game sets .visible)
+  const bandages = [];
+  {
+    const lint = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0xcfc6b2, roughness: 0.95 }));
+    const roll = new THREE.CylinderGeometry(0.035, 0.035, 0.07, 14);
+    for (let i = 0; i < 3; i++) {
+      const o = new THREE.Group();
+      const m = mesh(roll, lint); m.position.y = i === 2 ? 0.035 + 0.07 : 0.035;
+      if (i === 2) { m.rotation.z = Math.PI / 2; m.position.y = 0.035; }
+      o.add(m);
+      const tail = mesh(new THREE.PlaneGeometry(0.06, 0.12), lint); tail.rotation.x = -Math.PI / 2; tail.position.set(0.04, 0.002, 0.07); tail.rotation.z = 0.3;
+      if (i === 0) o.add(tail);
+      bandages.push(place(o, x0 + 0.22 + i * 0.1, z0 + 0.2 + (i % 2) * 0.08, i * 0.7));
+    }
+  }
+  return { group, supplies, candle, bandages };
 }
 
 // A rifle cartridge standing upright, base at y = 0 (vertex colours: brass case, copper bullet).

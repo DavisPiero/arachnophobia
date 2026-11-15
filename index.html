@@ -26,8 +26,9 @@
   <div id="crosshair"></div>
   <div id="prompt"></div>
   <svg id="reload-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="track"/><circle cx="20" cy="20" r="16" class="bar"/></svg>
+  <div id="clock-read"></div>
   <div id="ammo"><span id="ammo-mag">8</span><span class="sep">|</span><span id="ammo-stock">40</span><div class="label">loaded · on table</div></div>
-  <div id="health"><div class="label">health<span id="bandages"></span></div><div class="bar"><div id="health-trail"></div><div id="health-fill"></div></div></div>
+  <div id="health"><div class="label">health<span id="bandages"></span><span id="logs"></span></div><div class="bar"><div id="health-trail"></div><div id="health-fill"></div></div></div>
   <div id="message"></div>
   <div id="notice"></div>
   <div id="hint"></div>
@@ -86,16 +87,14 @@
 </div>
 
  <!-- inventory (I): the game pauses; weapons in order, locked ones greyed; pick one, then a number to remap it -->
-<div id="screen-inventory" class="screen term-screen overlay hidden">
-  <div class="term-panel">
-    <h2>INVENTORY</h2>
-    <ul id="inv-list" class="term-menu"></ul>
+<div id="screen-inventory" class="screen overlay inv-screen hidden">
+  <div class="inv-panel">
+    <h2>Inventory</h2>
+    <div id="inv-grid"></div>
+    <div id="inv-supplies"></div>
     <div id="inv-slots"></div>
-    <p id="inv-help" class="dimline"></p>
-    <ul class="term-menu">
-      <li><button id="btn-inv-hold">hold it</button></li>
-      <li><button id="btn-inv-done">done</button></li>
-    </ul>
+    <p id="inv-help"></p>
+    <div class="inv-actions"><button id="btn-inv-hold">Hold it</button><button id="btn-inv-done">Back</button></div>
   </div>
 </div>
 

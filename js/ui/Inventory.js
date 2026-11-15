@@ -1,7 +1,9 @@
 // The inventory (I, or the inventory button on the touch pause screen): the game pauses and lists your weapons.
 // Pick one (click, or arrows + Enter), then a number (key 1–5 or the number buttons) to put it on that key.
+// Each weapon is a card with its picture (js/ui/Icons.js); bandages and logs are shown under them.
 // Locked weapons are listed greyed with the wave they come at. Picking "hold it" takes the weapon in hand.
 import { Settings, keyLabel } from '../core/Settings.js';
+import { ICONS } from './Icons.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -9,7 +11,9 @@ export class Inventory {
   constructor({ arsenal, weapon, keyboard, isTouch }) {
     this.arsenal = arsenal; this.weapon = weapon; this.keyboard = keyboard; this.isTouch = isTouch;
     this.screen = $('screen-inventory');
-    this.listEl = $('inv-list');
+    this.gridEl = $('inv-grid');
+    this.suppliesEl = $('inv-supplies');
+    this.supplies = null;    // the game sets this: () => ({ bandages, logs })
     this.slotsEl = $('inv-slots');
     this.helpEl = $('inv-help');
     this.picked = null;
@@ -49,26 +53,29 @@ export class Inventory {
   help(text) { this.helpEl.textContent = text; }
 
   draw() {
-    this.listEl.innerHTML = '';
-    for (const w of this.arsenal.list()) {
-      const li = document.createElement('li');
+    const list = this.arsenal.list();
+    this.gridEl.innerHTML = '';
+    for (const w of list) {
       const b = document.createElement('button');
-      b.textContent = `${w.slot ? `[${w.slot}]` : '[ ]'} ${w.label}`;
+      b.className = 'inv-card';
       b.disabled = !w.unlocked;
-      if (w.name === this.picked) b.classList.add('picked');
-      b.addEventListener('click', () => { this.picked = w.name; this.draw(); this.help(`Now press ${this.isTouch ? 'a number' : '1–5'} to put it on that key, or hold it.`); });
-      const desc = document.createElement('span');
-      desc.className = 'desc';
-      desc.textContent = !w.unlocked ? `comes at wave ${w.wave}` : w.name === 'flare' ? `${this.arsenal.flares} left` : w.name === this.weapon.want ? 'in hand' : '';
-      li.append(b, desc);
-      this.listEl.appendChild(li);
+      b.classList.toggle('picked', w.name === this.picked);
+      b.classList.toggle('held', w.name === this.weapon.want);
+      const note = !w.unlocked ? `wave ${w.wave}` : w.name === 'flare' ? `${this.arsenal.flares} left` : w.name === this.weapon.want ? 'in hand' : '';
+      b.innerHTML = `<span class="inv-key">${w.slot || ''}</span><span class="inv-pic">${ICONS[w.name] || ''}</span>`
+        + `<span class="inv-name">${w.label}</span><span class="inv-note">${note}</span>`;
+      b.addEventListener('click', () => { this.picked = w.name; this.draw(); this.help(`Press ${this.isTouch ? 'a number below' : '1–5'} to put it on that key.`); });
+      this.gridEl.appendChild(b);
     }
+    const sup = this.supplies?.() || {};
+    this.suppliesEl.innerHTML = [['bandage', 'Bandages', sup.bandages], ['logs', 'Logs', sup.logs]]
+      .map(([icon, label, n]) => `<div class="inv-supply"><span class="inv-pic">${ICONS[icon]}</span><span class="inv-name">${label}</span><b>${n ?? 0}</b></div>`).join('');
     this.slotsEl.innerHTML = '';
     const slots = this.arsenal.slots;
     for (let n = 1; n <= 5; n++) {
       const b = document.createElement('button');
       const w = slots[n - 1];
-      b.innerHTML = `<b>${n}</b><span>${w ? this.arsenal.list().find((x) => x.name === w).label.split(' ').pop() : '—'}</span>`;
+      b.innerHTML = `<b>${n}</b><span>${w ? list.find((x) => x.name === w).label.split(' ').pop() : '—'}</span>`;
       b.classList.toggle('locked', !!w && !this.arsenal.has(w));
       b.addEventListener('click', () => this.assign(n));
       this.slotsEl.appendChild(b);

@@ -41,7 +41,9 @@ export class AmmoTable {
 
   inReach() {
     const p = this.player.position;
-    return Math.hypot(p.x - AMMO_TABLE.position.x, p.z - AMMO_TABLE.position.z) < AMMO_TABLE.interactRadius + 0.35;
+    // anywhere along the long table: distance to its centre line, not its middle
+    const dx = Math.max(0, Math.abs(p.x - AMMO_TABLE.position.x) - AMMO_TABLE.size.x / 2 + 0.3);
+    return Math.hypot(dx, p.z - AMMO_TABLE.position.z) < AMMO_TABLE.interactRadius;
   }
 
   /** What the interact prompt should say right now, or null if out of reach. */
