@@ -4,6 +4,6 @@
 export const PLACEMENT = {
   "table": { "x": -1.65, "length": 1.5 },
   "clock": { "x": -1.65, "y": 2.25, "radius": 0.28 },
-  "med": { "x": -3.15 },
+  "med": { "x": -0.1 },
   "lantern": { "x": 0.3, "z": 0.6 }
 };

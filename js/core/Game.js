@@ -5,7 +5,7 @@ import { Config } from './Config.js';
 import { Quality, isTouch } from './Quality.js';
 import { events } from './Events.js';
 import { buildWorld } from '../world/World.js';
-import { LANTERN, WINDOWS, WALL_CLOCK, MED_TABLE } from '../world/Layout.js';
+import { LANTERN, WINDOWS, WALL_CLOCK, MED_TABLE, AMMO_TABLE, BED } from '../world/Layout.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { Director } from '../audio/Director.js';
 import { Input } from '../input/Input.js';
@@ -35,7 +35,20 @@ import { Settings, onSettingsChange } from './Settings.js';
 
 const params = new URLSearchParams(location.search);
 
-const _clockTo = new THREE.Vector3(), _clockFwd = new THREE.Vector3();
+const _clockTo = new THREE.Vector3(), _clockFwd = new THREE.Vector3(), _lookTo = new THREE.Vector3();
+// where each thing you can use is, for "are you looking at it" (point, rough radius in metres)
+const LOOK = {
+  med: [MED_TABLE.position.clone().setY(0.85), 0.45],
+  ammo: [AMMO_TABLE.position.clone().setY(0.8), AMMO_TABLE.size.x / 2],
+  bed: [BED.position.clone().setY(0.4), 0.9],
+};
+const REST_TIPS = [
+  'Feed the stove before you sleep. The dark brings them closer.',
+  'A plank nailed back now is a plank they have to tear off again.',
+  'Small ones die to a stomp. Save your rounds.',
+  'Bandages are on the medical table, beside the ammo.',
+  'Listen. They tell you which window before you see them.',
+];
 
 export class Game {
   constructor(canvas) {
@@ -169,6 +182,7 @@ export class Game {
       if (wave === 1) this.hud.hint('logs', `Take a log from the stack by the stove (${this.hud.key('interact', 'USE')}): feed the fire, or nail it over a window. Never enough for both.`, 8);
       if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the ammo table. Or rest on the cot once a break.`, 7);
     });
+    events.on('healed', () => this.hud.healBurst());
     events.on('fireFed', () => this.hud.toast('The fire takes it'));
     events.on('windowRepaired', () => this.hud.toast('Plank nailed back'));
     events.on('reloadStart', () => this.hud.toast('Reloading'));
@@ -356,10 +370,10 @@ export class Game {
     if (playing) {
       if (input.consume('interact') && !this.healing.busy && !this.firewood.busy) {
         const t = this.currentPrompt()?.target;
-        if (t === 'med') { if (this.healing.tryBandage() === 'ok') this.hud.toast('Bandaging'); }
+        if (t === 'stove' || t === 'woodpile' || t === 'window') { const had = this.firewood.carrying; if (this.firewood.tryStart() && !had && this.firewood.carrying) this.hud.toast('Log in hand'); }
+        else if (t === 'med') { if (this.healing.tryBandage() === 'ok') this.hud.toast('Bandaging'); }
         else if (t === 'ammo') this.table.tryStart();
         else if (t === 'bed') this.healing.tryBed();
-        else { const had = this.firewood.carrying; if (this.firewood.tryStart() && !had && this.firewood.carrying) this.hud.toast('Log in hand'); }
       }
       if (input.consume('bandage')) {
         const r = this.healing.tryBandage();
@@ -394,6 +408,7 @@ export class Game {
     }
     this.time += simulate ? dt : 0;
     this.player.update(simulate ? dt : 0, input);
+    this.updateRest();
     if (simulate) {
       this.table.update(dt);
       this.healing.update(dt);
@@ -450,8 +465,9 @@ export class Game {
 
     // HUD
     const prompt = playing ? this.currentPrompt() : null;
-    this.updateHighlight(dt, prompt?.target);
-    this.hud.setClock(playing ? this.clockReading() : null);
+    const clockText = playing ? this.clockReading() : null;
+    this.updateHighlight(dt, prompt?.target || (clockText ? 'clock' : null));
+    this.hud.setClock(clockText);
     const bandageMeshes = this.world.cabin.medBandages || [];
     bandageMeshes.forEach((m, i) => { m.visible = i < this.healing.bandages; });
     this.input.touch.setInteractAvailable(!!prompt?.can, this.table.reloading ? '…' : 'USE');
@@ -503,14 +519,44 @@ export class Game {
 
   /** The one thing you can use where you stand: its prompt, with a title and what to light up (target). */
   currentPrompt() {
-    const tag = (p, target, title) => p && { ...p, target, title };
-    return tag(this.medPrompt(), 'med', 'Medical table') || tag(this.table.prompt(), 'ammo', 'Ammo table')
-      || tag(this.healing.bedPrompt(), 'bed', 'Cot') || this.firewood.prompt();
+    // only for what you are looking at, and only when you are near it (user, 2026-11-15)
+    // the one most squarely in view wins (the two tables stand side by side)
+    let best = null, bm = 0;
+    for (const [p, target, title] of [[this.medPrompt(), 'med', 'Medical table'], [this.table.prompt(), 'ammo', 'Ammo table'], [this.healing.bedPrompt(), 'bed', 'Cot']]) {
+      if (!p) continue;
+      if (!p.can && p.text.endsWith('…')) return { ...p, target, title };   // busy here: keep showing it
+      const m = this.lookingAt(...LOOK[target]);
+      if (m > bm) { bm = m; best = { ...p, target, title }; }
+    }
+    if (best) return best;
+    const f = this.firewood.prompt();
+    return f && (!f.at || this.lookingAt(f.at, f.r) > 0) ? f : null;
+  }
+
+  /** How squarely the view is on this point (within its radius plus a little); > 0 means you are looking at it. */
+  lookingAt(point, r) {
+    const to = _lookTo.copy(point).sub(this.camera.position), d = to.length();
+    const ang = Math.atan2(r, d) + 0.14;
+    return to.divideScalar(d).dot(this.camera.getWorldDirection(_clockFwd)) - Math.cos(ang);   // > 0: yes, bigger = more squarely
+  }
+
+  /** The cot: tip down into bed, fade to black for ~5 s with a tip and drifting Z's, then fade up and sit up. */
+  updateRest() {
+    const T = Config.heal.bed.time, h = this.healing, el = this.restEl ||= document.getElementById('rest');
+    if (h.bedT < 0) { if (this.resting) { this.resting = false; el.classList.remove('on'); el.style.opacity = 0; } return; }
+    if (!this.resting) { this.resting = true; el.querySelector('p').textContent = REST_TIPS[(Math.random() * REST_TIPS.length) | 0]; el.classList.add('on'); }
+    const s = h.bedT * T, ease = (x) => x * x * (3 - 2 * x), cl = (x) => Math.min(1, Math.max(0, x));
+    const down = s < T - 1.2 ? ease(cl(s / 1.1)) : ease(cl((T - s) / 1.1));
+    this.camera.rotateX(-0.75 * down);
+    this.camera.rotateZ(0.25 * down);
+    this.camera.position.y -= 0.7 * down;
+    el.style.opacity = s < 0.9 ? 0 : s < 1.5 ? (s - 0.9) / 0.6 : s < T - 1.5 ? 1 : cl((T - 0.9 - s) / 0.6);
   }
 
   /** The object you are at glows a warm gold, slowly breathing (user, 2026-11-15). */
   updateHighlight(dt, target) {
     const I = this.world.cabin.interactables; if (!I) return;
+    I.clock ||= this.clock.group;
     this.hl ||= {};
     const pulse = 0.8 + 0.2 * Math.sin(this.time * 3);
     for (const [k, g] of Object.entries(I)) {

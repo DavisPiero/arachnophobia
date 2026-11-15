@@ -12,6 +12,7 @@ import * as THREE from 'three';
 import { STOVE, WOODPILE } from '../world/Layout.js';
 
 const F = Config.fire, L = Config.logs;
+const PILE_AT = WOODPILE.position.clone().setY(0.2);
 
 export class Firewood {
   constructor({ player, weapon, windows, spiders, lighting, audio, events, camera }) {
@@ -85,13 +86,13 @@ export class Firewood {
     if (this.player.dead) return null;
     if (this.job) return { text: this.job.kind === 'feed' ? 'Feeding the fire…' : 'Nailing a plank…', can: false };
     if (this.carrying) {
-      if (this.nearStove()) return { title: 'Stove', target: 'stove', ...(this.fuel > F.maxFuel - F.burnPerLog ? { text: this.fireWord(), can: false } : { text: 'Put the log on the fire', can: true }) };
+      if (this.nearStove()) return { title: 'Stove', target: 'stove', at: STOVE.door, r: 0.4, ...(this.fuel > F.maxFuel - F.burnPerLog ? { text: this.fireWord(), can: false } : { text: 'Put the log on the fire', can: true }) };
       const w = this.atWindow();
-      if (w && w.boards.some((b) => b.fallen)) return this.blockedBy(w) ? { title: 'Window', text: 'Something is in the way', can: false } : { title: 'Window', text: 'Nail it over the window', can: true };
+      if (w && w.boards.some((b) => b.fallen)) return this.blockedBy(w) ? { title: 'Window', target: 'window', at: w.center, r: 0.65, text: 'Something is in the way', can: false } : { title: 'Window', target: 'window', at: w.center, r: 0.65, text: 'Nail it over the window', can: true };
       return null;
     }
-    if (this.nearPile()) return { title: 'Wood', target: 'woodpile', ...(this.logs > 0 ? { text: `Take a log · ${this.logText()} left`, can: true } : { text: 'No logs left', can: false }) };
-    if (this.nearStove()) return { title: 'Stove', target: 'stove', text: this.fireWord(), can: false };
+    if (this.nearPile()) return { title: 'Wood', target: 'woodpile', at: PILE_AT, r: 0.45, ...(this.logs > 0 ? { text: `Take a log · ${this.logText()} left`, can: true } : { text: 'No logs left', can: false }) };
+    if (this.nearStove()) return { title: 'Stove', target: 'stove', at: STOVE.door, r: 0.4, text: this.fireWord(), can: false };
     return null;
   }
 

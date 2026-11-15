@@ -175,3 +175,7 @@ One line each, with the reason. Newest at the bottom.
 - 2026-11-15 — UI polish: one ink-on-black language with a faint grain, thin warm lines and a brass accent for every in-game screen (pause, settings from pause, death, inventory, HUD); the main menu stays the green terminal on the 3D monitor. Screens and panels ease in, inventory fades out, menu items slide with a brass tick.
 - 2026-11-15 — HUD: thinner health bar, serif ammo, a weapon picture by the ammo whose name shows for a moment on a change, a quiet gold line for small actions (log in hand, plank nailed, the fire takes it, reloading, bandaging).
 - 2026-11-15 — Ammo table back to 1.5 m at x -1.65; the medical table stands where the extension was (x -3.15); clock above the ammo table.
+- 2026-11-15 — Medical table moved to the right of the ammo table (east, x -0.1, as you face it from the room... user's "right" read as the side it was not on).
+- 2026-11-15 — Prompts only for what you look at (user): near it AND the view on it (its radius + 0.14 rad); the one most squarely in view wins. The clock glows gold while you read it.
+- 2026-11-15 — Healed (bandage done, or up from the cot): small red crosses rise around the middle, the health bar glows, "Patched up".
+- 2026-11-15 — Rest on the cot is 7.5 s: the view tips down and rolls into bed, fades to black ~5 s with a random tip and three drifting Z's, fades up and sits back up.

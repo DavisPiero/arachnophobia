@@ -91,6 +91,21 @@ export class HUD {
     }
   }
 
+  /** Healed: a few small red crosses rise and fade around the middle, and the health bar glows. */
+  healBurst() {
+    for (let i = 0; i < 7; i++) {
+      const c = document.createElement('i');
+      c.className = 'heal-cross';
+      c.style.left = `${50 + (Math.random() - 0.5) * 26}%`; c.style.top = `${52 + (Math.random() - 0.5) * 18}%`;
+      c.style.animationDelay = `${i * 0.07}s`; c.style.fontSize = `${12 + Math.random() * 10}px`;
+      c.textContent = '✚';
+      this.root.appendChild(c);
+      setTimeout(() => c.remove(), 1700);
+    }
+    this.health.classList.remove('healed'); void this.health.offsetWidth; this.health.classList.add('healed');
+    this.toast('Patched up');
+  }
+
   /** A quiet line under the prompt for small things done: a log taken, a plank nailed. */
   toast(text, seconds = 1.6) {
     this.toastEl.textContent = text;
