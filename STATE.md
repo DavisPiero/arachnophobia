@@ -1,32 +1,31 @@
 # State
 
-**Where we are:** the game is turning into a survival game (user, 2026-11-15). The plan is `SURVIVAL.md`: days outside
-in a crater, nights defending the cabin, steps S0–S7. **S0 is done and merged:** the menu offers **Survival** and
-**Waves**. Waves never ends (15 s breaks). Survival is still the old 10-wave night until S1.
+**Where we are:** the survival plan (`SURVIVAL.md`) is down to four steps: S0 modes, S1 first day, S2 basin and
+workbench, S3 the long game, S4 make it real. **S0 and S1 are done and merged.** Survival now starts in the morning:
+open the door, walk the forest, pick up branches, ammo tins and yarrow, carry them home before dusk, hold the cabin
+through a night of three waves, and wake to the next day. Waves mode is the old endless night, door boarded.
 
-**Next:** S1, going outside: the door opens, you walk the existing forest, trees are solid, spiders chase you in the
-open. The riskiest step (spiders only know fixed lanes to windows today). Then S2 day and night, S3 gathering.
+**Next:** play S1 by hand and tell me how it feels (day length, how much lies out there, the pack size, the spiders
+chasing you outside). Then S2: the full crater with cliffs and places, and the workbench to spend what you gather.
 
-**Still wanted from the horror rework:** D (warmth, lanterns going out, gunshots draw spiders; folds into S5–S6),
+**Still wanted from the horror rework:** D (warmth, lanterns going out, gunshots draw spiders; folds into S2–S3),
 E (creatures, needs your references), F (weapons, sounds, a fire crackle).
 
-**Open with you (survival, my recommendation in brackets; I assumed yes to start S0):**
+**Open with you (survival; guesses stay guesses until you confirm, my recommendation in brackets):**
+- S1 numbers: day 8 min, dusk 1, three waves a night, a pack of 6, 15 things out each morning. (Keep, tune by playing.)
 - Waves breaks 15 s and a weapon every two waves? (yes)
-- A thin slice on today's map (S1–S3) before the crater? (yes)
-- Outside: reload from a belt pouch and bandage anywhere, slowly? (yes, Survival only)
+- Outside: reload from a belt pouch and bandage anywhere, slowly? (yes, Survival only; planned for S3)
 - No hunger or thirst at first? (yes)
-- Death: lose the trip by day, replay from the morning at night? (yes)
-- Day about 8 min, dusk 1, night 6? (yes, to tune by playing)
+- Death: lose the trip by day, replay from the morning at night? (yes; S3. Today dying still ends the run)
 - Where is the lab (I put it far north) and how many sheds and den mouths (I guessed 3–4 sheds)?
 
 **Open with you (older):**
 - Clock position (move it with `dev/place.html`); bandages only at the medical table in Waves?
-- Logs: numbers are guesses (3 at the start, +3 a wave, 55 s a log); the stack does not shrink yet.
 - Phones: lower the fists' guard? Faces: references for session E. Is the two-room cabin still wanted?
 
-**Seen in the assessment, not fixed (your call):** the flashlight is a blown-out white disc on anything close; a seam
-in the cabin wall texture.
+**Seen, not fixed (your call):** the flashlight is a blown-out white disc on anything close; a seam in the cabin
+wall texture; `DECISIONS.md` is at 197 lines and will need its oldest phase archived soon.
 
 **Tools:** `npm test`; `node tests/fistbot.mjs`; `node tests/brightness.mjs`; `dev/place.html`.
-`?mode=waves` with `autostart=1` starts Waves. `?debug=1`: **G** weapons, **N** ends the wave, **U** runner inside,
-**B** breaks planks.
+`?mode=waves` with `autostart=1` starts Waves. `?debug=1`: **T** skips to the end of the day/dusk/dawn, **G** weapons,
+**N** ends the wave, **U** runner inside, **B** breaks planks.

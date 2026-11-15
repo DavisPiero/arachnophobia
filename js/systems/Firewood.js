@@ -26,7 +26,7 @@ export class Firewood {
     this.held.visible = false;
     camera?.add(this.held);
     this.reset();
-    events.on('waveEnd', () => { this.logs = Math.min(L.max, this.logs + L.perWave); });
+    events.on('waveEnd', () => { this.logs = Math.min(L.max, this.logs + (this.perWave ?? L.perWave)); });   // perWave: set per game mode
   }
 
   reset() {

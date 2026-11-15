@@ -13,7 +13,7 @@ const page = await (await browser.newContext({ viewport: { width: 844, height: 3
 const errors = [];
 page.on('console', (m) => { if (m.type() === 'error') errors.push(m.text()); });
 page.on('pageerror', (e) => errors.push(e.message));
-await page.goto(`http://localhost:${port}/index.html?mute=1&autostart=1&quality=low`);
+await page.goto(`http://localhost:${port}/index.html?mute=1&autostart=1&mode=waves&quality=low`);
 await page.waitForFunction(() => window.game?.state === 'playing', null, { timeout: 60000 });
 // skip most of the quiet intro
 await page.evaluate(() => { window.game.waves.timer = 3; });

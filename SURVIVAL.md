@@ -1,6 +1,6 @@
 # Survival plan
 
-*Draft of 2026-11-15, with the user's notes of the same day. S0 is built; nothing else is. Everything marked (guess)
+*Draft of 2026-11-15, with the user's notes of the same day. Steps condensed to S0–S4 the same day; S0 and S1 are built. Everything marked (guess)
 is mine until you confirm it.*
 
 ## The idea in one paragraph
@@ -79,26 +79,24 @@ A **workbench** in the cabin turns them into:
 bandaging only at the medical table. Recommendation: outside you reload from a small belt pouch, slowly and standing
 still, and bandage anywhere, slowly. The table stays the only place with the big stock.
 
-## How we get there: eight steps, each one playable
+## How we get there: four steps, each one playable
 
-Order matters: first a thin slice of the whole loop on the map we already have, then make the map big.
+Condensed from eight to four on 2026-11-15 (user: too little changed per step). Order matters: first a thin slice of
+the whole loop on the map we already have, then make the map big.
 
 | Step | What you can do when it is done | Main files |
 |---|---|---|
-| **S0 Modes** *(done 2026-11-15)* | Menu offers Survival and Waves. Waves runs forever. Survival is the same night for now. | `Config.modes`, `WaveSystem.js`, `Game.js`, `Menu.js`. `Game.js` is not split yet: that waits until Survival has rules of its own (S1–S2) |
-| **S1 Outside** | Open the door and walk the existing forest. Trees and rocks are solid. Spiders chase you on open ground. | `Player.js`, `Layout.js`, `Forest.js`, `Cabin.js` (door, outside walls), `SpiderAI.js`, `SpiderPaths.js` |
-| **S2 Day and night** | The sun comes up and goes down: sky, fog, light, sound. A pocket watch. A dusk warning. | `Lighting.js`, new `js/survival/DayCycle.js`, `Director.js`, `brightness.mjs` gets a day check |
-| **S3 Gather** | Pick things up, search containers, chop fallen trees, fill a backpack, stash it at home. | new `js/survival/Items.js`, `Pickups.js`, `Inventory.js` (Items tab exists), `Firewood.js`, `AmmoTable.js` |
-| **S4 The basin** | The full crater with cliffs, the places above as simple block shapes, a hand-drawn map. | new `js/world/Basin.js`, `Forest.js` in chunks, `Layout.js`, `dev/place.html` learns to place landmarks |
-| **S5 Workbench** | Spend what you found: window tiers, door, traps, lanterns, pack and weapon upgrades. | new `js/survival/Crafting.js`, recipes in a data file, `WindowSystem.js`, `Cabin.js` |
-| **S6 The long game** | Nights scale by day, brood nights, dens and tunnels with their few daytime spiders, weapon chests, death rules, save at dawn. | `WaveSystem.js`, `SpiderAI.js`, new `js/survival/Save.js` |
-| **S7 Make it real** | Blender models for the places, new sounds, notes to find, first stranger playtest. | `blender/`, `SoundBank.js` |
+| **S0 Modes** *(done 2026-11-15)* | Menu offers Survival and Waves. Waves runs forever. | `Config.modes`, `WaveSystem.js`, `Game.js`, `Menu.js` |
+| **S1 First day** (was S1–S3) | Survival starts in the morning. Open the door and walk the existing forest; trees and rocks are solid. The light goes from day to dusk to night and back; the wall clock tells the hour. Pick up wood, ammo tins and herbs into a small pack; walk in and it is unpacked. At night the waves come; outside they chase you on open ground. | new `js/survival/` (`DayCycle.js`, `Pickups.js`), `Player.js`, `Cabin.js` (door), `Forest.js` (obstacles), `Lighting.js`, `SpiderAI.js`, `WaveSystem.js`, `Game.js` |
+| **S2 Basin and workbench** (was S4–S5) | The full crater with cliffs, the places as block shapes, a hand-drawn map. A workbench: window tiers, a barred door, traps, lanterns, pack and weapon upgrades. | new `js/world/Basin.js`, `Forest.js` in tiles, `Layout.js`, `dev/place.html`, new `js/survival/Crafting.js` and a recipe file, `WindowSystem.js` |
+| **S3 The long game** (was S6) | Nights scale by day, brood nights, dens and tunnels with their few daytime spiders, weapon chests, death rules, save at dawn, reload and bandage outside. | `WaveSystem.js`, `SpiderAI.js`, new `js/survival/Save.js` |
+| **S4 Make it real** (was S7) | Blender models for the places, new sounds, notes to find, first stranger playtest. | `blender/`, `SoundBank.js` |
 
-After **S3** there is a complete small game: go out, bring wood and ammo home, survive the night. That is the first
+After **S1** there is a complete small game: go out, bring wood and ammo home, survive the night. That is the first
 build to put in front of someone who has never seen it.
 
 Sessions D (warmth, lights), E (creatures) and F (weapons, sound) from the horror rework are not dropped: D folds
-into S5 and S6; E and F can run alongside whenever your references are ready.
+into S2 and S3; E and F can run alongside whenever your references are ready.
 
 ## What is hard (said plainly)
 
@@ -109,7 +107,7 @@ into S5 and S6; E and F can run alongside whenever your references are ready.
 - **Phones.** A big forest is expensive. Plan: build it in tiles so only nearby ones draw, and let the basin's fog set
   how far you see (shorter on phones). Three.js does not hide off-screen instanced trees by itself, so tiles are needed.
 - **The tunnels.** An underground system is a second, indoor map. First version: short dead-end dens; joined tunnels later.
-- **`Game.js` is over 600 lines.** S0 only added a mode switch; it must be split when Survival gets its own rules.
+- **`Game.js` is over 600 lines.** Survival rules now live in `js/survival/`; the rest of `Game.js` still wants splitting.
 - **Scope.** This is several times the size of the horror rework. Each step should be signed off before the next.
 
 ## Not in this plan
@@ -119,9 +117,9 @@ Hunger and thirst, other survivors or traders, vehicles, building anywhere but t
 ## Questions for you (my recommendation first)
 
 1. **Waves mode breaks:** 15 s, and keep "a weapon every two waves"? (Yes to both.)
-2. **Start with a thin slice on today's map (S0–S3) before building the crater?** (Yes.)
+2. **Start with a thin slice on today's map (S1) before building the crater?** (Yes.)
 3. **Reload and bandage outside,** slowly, from what you carry? (Yes, survival only; Waves keeps the tables.)
 4. **No hunger or thirst** in the first version? (Yes.)
 5. **Death:** lose the trip by day, replay from the morning at night? (Yes.)
 6. **Day length:** about 8 minutes of day, 1 of dusk, 6 of night? (Yes, as a first guess to tune by playing.)
-7. **The story spine:** the breach under the west cliff as the place you eventually close? (Yes, but not before S7.)
+7. **The story spine:** the breach under the west cliff as the place you eventually close? (Yes, but not before S4.)

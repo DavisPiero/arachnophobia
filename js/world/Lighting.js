@@ -83,7 +83,7 @@ export function buildLighting(scene, renderer, quality) {
   renderer.toneMappingExposure = quality.tier === 'low' ? Config.render.exposureLow : Config.render.exposure;
 
   // ---------------------------------------------------------- sky dome
-  const skyUniforms = { uFlash: { value: 0 }, uMoonDir: { value: new THREE.Vector3(0.62, 0.62, -0.38).normalize() } };
+  const skyUniforms = { uDay: { value: 0 }, uFlash: { value: 0 }, uMoonDir: { value: new THREE.Vector3(0.62, 0.62, -0.38).normalize() } };
   const sky = new THREE.Mesh(
     new THREE.SphereGeometry(180, 32, 16),
     new THREE.ShaderMaterial({
@@ -98,6 +98,7 @@ export function buildLighting(scene, renderer, quality) {
         }`,
       fragmentShader: /* glsl */`
         uniform float uFlash;
+        uniform float uDay;
         uniform vec3 uMoonDir;
         varying vec3 vDir;
         #include <common>
@@ -112,6 +113,10 @@ export function buildLighting(scene, renderer, quality) {
           // cloud-hidden moon: broad cold glow
           float m = max(dot(vDir, uMoonDir), 0.0);
           c += vec3(0.05, 0.06, 0.08) * pow(m, 10.0) + vec3(0.02, 0.025, 0.03) * pow(m, 3.0);
+          // daylight: an overcast, misty sky, palest at the horizon where it meets the fog (S1)
+          vec3 dayC = mix(vec3(0.26, 0.28, 0.29), vec3(0.17, 0.2, 0.24), smoothstep(0.05, 0.9, e));
+          dayC += vec3(0.12, 0.11, 0.09) * pow(m, 4.0);
+          c = mix(c, dayC, uDay);
           c += vec3(0.35, 0.38, 0.45) * uFlash * (0.4 + 0.6 * smoothstep(-0.1, 0.4, e));
           gl_FragColor = vec4(c, 1.0);
           #include <tonemapping_fragment>
@@ -213,6 +218,29 @@ export function buildLighting(scene, renderer, quality) {
   const flashes = [];     // pulses: { t, s }
   let clock = 0, dip = 0, nextDip = 6 + Math.random() * 8, dipT = -1;
   let flashLevel = 0;
+  // daylight, 0 = night (as the game always was) .. 1 = full day. Set by js/survival/DayCycle.js through the game.
+  let day = 0;
+  const D = Config.day;
+  const SUN_COLOR = new THREE.Color().setRGB(1.0, 0.95, 0.86, THREE.SRGBColorSpace);
+  const DAY_FOG = new THREE.Color().setRGB(...D.fogColor, THREE.LinearSRGBColorSpace);
+  const HEMI_SKY = hemi.color.clone(), HEMI_GROUND = hemi.groundColor.clone();
+  const DAY_SKY = new THREE.Color().setRGB(0.75, 0.8, 0.85, THREE.SRGBColorSpace), DAY_GROUND = new THREE.Color().setRGB(0.3, 0.29, 0.24, THREE.SRGBColorSpace);
+  const NIGHT_FOG_DENSITY = scene.fog.density, NIGHT_EXPOSURE = renderer.toneMappingExposure;
+  const NIGHT_BG = scene.background.clone();
+  const _dayFog = new THREE.Color(), _white = new THREE.Color(1, 1, 1);
+  function setDaylight(k) {
+    day = Math.max(0, Math.min(1, k));
+    const e = day * day * (3 - 2 * day);   // eased: dusk falls off quickly at the end
+    const f = Math.sqrt(day);              // the mist stays pale longer than the light (else dusk is black fog)
+    hemi.color.copy(HEMI_SKY).lerp(DAY_SKY, e);
+    hemi.groundColor.copy(HEMI_GROUND).lerp(DAY_GROUND, e);
+    scene.fog.density = THREE.MathUtils.lerp(NIGHT_FOG_DENSITY, D.fogDensity, f);
+    scene.background.copy(NIGHT_BG).lerp(DAY_FOG, e);
+    renderer.toneMappingExposure = NIGHT_EXPOSURE * THREE.MathUtils.lerp(1, D.exposure, e);
+    skyUniforms.uDay.value = e;
+    _dayFog.copy(FOG_COLOR).lerp(DAY_FOG, e * 0.5 + f * 0.5);
+  }
+  _dayFog.copy(FOG_COLOR);
 
   function flash(strength = 1) {
     const s = Math.max(0, Math.min(1, strength));
@@ -265,12 +293,13 @@ export function buildLighting(scene, renderer, quality) {
       fl += flashes[i].s * Math.exp(-age / 0.075);
     }
     flashLevel = Math.min(1.5, fl);
-    moon.intensity = MOON_INTENSITY + flashLevel * 3;
-    moon.color.copy(MOON_COLOR).lerp(new THREE.Color(1, 1, 1), Math.min(1, flashLevel));
-    hemi.intensity = HEMI_INTENSITY + flashLevel * 2;
-    outsideInside.value = OUTSIDE_INSIDE_BASE + flashLevel * 0.12;
+    const e = skyUniforms.uDay.value;
+    moon.intensity = THREE.MathUtils.lerp(MOON_INTENSITY, D.sun, e) + flashLevel * 3;
+    moon.color.copy(MOON_COLOR).lerp(SUN_COLOR, e).lerp(_white, Math.min(1, flashLevel));
+    hemi.intensity = THREE.MathUtils.lerp(HEMI_INTENSITY, D.hemi, e) + flashLevel * 2;
+    outsideInside.value = OUTSIDE_INSIDE_BASE + e * 0.2 + flashLevel * 0.12;
     skyUniforms.uFlash.value = flashLevel;
-    scene.fog.color.copy(FOG_COLOR).lerp(FLASH_FOG, Math.min(1, flashLevel));
+    scene.fog.color.copy(_dayFog).lerp(FLASH_FOG, Math.min(1, flashLevel) * (1 - e));
     // muzzle
     if (muzzleAge < 1) {
       muzzleAge += dt;
@@ -280,7 +309,8 @@ export function buildLighting(scene, renderer, quality) {
 
   return {
     group, lantern, wallLamp, moon, hemi, sky, lanternModel,
-    stoveLight, update, flash, muzzleFlash, addFlame, setFire,
+    stoveLight, update, flash, muzzleFlash, addFlame, setFire, setDaylight,
+    get daylight() { return day; },
     get flashLevel() { return flashLevel; },
   };
 }

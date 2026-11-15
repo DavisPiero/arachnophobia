@@ -1,29 +1,33 @@
 # Hand-off
 
-*Session of 2026-11-15 (assessment, survival plan, S0 modes). Replaces any earlier note.*
+*Session of 2026-11-15 (survival plan condensed, S1 first day). Replaces any earlier note.*
 
 ## Repo state
-- `claude/assessment-fixes` merged into `main` and pushed (user: "when done, merge and push"); branch deleted.
-- `npm test` passes, including two new mode checks and "all three menu entries fit on the monitor".
-- Checked headless: the menu shows survival / waves / settings; clicking waves reaches play in Waves mode.
-  Not played by hand.
+- `claude/survival-first-day` merged into `main` and pushed (user: "when you are done merge and push"); branch deleted.
+- `npm test` passes on desktop and phone, with four new Survival checks (door, walking out, unpacking, Waves keeps
+  the door boarded). `node tests/fistbot.mjs 1` survives wave 1 in Waves mode.
+- Checked headless: day, dusk, night and dawn screenshots; the door; a tree stopping you; picking up and unpacking;
+  a runner hunting you outside and going back to its lane when you go in. Not played by hand.
 
 ## Read first
-1. `STATE.md` (open questions come first; seven are about survival).
-2. `SURVIVAL.md` (the plan; S1 is next).
+1. `STATE.md` (open questions come first).
+2. `SURVIVAL.md` (four steps now; S2 is next).
 
 ## What was built
-- `Config.modes` (`survival`: 10 waves, 30 s breaks; `waves`: endless, 15 s breaks). `Config.waves.count` and
-  `breakTime` are gone; `clockWaves` sets how fast the wall clock turns.
-- `WaveSystem.setMode(id)`, `.rules`, `.endless`. `Game.mode`, `Game.setMode(id)`; the menu buttons carry
-  `data-mode`; `?mode=` works with `autostart=1`.
-- Menu: `#btn-start` is now "survival", new `#btn-waves`.
-- Fixes: the bandage hint names the medical table; `tests/fistbot.mjs` bandages (at the medical table).
+- `js/survival/Survival.js`: Survival's rules beside `Game.js` (door, outside, prompts, unpacking, the clock text).
+- `js/survival/DayCycle.js`: day → dusk → night (the waves) → dawn → next day; drives `Lighting.setDaylight`.
+- `js/survival/Pickups.js`: branches, ammo tins, yarrow; a pack; scattered fresh each morning.
+- `js/world/Obstacles.js`: trunks, rocks, logs, shed as circles/capsules in a grid; filled by `Forest.js`.
+- `Cabin.js`: the door leaf hangs on a pivot; its boards are a separate group (shown only in Waves).
+- `Player.js`: `canLeave`, ground height outside, the doorstep, the 58 m leash, `footForest` steps.
+- `SpiderAI.js`: a `hunt` state for spiders on the ground when you are outside at night.
+- `WaveSystem.js`: `lastWave` and `nextNight()`; `waveEnd` now says `nightOver`; `last` means the run is over.
 
 ## Known weak spots
-- Survival and Waves differ only in wave count and break length so far.
-- Waves past wave 10 only grows the spider count (capped by how many may be alive at once); nothing else escalates.
-- `Game.js` is over 600 lines and was not split; do it when Survival gets its own rules (S1–S2).
+- Spiders already inside when you go out stay inside; none come in through an open door.
+- The door leaf is solid only when fully open or shut; while it swings you can pass through it.
+- Same night ambience by day (wind, rain); no birds or day sounds yet.
+- The stove burns down during the day; you relight it at dusk (maybe right, maybe not).
+- Placeholder pickup meshes; the cabin outside was fine at a glance but not looked at closely.
+- `Game.js` is still over 600 lines; Survival's rules now live in `js/survival/`.
 - The user does not want balance bots or difficulty tuning proposed.
-- Earlier ones still stand: wood stack does not shrink, no fire sound, hard flashlight disc, wall texture seam,
-  code-made shotgun and flare.

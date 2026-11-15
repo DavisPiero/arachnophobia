@@ -32,6 +32,7 @@ import { loadSpiderModels } from '../spiders/SpiderModel.js';
 import { Music } from '../audio/Music.js';
 import { Firewood } from '../systems/Firewood.js';
 import { Settings, onSettingsChange } from './Settings.js';
+import { Survival } from '../survival/Survival.js';
 
 const params = new URLSearchParams(location.search);
 
@@ -96,6 +97,7 @@ export class Game {
     this.healing = new Healing({ player: this.player, weapon: this.weapon, waves: this.waves, audio: this.audio, events });
     this.firewood = new Firewood({ player: this.player, weapon: this.weapon, windows: this.windows, spiders: this.spiders, lighting: this.world.lighting, audio: this.audio, events, camera: this.camera });
     this.clock = new WallClock(this.scene);
+    this.survival = new Survival(this);   // the door, outside, day and night, gathering (Survival mode only)
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
     this.hud = new HUD(isTouch);
@@ -177,11 +179,11 @@ export class Game {
       if (name === 'shotgun') this.hud.hint('shotgun', 'The shotgun loads at the ammo table too, from its own box of shells.', 6);
       this.hud.hint('inventory', `Press ${this.hud.key('inventory', 'pause → inventory')} to see your weapons. Drag them to change the order.`, 6);
     });
-    events.on('waveEnd', ({ wave, last }) => {
-      if (last) return;   // dawn has its own screen
+    events.on('waveEnd', ({ wave, last, nightOver }) => {
+      if (last || nightOver && this.survival.active) return;   // dawn has its own screen
       const nw = this.newWeapon; this.newWeapon = null;
       if (nw) { this.hud.flash(`Wave ${wave} survived`, `${nw.title} · ${nw.sub}`, 5); return; }
-      this.hud.flash(`Wave ${wave} survived`, `+${Config.logs.perWave} logs · a bandage`, 4);
+      this.hud.flash(`Wave ${wave} survived`, this.survival.active ? 'A bandage on the medical table' : `+${Config.logs.perWave} logs · a bandage`, 4);
       if (wave === 1) this.hud.hint('logs', `Take a log from the stack by the stove (${this.hud.key('interact', 'USE')}): feed the fire, or nail it over a window. Never enough for both.`, 8);
       if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the medical table, beside the ammo. Or rest on the cot once a break.`, 7);
     });
@@ -189,7 +191,10 @@ export class Game {
     events.on('fireFed', () => this.hud.toast('The fire takes it'));
     events.on('windowRepaired', () => this.hud.toast('Plank nailed back'));
     events.on('reloadStart', () => this.hud.toast('Reloading'));
-    events.on('dawn', () => { this.dawnTimer = 3; this.hud.flash('Dawn', 'The light is coming up through the trees.', 3); });
+    events.on('dawn', ({ nights }) => {
+      this.hud.flash('Dawn', 'The light is coming up through the trees.', 3);
+      if (!nights) this.dawnTimer = 3;   // Survival goes on into the next day
+    });
     events.on('dryFire', () => {
       this.hud.notice('NO AMMO', 'Reload at the ammo table');
       this.hud.hint('reload', `Your rounds are on the ammo table. Stand at it and press ${this.hud.key('interact', 'USE')} to reload.`, 6);
@@ -245,6 +250,7 @@ export class Game {
   setMode(id) {
     this.mode = Config.modes[id] ? id : 'survival';
     this.waves.setMode(this.mode);
+    this.survival.setActive(this.mode === 'survival');
   }
 
   start(fromGesture = true) {
@@ -253,7 +259,8 @@ export class Game {
     this.music.stop();
     this.director.start();
     this.menu.showStart(false);
-    this.hud.hint('start', 'Nothing but your fists tonight, at first. Better weapons come as the night goes on.', 6);
+    if (this.survival.active) this.survival.started();
+    else this.hud.hint('start', 'Nothing but your fists tonight, at first. Better weapons come as the night goes on.', 6);
     this.resume(fromGesture);
   }
 
@@ -292,8 +299,8 @@ export class Game {
     this.input.setEnabled(false);
     this.input.keyboard.exitLock();
     document.body.classList.remove('playing');
-    const dawn = this.waves.phase === 'dawn';
-    this.menu.showOver(true, { wave: this.waves.wave, kills: this.kills, dawn, mode: this.mode });
+    const dawn = this.waves.phase === 'dawn' && !this.survival.active;
+    this.menu.showOver(true, { wave: this.waves.wave, kills: this.kills, dawn, mode: this.mode, day: this.survival.cycle.day, outside: this.player.outside });
     events.emit('gameOver', { wave: this.waves.wave, kills: this.kills, dawn, mode: this.mode });
   }
 
@@ -313,6 +320,7 @@ export class Game {
     this.waves.reset();
     this.healing.reset();
     this.firewood.reset();
+    this.survival.reset();
     this.dawnTimer = 0;
     this.kills = 0;
     this.overTimer = 0;
@@ -380,7 +388,8 @@ export class Game {
     if (playing) {
       if (input.consume('interact') && !this.healing.busy && !this.firewood.busy) {
         const t = this.currentPrompt()?.target;
-        if (t === 'stove' || t === 'woodpile' || t === 'window') { const had = this.firewood.carrying; if (this.firewood.tryStart() && !had && this.firewood.carrying) this.hud.toast('Log in hand'); }
+        if (this.survival.use(t)) { /* the door, or something picked up */ }
+        else if (t === 'stove' || t === 'woodpile' || t === 'window') { const had = this.firewood.carrying; if (this.firewood.tryStart() && !had && this.firewood.carrying) this.hud.toast('Log in hand'); }
         else if (t === 'med') { if (this.healing.tryBandage() === 'ok') this.hud.toast('Bandaging'); }
         else if (t === 'ammo') this.table.tryStart();
         else if (t === 'bed') this.healing.tryBed();
@@ -425,8 +434,9 @@ export class Game {
       this.firewood.update(dt);
       this.melee.update(dt);
       this.flares.update(dt);
+      this.survival.update(dt);
       const calmBefore = this.waves.phase === 'calm' ? this.waves.timer : null;
-      this.waves.update(dt);
+      if (this.survival.wavesRun) this.waves.update(dt);
       // deliberate silence in the seconds before a wave arrives
       if (calmBefore !== null && calmBefore > 14 && this.waves.timer <= 14) this.director.silence?.(14);
       this.spiders.update(dt, this.player);
@@ -434,7 +444,7 @@ export class Game {
       this.weapon.targets = this.spiders.targets;
       this.weapon.worldMeshes = this.cabinMeshes.concat(this.windows.boardMeshes());
       this.danger += (this.spiders.danger(this.player) - this.danger) * (1 - Math.exp(-dt * 0.8));
-      this.eyes.rate = 0.6 + this.danger * 1.2;
+      this.eyes.rate = (0.6 + this.danger * 1.2) * (1 - this.survival.light);   // no red eyes by day
       this.director.update(dt, {
         danger: this.danger,
         playerPos: this.player.position,
@@ -448,7 +458,7 @@ export class Game {
         this.heartT -= dt;
         if (this.heartT <= 0) { this.audio.play('heartbeat', { volume: 0.5 + 0.5 * (1 - this.player.health / 35), exterior: false }); this.heartT = 0.7 + this.player.health / 35 * 0.5; }
       }
-      this.clock.set(this.waves.clockHours);
+      this.clock.set(this.survival.active ? this.survival.cycle.hours : this.waves.clockHours);
       if (this.dawnTimer > 0 && this.state === 'playing') { this.dawnTimer -= dt; if (this.dawnTimer <= 0) this.gameOver(); }
       if (this.player.dead && this.state === 'playing') {
         this.overTimer += dt;
@@ -470,7 +480,7 @@ export class Game {
     // the gun picks up the lantern's warmth depending on how close you are to it
     const dl = this.camera.position.distanceTo(LANTERN.position);
     this.weapon.viewKey.intensity = Config.render.viewKeyMin + 2.0 / (1 + dl * dl * 0.35) * (this.world.lighting.lantern.intensity / (this.lanternBase ||= this.world.lighting.lantern.intensity || 1))
-      + this.flashlight.level * 1.2;
+      + this.flashlight.level * 1.2 + this.survival.light * (this.player.outside ? 2.2 : 0.6);   // daylight on your hands
     this.audio.update(dt);
 
     // HUD
@@ -504,11 +514,14 @@ export class Game {
     const d = to.length();
     if (d > 7 || to.normalize().dot(this.camera.getWorldDirection(_clockFwd)) < 0.985 - 0.02 * WALL_CLOCK.radius / Math.max(1, d)) return null;
     const W = this.waves, C = Config.waves, mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    const day = this.survival.active && this.survival.clockText(mmss);
+    if (day) return day;
     if (W.phase === 'wave') {
       const left = C.waveTime - W.waveT;
-      return `Wave ${W.wave}${W.endless ? '' : ` of ${W.rules.count}`} · ${left > 0 ? `${mmss(left)} left` : 'the last of them'}`;
+      const of = W.endless ? '' : W.nights ? ` of ${W.rules.count} tonight` : ` of ${W.rules.count}`;
+      return `Wave ${W.nights ? W.wave - (W.lastWave - W.rules.count) : W.wave}${of} · ${left > 0 ? `${mmss(left)} left` : 'the last of them'}`;
     }
-    if (W.phase === 'calm') return `${W.wave ? 'Break' : 'Quiet'} · wave ${W.wave + 1} in ${mmss(Math.max(0, W.timer))}`;
+    if (W.phase === 'calm') return `${W.wave && W.wave !== W.lastWave - W.rules.count ? 'Break' : 'Quiet'} · wave ${W.nights ? W.wave + 1 - (W.lastWave - W.rules.count) : W.wave + 1} in ${mmss(Math.max(0, W.timer))}`;
     return null;
   }
 
@@ -539,6 +552,8 @@ export class Game {
       if (m > bm) { bm = m; best = { ...p, target, title }; }
     }
     if (best) return best;
+    const sv = this.survival.prompt((p, r) => this.lookingAt(p, r));
+    if (sv) return sv;
     const f = this.firewood.prompt();
     return f && (!f.at || this.lookingAt(f.at, f.r) > 0) ? f : null;
   }
@@ -596,6 +611,7 @@ export class Game {
       }
       if (e.code === 'KeyB') for (const w of this.windows.windows) this.windows.damage(w.id, 30);
       if (e.code === 'KeyJ') events.emit('lightning', { strength: 1 });
+      if (e.code === 'KeyT') this.survival.cycle.skip();   // Survival: jump to the end of the day / dusk / dawn
       if (e.code === 'KeyN') { this.waves.waveT = 999; for (const s of this.spiders.spiders) if (s.alive) s.die(); } // end this wave now
     });
   }
@@ -603,7 +619,7 @@ export class Game {
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 0.5) { this.fps = Math.round(this.fpsN / this.fpsAcc); this.fpsAcc = 0; this.fpsN = 0; }
     const i = this.renderer.info;
-    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-5 spawn  U runner inside  G all weapons  K kill  B damage windows  J lightning  N end wave`;
+    this.debugEl.textContent = `${this.fps} fps  ${Quality.tier}\ncalls ${i.render.calls}  tris ${(i.render.triangles / 1000).toFixed(0)}k\nwave ${this.waves.wave} ${this.waves.phase}  spiders ${this.spiders.aliveCount}\ndanger ${this.danger.toFixed(2)}\n1-5 spawn  U runner inside  G all weapons  K kill  B damage windows  J lightning  N end wave  T skip day`;
   }
 }
 

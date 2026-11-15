@@ -847,6 +847,21 @@ export const RECIPES = {
       k.src(out, 0);
     },
   },
+  // outside: a soft thud into the forest floor and a crunch of needles and dry leaves (S1)
+  footForest: {
+    variants: 6, lowVariants: 3, dur: 0.4, gain: 0.3, reverb: 0.03, peak: 0.8,
+    render(k) {
+      const a = k.arr(); const t0 = 0.004;
+      k.mode(a, t0, k.rr(60, 85), 0.8, 0.04); k.burst(a, t0, 0.35, 0.012, 0.9);
+      k.src(k.filt(a, 'lowpass', 300), 0);
+      for (let i = 0, n = k.ri(4, 8); i < n; i++) {   // needles and twigs giving way
+        const t = t0 + k.rr(0, 0.16); const nn = k.noise('white', t, t + 0.03); const bp = k.f('bandpass', k.rr(2200, 5200), 1.2); const g = k.g(0);
+        k.env(g.gain, [[t, 0], [t + 0.003, k.rr(0.04, 0.12)], [t + 0.03, 0]]); k.chain(nn, bp, g, k.mix);
+      }
+      const n = k.noise('white', t0, t0 + 0.25); const bp = k.f('bandpass', k.rr(900, 1500), 0.6); const g = k.g(0);
+      k.env(g.gain, [[t0, 0], [t0 + 0.02, 0.07], [t0 + 0.12, 0.03], [t0 + 0.24, 0]]); k.chain(n, bp, g, k.mix);
+    },
+  },
   footRug: {
     variants: 6, lowVariants: 3, dur: 0.38, gain: 0.28, reverb: 0.06, peak: 0.8,
     render(k) {
@@ -1386,7 +1401,7 @@ export const RECIPES = {
 
 export const REQUIRED_NAMES = [
   'gunshot', 'dryFire', 'magOut', 'magIn', 'roundLoad', 'boltRack', 'ammoPickup', 'glassCrack', 'glassShatter', 'glassTap',
-  'glassScratch', 'woodScrape', 'boardHit', 'boardBreak', 'footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactWood',
+  'glassScratch', 'woodScrape', 'boardHit', 'boardBreak', 'footWood', 'footRug', 'footForest', 'playerHurt', 'heartbeat', 'bulletImpactWood',
   'bulletImpactFlesh', 'uiClick', 'torchClick',
   'leverCycle', 'caseTink', 'roundInsert', 'axeSwing', 'axeChop', 'stomp', 'stompSquish', 'spiderKill',
   'chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep',
@@ -1398,7 +1413,7 @@ export const CATEGORIES = {
   Weapon: ['gunshot', 'leverCycle', 'caseTink', 'roundInsert', 'dryFire', 'ammoPickup', 'torchClick', 'magOut', 'magIn', 'roundLoad', 'boltRack'],
   Melee: ['axeSwing', 'axeChop', 'stomp', 'stompSquish', 'spiderKill'],
   'Glass & wood': ['glassTap', 'glassScratch', 'glassCrack', 'glassShatter', 'woodScrape', 'boardHit', 'boardBreak', 'bulletImpactWood'],
-  Player: ['footWood', 'footRug', 'playerHurt', 'heartbeat', 'bulletImpactFlesh', 'uiClick'],
+  Player: ['footWood', 'footRug', 'footForest', 'playerHurt', 'heartbeat', 'bulletImpactFlesh', 'uiClick'],
   Spiders: ['chitterRunner', 'skitterRunner', 'clickClimber', 'breathBrute', 'stepBrute', 'breathStalker', 'stepSpider', 'roofStep', 'spiderHiss', 'spiderPain', 'spiderScream', 'spiderAttack'],
   'Ambience one-shots': ['thunder', 'treeCreak', 'branchSnap', 'cabinCreak', 'lanternCreak', 'distantUnknown', 'windGust'],
   'Ambience loops': ['wind', 'rain', 'roomTone', 'drone'],
