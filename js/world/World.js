@@ -47,6 +47,8 @@ export function buildWorld(scene, renderer, quality, events) {
       colliders: cabin.colliders,
       floorTypeAt: cabin.floorTypeAt,
       ammoTable: cabin.ammoTable,
+      medBandages: cabin.medBandages,
+      interactables: cabin.interactables,
       windowFrames: cabin.windowFrames,
       candle: cabin.candle.light,
     },

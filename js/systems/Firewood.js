@@ -85,13 +85,13 @@ export class Firewood {
     if (this.player.dead) return null;
     if (this.job) return { text: this.job.kind === 'feed' ? 'Feeding the fire…' : 'Nailing a plank…', can: false };
     if (this.carrying) {
-      if (this.nearStove()) return this.fuel > F.maxFuel - F.burnPerLog ? { text: this.fireWord(), can: false } : { text: 'Put the log on the fire', can: true };
+      if (this.nearStove()) return { title: 'Stove', target: 'stove', ...(this.fuel > F.maxFuel - F.burnPerLog ? { text: this.fireWord(), can: false } : { text: 'Put the log on the fire', can: true }) };
       const w = this.atWindow();
-      if (w && w.boards.some((b) => b.fallen)) return this.blockedBy(w) ? { text: 'Something is in the way', can: false } : { text: 'Nail it over the window', can: true };
+      if (w && w.boards.some((b) => b.fallen)) return this.blockedBy(w) ? { title: 'Window', text: 'Something is in the way', can: false } : { title: 'Window', text: 'Nail it over the window', can: true };
       return null;
     }
-    if (this.nearPile()) return this.logs > 0 ? { text: `Take a log · ${this.logText()} left`, can: true } : { text: 'No logs left', can: false };
-    if (this.nearStove()) return { text: this.fireWord(), can: false };
+    if (this.nearPile()) return { title: 'Wood', target: 'woodpile', ...(this.logs > 0 ? { text: `Take a log · ${this.logText()} left`, can: true } : { text: 'No logs left', can: false }) };
+    if (this.nearStove()) return { title: 'Stove', target: 'stove', text: this.fireWord(), can: false };
     return null;
   }
 

@@ -5,7 +5,7 @@ import { Config } from './Config.js';
 import { Quality, isTouch } from './Quality.js';
 import { events } from './Events.js';
 import { buildWorld } from '../world/World.js';
-import { LANTERN, WINDOWS, WALL_CLOCK } from '../world/Layout.js';
+import { LANTERN, WINDOWS, WALL_CLOCK, MED_TABLE } from '../world/Layout.js';
 import { AudioEngine } from '../audio/AudioEngine.js';
 import { Director } from '../audio/Director.js';
 import { Input } from '../input/Input.js';
@@ -90,7 +90,7 @@ export class Game {
     this.menu = new Menu(this.audio, this.input.keyboard);
     this.menu.onOptions = () => this.postfx.setOptions(Settings);
     this.inventory = new Inventory({ arsenal: this.arsenal, weapon: this.weapon, isTouch });
-    this.healing.atTable = () => this.table.inReach();
+    this.healing.atTable = () => this.nearMed();
     this.inventory.supplies = () => ({ bandages: this.healing.bandages });
     this.inventory.onClose = () => { this.input.endFrame(); this.resume(); };
     this.postfx.setOptions(Settings);
@@ -352,14 +352,17 @@ export class Game {
 
     if (playing) {
       if (input.consume('interact') && !this.healing.busy && !this.firewood.busy) {
-        if (this.tablePrompt()?.bandage) this.healing.tryBandage();
-        else if (!this.table.tryStart() && !this.table.prompt() && !this.healing.tryBed() && !this.healing.bedPrompt()) this.firewood.tryStart();
+        const t = this.currentPrompt()?.target;
+        if (t === 'med') this.healing.tryBandage();
+        else if (t === 'ammo') this.table.tryStart();
+        else if (t === 'bed') this.healing.tryBed();
+        else this.firewood.tryStart();
       }
       if (input.consume('bandage')) {
         const r = this.healing.tryBandage();
         if (r === 'none') this.hud.notice('NO BANDAGES', 'You get one for every wave you survive');
         else if (r === 'full') this.hud.notice('NOT HURT');
-        else if (r === 'table') this.hud.notice('BANDAGES ARE ON THE TABLE');
+        else if (r === 'table') this.hud.notice('BANDAGES ARE ON THE MEDICAL TABLE');
       }
       for (let n = 1; n <= 5; n++) if (input.consume('slot' + n)) {
         const w = this.arsenal.atSlot(n), name = this.arsenal.slots[n - 1];
@@ -442,9 +445,10 @@ export class Game {
     this.audio.update(dt);
 
     // HUD
-    const prompt = playing ? (this.tablePrompt() || this.healing.bedPrompt() || this.firewood.prompt()) : null;
+    const prompt = playing ? this.currentPrompt() : null;
+    this.updateHighlight(dt, prompt?.target);
     this.hud.setClock(playing ? this.clockReading() : null);
-    const bandageMeshes = this.world.cabin.ammoTable.bandages || [];
+    const bandageMeshes = this.world.cabin.medBandages || [];
     bandageMeshes.forEach((m, i) => { m.visible = i < this.healing.bandages; });
     this.input.touch.setInteractAvailable(!!prompt?.can, this.table.reloading ? '…' : 'USE');
     const want = this.weapon.want, flareHeld = want === 'flare';
@@ -478,13 +482,40 @@ export class Game {
     return null;
   }
 
-  /** The table's prompt; when there is nothing to load and you are hurt, it offers a bandage instead. */
-  tablePrompt() {
-    const p = this.table.prompt();
-    if (!p || p.can || this.table.reloading) return p;
+  nearMed() {
+    const p = this.player.position;
+    return Math.hypot(p.x - MED_TABLE.position.x, p.z - MED_TABLE.position.z) < MED_TABLE.interactRadius + 0.3;
+  }
+
+  /** The medical table's prompt (bandages), or null when not at it. */
+  medPrompt() {
+    if (!this.nearMed() || this.player.dead) return null;
     const h = this.healing;
-    if (h.bandages > 0 && !h.busy && this.player.health < Config.player.maxHealth) return { text: `Bandage up · ${h.bandages} left`, can: true, bandage: true };
-    return p;
+    if (h.bandageT >= 0) return { text: 'Bandaging…', can: false };
+    if (h.bandages <= 0) return { text: 'No bandages · one for each wave you survive', can: false };
+    if (this.player.health >= Config.player.maxHealth) return { text: `Not hurt · ${h.bandages} bandage${h.bandages > 1 ? 's' : ''}`, can: false };
+    return { text: `Bandage up · ${h.bandages} left`, can: true };
+  }
+
+  /** The one thing you can use where you stand: its prompt, with a title and what to light up (target). */
+  currentPrompt() {
+    const tag = (p, target, title) => p && { ...p, target, title };
+    return tag(this.medPrompt(), 'med', 'Medical table') || tag(this.table.prompt(), 'ammo', 'Ammo table')
+      || tag(this.healing.bedPrompt(), 'bed', 'Cot') || this.firewood.prompt();
+  }
+
+  /** The object you are at glows a warm gold, slowly breathing (user, 2026-11-15). */
+  updateHighlight(dt, target) {
+    const I = this.world.cabin.interactables; if (!I) return;
+    this.hl ||= {};
+    const pulse = 0.8 + 0.2 * Math.sin(this.time * 3);
+    for (const [k, g] of Object.entries(I)) {
+      const v = this.hl[k] = (this.hl[k] || 0) + ((k === target ? 1 : 0) - (this.hl[k] || 0)) * Math.min(1, dt * 8);
+      const e = v < 0.003 ? 0 : v * pulse * Config.render.highlight;
+      if (g.userData.hl === e) continue;
+      g.userData.hl = e;
+      g.traverse((o) => { if (o.isMesh && o.material.emissive) o.material.emissive.setRGB(1, 0.66, 0.25).multiplyScalar(e); });
+    }
   }
 
   // ---------------- debug helpers (?debug=1) ----------------
