@@ -35,7 +35,8 @@ function wallWithHoles(axis, fixed0, fixed1, from, to, holes) {
 }
 
 export class SpiderCollision {
-  constructor(colliders = []) {
+  /** blocked(id): is that window still boarded (its planks are something to stand on)? */
+  constructor(colliders = [], blocked = null) {
     const holes = { north: [], south: [], east: [], west: [] };
     for (const w of WINDOWS) {
       const y0 = w.center.y - w.height / 2, y1 = w.center.y + w.height / 2;
@@ -53,9 +54,22 @@ export class SpiderCollision {
     ];
     // furniture: the cabin gives floor footprints; tops are about table height unless given
     this.furniture = colliders.map((c) => box(c.minX, 0, c.minZ, c.maxX, c.maxY ?? 0.78, c.maxZ, 'furniture'));
-    this.boxes = [...this.walls, ...this.furniture];
+    // the planks across each window (on the outer face): solid until the window is breached
+    this.blocked = blocked;
+    this.boards = WINDOWS.map((w) => {
+      const n = w.normal, hw = w.width / 2 + 0.1, hh = w.height / 2;
+      const o = w.center.clone().addScaledVector(n, T + 0.02);
+      const ax = Math.abs(n.x) > 0.5;
+      const b = ax ? box(o.x - (n.x > 0 ? 0 : 0.035), o.y - hh, o.z - hw, o.x + (n.x > 0 ? 0.035 : 0), o.y + hh, o.z + hw, 'glass')
+                   : box(o.x - hw, o.y - hh, o.z - (n.z > 0 ? 0 : 0.035), o.x + hw, o.y + hh, o.z + (n.z > 0 ? 0.035 : 0), 'glass');
+      b.win = w.id;
+      return b;
+    });
+    this.boxes = [...this.walls, ...this.furniture, ...this.boards];
     this.door = DOOR;
   }
+
+  isBlocked(id) { return this.blocked ? this.blocked(id) : true; }
 
   static inside(x, z) { return Math.abs(x) < HX && Math.abs(z) < HZ; }
 
@@ -70,6 +84,7 @@ export class SpiderCollision {
     let best = maxDist, hit = null;
     // boxes (walls with their window holes, furniture)
     for (const b of this.boxes) {
+      if (b.win && !this.isBlocked(b.win)) continue;
       const t = rayBox(from, dir, b, best, _n);
       if (t !== null && t < best) {
         best = t; hit = out;
@@ -133,6 +148,7 @@ export class SpiderCollision {
   pushOutSphere(c, r) {
     let moved = false;
     for (const b of this.boxes) {
+      if (b.win && !this.isBlocked(b.win)) continue;
       const qx = Math.max(b.min.x, Math.min(c.x, b.max.x)), qy = Math.max(b.min.y, Math.min(c.y, b.max.y)), qz = Math.max(b.min.z, Math.min(c.z, b.max.z));
       const dx = c.x - qx, dy = c.y - qy, dz = c.z - qz, d2 = dx * dx + dy * dy + dz * dz;
       if (d2 >= r * r) continue;
@@ -149,6 +165,9 @@ export class SpiderCollision {
       }
       moved = true;
     }
+    // the roof is solid all the way down to the ceiling (the attic), and the overhang is a slab
+    const ry = underRoof(c.x, c.z, c.y);
+    if (ry !== null && c.y < ry + r * 0.4) { c.y = ry + r * 0.4; moved = true; }
     if (SpiderCollision.inside(c.x, c.z)) {
       if (c.y < CABIN.floorY + r * 0.5) { c.y = CABIN.floorY + r * 0.5; moved = true; }
       if (c.y > H - r * 0.5) { c.y = H - r * 0.5; moved = true; }
@@ -158,11 +177,25 @@ export class SpiderCollision {
 
   /** Is a point inside a wall or a piece of furniture (with padding)? */
   pointInside(p, pad = 0) {
+    const ry = underRoof(p.x, p.z, p.y);
+    if (ry !== null && p.y < ry + pad) return ATTIC;
     for (const b of this.boxes) {
+      if (b.win && !this.isBlocked(b.win)) continue;
       if (p.x > b.min.x - pad && p.x < b.max.x + pad && p.y > b.min.y - pad && p.y < b.max.y + pad && p.z > b.min.z - pad && p.z < b.max.z + pad) return b;
     }
     return null;
   }
+}
+
+const ATTIC = { s: 'roof' };
+const ROOF_SLAB = 0.14;
+/** If (x, y, z) is inside the roof (the attic over the walls, or the slab of the overhang), the roof's top there; else null. */
+function underRoof(x, z, y) {
+  if (y < H - 0.05 || !onRoof(x, z)) return null;
+  const top = roofHeight(x);
+  if (y >= top) return null;
+  const overWalls = Math.abs(x) <= HX + T && Math.abs(z) <= HZ + T;
+  return overWalls || y > top - ROOF_SLAB ? top : null;
 }
 
 function onRoof(x, z) {

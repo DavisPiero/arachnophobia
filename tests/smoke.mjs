@@ -273,14 +273,47 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     check(await page.evaluate(() => (window.visualViewport?.scale ?? 1) <= 1.01), 'double tap does not zoom the page');
   }
 
+  // stand at a window too long while spiders are out: one springs at you; inside, a leaper leaps and hurts
+  const jump = await page.evaluate(async () => {
+    const g = window.game, m = g.spiders;
+    const { WINDOWS } = await import('./js/world/Layout.js');
+    const w = WINDOWS.find((x) => x.id === 'north');
+    g.player.position.set(w.center.x - w.normal.x * 0.6, g.player.position.y, w.center.z - w.normal.z * 0.6);
+    g.player.yaw = 0; g.player.pitch = 0; g.player.health = 100; g.player.dead = false;
+    const far = m.spawn('runner', 'east', 'medium');
+    let jumped = false;
+    const off = g.events.on('windowJump', () => { jumped = true; });
+    m.lingerCD = 0; m.lingerNeed = 0.5; m.lingerT = 0;
+    for (let i = 0; i < 90 && !jumped; i++) g.update(1 / 30);
+    for (let i = 0; i < 30; i++) g.update(1 / 30);
+    off?.();
+    const hurtAtWindow = g.player.health < 100;
+    // a leaper inside, 4 m away
+    for (const s of m.spiders) s.die();
+    g.player.position.set(0, g.player.position.y, 2); g.player.health = 100;
+    const s = m.spawn('runner', 'north', 'medium');
+    s.state = 'inside'; s.surface = 'floor'; s.path = null; s.root.position.set(0, 0, -2); s.visual.rig.snapFeet();
+    s.leapCD = 0; s.cfg = { ...s.cfg, leap: { ...s.cfg.leap, chance: 1000 } };
+    let leapt = false;
+    for (let i = 0; i < 60; i++) { g.update(1 / 30); if (s.state === 'leap') leapt = true; }
+    for (const x of m.spiders) x.die();
+    return { jumped, hurtAtWindow, leapt, hurtByLeap: g.player.health < 100 };
+  });
+  check(jump.jumped && jump.hurtAtWindow, `a spider springs at you when you stay at a window (${JSON.stringify(jump)})`);
+  check(jump.leapt && jump.hurtByLeap, 'a leaper inside leaps and hurts');
+
   // window damage through to breach
   const br = await page.evaluate(async () => {
     const g = window.game;
-    for (let i = 0; i < 12; i++) g.windows.damage('west', 10);
+    // no glass: the planks are the barrier, and the player cannot hurt them (bullets and punches stop at a plank)
+    const w = g.windows.byId.west;
+    const firstBoard = w.boards[0].health;
+    g.melee?.axeHit?.();                                   // a punch at nothing must not touch a window
+    for (let i = 0; i < 60 && w.stage < 4; i++) g.windows.damage('west', 10, w.center);
     await new Promise((res) => setTimeout(res, 300));
-    return g.windows.byId.west.stage;
+    return { stage: w.stage, boards: w.boards.length, fallen: w.boards.filter((b) => b.fallen).length, firstBoard };
   });
-  check(br === 4, 'window damage reaches breach');
+  check(br.stage === 4 && br.fallen === br.boards, 'window boards torn off one by one reach breach');
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await ctx.close();
 }).concat(menuCheck));

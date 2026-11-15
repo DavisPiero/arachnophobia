@@ -40,7 +40,9 @@ const result = await page.evaluate(async ({ only, sizeArg }) => {
   // furniture footprints: the real cabin's colliders if we can build it cheaply, else none
   let colliders = [];
   try { const w = await import('./js/world/World.js'); const world = new w.World(scene, { tier: 'low' }); colliders = world.cabin?.colliders || []; } catch { colliders = []; }
-  const collision = new SpiderCollision(colliders);
+  // the window's boards are solid until the spider squeezes in (as if the window had just been breached)
+  let boarded = true;
+  const collision = new SpiderCollision(colliders, () => boarded);
   const win = WINDOWS[0];
   const fakeWin = { id: win.id, center: win.center.clone(), normal: win.normal.clone(), width: win.width, height: win.height, stage: 4 };
   const mgr = { scene, audio: null, events: { emit() {} }, quality: { tier: 'high', spiderDetail: 1 }, collision, colliders, gore: null,
@@ -56,7 +58,7 @@ const result = await page.evaluate(async ({ only, sizeArg }) => {
     const rig = s.visual.rig;
     const prevQ = rig.legs.map((l) => l.q.map((q) => q.clone()));
     const prevA = rig.legs.map(() => new Float32Array(6));
-    let phase = 'walk';
+    let phase = 'walk'; boarded = true;
     const m = { byPhase: {}, frames: 0, snaps: 0, reachErr: 0, clipBody: 0, clipKnee: 0, clipFoot: 0, maxSnapDeg: 0 };
     const run = (secs, each) => {
       const n = Math.round(secs / dt);
@@ -107,7 +109,7 @@ const result = await page.evaluate(async ({ only, sizeArg }) => {
     while (s.path) run(0.25);
     run(0.8);
     // 5. squeeze in through the window, 6. walk across the floor
-    phase = 'squeeze';
+    phase = 'squeeze'; boarded = false;
     s.window = fakeWin;
     s.goInside();
     let guard = 0;

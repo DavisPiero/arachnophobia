@@ -145,7 +145,7 @@ export class Game {
     events.on('waveStart', ({ wave, last }) => {
       this.hud.flash(last ? 'The last wave' : `Wave ${wave}`, wave === 1 ? 'They are coming. Listen for where.' : last ? 'Hold on until dawn.' : '', 3);
       if (wave === 1) this.hud.hint('fists', 'Only your fists for now. Let them break in, then meet them: punch with the left mouse button / FIRE, stomp the small ones.', 7);
-      if (wave === 3) this.hud.hint('windows', 'Watch the windows. Shoot them before they break the glass.');
+      if (wave === 3) this.hud.hint('windows', 'Shoot through the gaps between the boards.');
     });
     events.on('weaponUnlocked', ({ name, slot }) => {
       const label = Config.arsenal.names[name];
@@ -167,7 +167,7 @@ export class Game {
       this.hud.notice('NO AMMO', 'Reload at the ammo table');
       this.hud.hint('reload', `Your rounds are on the ammo table. Stand at it and press ${this.hud.key('interact', 'USE')} to reload.`, 6);
     });
-    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', 'A window is cracking. Get there before it breaks.'); });
+    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', 'A board is gone. Get there before they tear through.'); });
     events.on('windowBreached', ({ id }) => {
       const w = WINDOWS.find((x) => x.id === id);
       this.hud.flash(`The ${w.label.toLowerCase()} window is broken`, '', 3);

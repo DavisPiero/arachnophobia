@@ -87,7 +87,7 @@ export class Gore {
 
   /** Splat on a window's glass, seen from inside the room. Skipped if the glass is already gone. */
   splatGlass(window, point, size = 0.35) {
-    if (!window || window.stage >= 2 || !window.glass) return;
+    if (!window || !window.glass) return;   // no glass any more (2026-11-15): splats stay on the ground and walls
     window.glass.getWorldPosition(_g);
     const n = window.normal;                     // points out of the cabin
     // project the point onto the glass, then a hair towards the room

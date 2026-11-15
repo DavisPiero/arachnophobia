@@ -4,7 +4,7 @@
 //   'lightning'      { strength 0..1 }          Director fires it; Lighting flashes; Stalkers flee
 //   'muzzleFlash'    { position }               Weapon fires it; Stalkers near the flash flee
 //   'shot'           { origin, direction, hitPoint|null, hitSpider|null }
-//   'windowDamaged'  { id, stage, health }      stage: 0 intact, 1 cracked, 2 shattered, 3 boards splintering, 4 breached
+//   'windowDamaged'  { id, stage, health, before }  a board fell off; stage = boards gone (4 = breached)
 //   'windowBreached' { id }
 //   'spiderSpawned'  { spider }
 //   'spiderKilled'   { spider, point, by }      by: 'bullet' | 'axe' | 'fists' | 'stomp'

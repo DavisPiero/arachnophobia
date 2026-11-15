@@ -703,6 +703,9 @@ export function createSpiderVisual(type, quality, opts = {}) {
   mesh.receiveShadow = false;
   mesh.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, def.bodyH, 0), def.restR * 1.7 + def.bodyH);
   space.add(mesh);
+  // the fill light is per spider: full inside the cabin, almost none outside, where only your flashlight shows them
+  // (user: you should not see the spiders outside so much). The uniform is shared, so set it before each draw.
+  mesh.onBeforeRender = () => { SPIDER_FILL.value = Config.render.spiderFill * (visual.fillK ?? 1); material.uniformsNeedUpdate = true; };
 
   // eyes: per-instance materials so glow can be dimmed per spider
   const eyeMat = new THREE.MeshBasicMaterial({ color: 0xff1008, vertexColors: true, transparent: true, depthWrite: false, toneMapped: false });
