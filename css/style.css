@@ -341,7 +341,7 @@ button { transition: color 0.18s, background-color 0.18s, border-color 0.18s, op
 /* every screen eases in instead of snapping */
 .screen:not(.hidden) { animation: screenIn 0.4s var(--ease) both; }
 @keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
-.overlay > .term-panel, .inv-panel { animation: panelIn 0.38s var(--ease) both; }
+body:not(.title) .overlay > .term-panel, .inv-panel { animation: panelIn 0.38s var(--ease) both; }
 @keyframes panelIn { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
 .inv-screen.closing { animation: screenOut 0.18s ease-in both; }
 @keyframes screenOut { to { opacity: 0; } }

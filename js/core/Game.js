@@ -536,7 +536,7 @@ export class Game {
   /** How squarely the view is on this point (within its radius plus a little); > 0 means you are looking at it. */
   lookingAt(point, r) {
     const to = _lookTo.copy(point).sub(this.camera.position), d = to.length();
-    const ang = Math.atan2(r, d) + 0.14;
+    const ang = Math.atan2(r, d) + 0.32;   // generous: a glance at it is enough (user, 2026-11-15; was 0.14)
     return to.divideScalar(d).dot(this.camera.getWorldDirection(_clockFwd)) - Math.cos(ang);   // > 0: yes, bigger = more squarely
   }
 

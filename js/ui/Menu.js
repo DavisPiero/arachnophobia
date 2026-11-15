@@ -8,7 +8,7 @@ import { Quality, isTouch } from '../core/Quality.js';
 const $ = (id) => document.getElementById(id);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// The boot (user, 2026-11-15: shorter, centred, no scrolling log): garbled letters decode into ARACHNOPHOBIA TERMINAL
+// The boot (user, 2026-11-15: shorter, centred, no scrolling log): garbled letters decode into ARACHNOPHOBIA
 // (tap to start), then UPDATING, CALIBRATING, INITIATING each decode in the middle over a thin bar, then the menu.
 const BOOT_STEPS = ['UPDATING', 'CALIBRATING', 'INITIATING'];
 const GARBLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$/<>';
@@ -44,7 +44,7 @@ export class Menu {
     this.onOptions = null;      // game sets this: called when a graphics option changes
     this.settingsFrom = null;   // the screen to go back to
     this.startBtn.disabled = true;
-    decode($('boot-text'), 'ARACHNOPHOBIA TERMINAL', 1100).then(() => $('boot-tap').classList.add('show'));
+    decode($('boot-text'), 'ARACHNOPHOBIA', 1000).then(() => $('boot-tap').classList.add('show'));
 
     // stop clicks on menus from reaching the game
     for (const s of [this.boot, this.loadingScreen, this.start, this.pause, this.over, this.settings]) s.addEventListener('pointerdown', (e) => e.stopPropagation());

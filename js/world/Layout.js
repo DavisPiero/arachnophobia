@@ -45,7 +45,7 @@ export const DOOR = { center: new THREE.Vector3(2.55, 1.0, CABIN.halfZ), width: 
 export const AMMO_TABLE = {
   position: new THREE.Vector3(PLACEMENT.table.x, 0, CABIN.halfZ - 0.4),
   size: { x: PLACEMENT.table.length, z: 0.7, h: 0.8 },
-  interactRadius: 1.35,
+  interactRadius: 1.8,
 };
 
 // Hanging lantern: the main interior light.
@@ -71,15 +71,15 @@ export const FURNITURE = {
 export const STOVE = {
   position: new THREE.Vector3(CABIN.halfX - FURNITURE.stove.inset, 0, -CABIN.halfZ + FURNITURE.stove.inset),
   door: new THREE.Vector3(CABIN.halfX - FURNITURE.stove.inset - 0.27, 0.40, -CABIN.halfZ + FURNITURE.stove.inset),
-  interactRadius: 1.4,   // from the door, on the floor
+  interactRadius: 1.9,   // from the door, on the floor
 };
 
 // The wood stack along the north wall, west of the stove: take one log at a time from here.
 // Moved away from the stove (user: the two prompts were too close), east of the north window.
-export const WOODPILE = { position: new THREE.Vector3(1.85, 0, -CABIN.halfZ + 0.3), interactRadius: 1.25 };
+export const WOODPILE = { position: new THREE.Vector3(1.85, 0, -CABIN.halfZ + 0.3), interactRadius: 1.8 };
 
 // The medical table: small, metal, on the south wall apart from the ammo table; the bandages lie on it.
-export const MED_TABLE = { position: new THREE.Vector3(PLACEMENT.med.x, 0, CABIN.halfZ - 0.3), size: { x: 0.8, z: 0.5, h: 0.85 }, interactRadius: 1.1 };
+export const MED_TABLE = { position: new THREE.Vector3(PLACEMENT.med.x, 0, CABIN.halfZ - 0.3), size: { x: 0.8, z: 0.5, h: 0.85 }, interactRadius: 1.5 };
 
 // Ground height outside. Flat (CABIN.groundY) near the cabin, then each side has its own shape:
 //  north: dense forest, ground rises gently away from the cabin
