@@ -5,6 +5,8 @@
 the fire or the planks, scroll-wheel weapons, a slight lens bulge, the new inventory (slots, drag to reorder), less text, a bigger
 clock you can read, the long table with bandages on it, and a placement tool.
 
+**Since:** UI polish pass (new boot, ink look for in-game screens, HUD weapon picture and feedback lines), ammo table short again with the medical table beside it.
+
 **Next:** D (warmth reads the fire, lanterns that go out, gunshots draw spiders), E (creatures, needs your references),
 F (weapons, sounds, a fire crackle).
 

@@ -123,7 +123,7 @@ export const Config = {
   },
   // the loading screen stays at least this long: long enough for the retimed BOOT_LOG failure run (js/ui/Menu.js)
   // to play out in full and for the music to have built up to the kick by the time the screen reveals the menu
-  loading: { minSeconds: 9.7 },
+  loading: { minSeconds: 3.3 },   // was 9.7 (timed to the music's kick): too long (user, 2026-11-15)
   night: {
     moon: 0.38,              // cold moonlight (0.7 until 2026-11-15: the yard was too readable, user: make it darker)
     hemi: 0.45,              // sky fill from above (was 0.85)

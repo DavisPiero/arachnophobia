@@ -169,6 +169,9 @@ export class Game {
       if (wave === 1) this.hud.hint('logs', `Take a log from the stack by the stove (${this.hud.key('interact', 'USE')}): feed the fire, or nail it over a window. Never enough for both.`, 8);
       if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the ammo table. Or rest on the cot once a break.`, 7);
     });
+    events.on('fireFed', () => this.hud.toast('The fire takes it'));
+    events.on('windowRepaired', () => this.hud.toast('Plank nailed back'));
+    events.on('reloadStart', () => this.hud.toast('Reloading'));
     events.on('dawn', () => { this.dawnTimer = 3; this.hud.flash('Dawn', 'The light is coming up through the trees.', 3); });
     events.on('dryFire', () => {
       this.hud.notice('NO AMMO', 'Reload at the ammo table');
@@ -353,14 +356,15 @@ export class Game {
     if (playing) {
       if (input.consume('interact') && !this.healing.busy && !this.firewood.busy) {
         const t = this.currentPrompt()?.target;
-        if (t === 'med') this.healing.tryBandage();
+        if (t === 'med') { if (this.healing.tryBandage() === 'ok') this.hud.toast('Bandaging'); }
         else if (t === 'ammo') this.table.tryStart();
         else if (t === 'bed') this.healing.tryBed();
-        else this.firewood.tryStart();
+        else { const had = this.firewood.carrying; if (this.firewood.tryStart() && !had && this.firewood.carrying) this.hud.toast('Log in hand'); }
       }
       if (input.consume('bandage')) {
         const r = this.healing.tryBandage();
-        if (r === 'none') this.hud.notice('NO BANDAGES', 'You get one for every wave you survive');
+        if (r === 'ok') this.hud.toast('Bandaging');
+        else if (r === 'none') this.hud.notice('NO BANDAGES', 'You get one for every wave you survive');
         else if (r === 'full') this.hud.notice('NOT HURT');
         else if (r === 'table') this.hud.notice('BANDAGES ARE ON THE MEDICAL TABLE');
       }

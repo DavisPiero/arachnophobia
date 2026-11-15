@@ -52,17 +52,18 @@ export class Inventory {
     });
   }
 
-  get open() { return !this.screen.classList.contains('hidden'); }
+  get open() { return !this.screen.classList.contains('hidden') && !this.screen.classList.contains('closing'); }
 
   show() {
     this.tab = 'weapons';
     this.picked = this.weapon.want && this.arsenal.has(this.weapon.want) ? this.weapon.want : null;
     this.draw();
-    this.screen.classList.remove('hidden');
+    this.screen.classList.remove('hidden', 'closing');
   }
   close() {
     if (!this.open) return;
-    this.screen.classList.add('hidden');
+    this.screen.classList.add('closing');   // fades out (css), then hides
+    setTimeout(() => { this.screen.classList.add('hidden'); this.screen.classList.remove('closing'); }, 180);
     this.onClose?.();
   }
 

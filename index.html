@@ -25,6 +25,8 @@
 <div id="hud" class="hidden">
   <div id="crosshair"></div>
   <div id="prompt"></div>
+  <div id="toast"></div>
+  <div id="weapon-ind"><span id="weapon-icon"></span><span id="weapon-name"></span></div>
   <svg id="reload-ring" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" class="track"/><circle cx="20" cy="20" r="16" class="bar"/></svg>
   <div id="clock-read"></div>
   <div id="ammo"><span id="ammo-mag">8</span><span class="sep">|</span><span id="ammo-stock">40</span><div class="label">loaded · on table</div></div>
@@ -53,14 +55,13 @@
 <!-- 1. boot gate: the first tap/click also unlocks sound (browsers need a gesture before audio can play) -->
 <div id="enter-fade"></div>
 <div id="screen-boot" class="screen term-screen">
-  <div class="boot-gate"><span id="boot-text">ARACHNE FIELD TERMINAL</span><br><span class="blink-line">press any key to wake the terminal<span class="cursor">█</span></span></div>
+  <div class="boot-center"><div id="boot-text" class="boot-title"></div><div id="boot-tap" class="boot-sub">(tap to start)</div></div>
 </div>
 
-<!-- 2. loading: a black screen, a boot log typing itself out -->
+<!-- 2. loading: three steps decode in the middle over a thin bar -->
 <div id="screen-loading" class="screen term-screen hidden">
   <div class="scan"></div>
-  <pre id="boot-log"></pre>
-  <div id="boot-progress"></div>
+  <div class="boot-center"><div id="boot-step" class="boot-title"></div><div id="boot-bar"><i id="boot-fill"></i></div></div>
 </div>
 
 <!-- 3. main menu: a 3D lab (js/ui/MenuScene.js); this panel is warped onto the left monitor's screen -->
