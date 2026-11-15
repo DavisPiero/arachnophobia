@@ -89,7 +89,8 @@ export const Config = {
     // where each plank sits: -1 = bottom of the opening, 1 = top. Two low, two high, a wide gap at eye level
     // (user, 2026-11-15: move the boards away from the centre so you can see out). Was four evenly spaced.
     boardSpots: [-1, -0.55, 0.55, 1],   // planks per window = how many spots; shoot through the gaps
-    boardHealth: 80,         // each plank; all four gone = breached (320 in all, 3.2x the old window)
+    boardHealth: 80,
+    spiderDamage: 1.6,       // x every spider's windowDamage against the planks (user 2026-11-15: they break them faster; was 1)         // each plank; all four gone = breached (320 in all, 3.2x the old window)
     // how close the player is to a window (distance from the eye to the window centre, adjusted for angle).
     // Only used to tell a watcher it has been seen; windows no longer darken from afar.
     clearDistance: 0.9,      // closeness 1 at or nearer than this
@@ -104,6 +105,9 @@ export const Config = {
     viewAmbient: 1.4,        // hands and gun: soft warm fill (was 0.32)
     viewKeyMin: 1.3,         // hands and gun: the warm key light never drops below this (was 0.5)
     spiderFill: 0.1,         // spiders: a faint light of their own (inside the cabin)
+    // lens: slight barrel distortion ("optics compensation"), the middle ~10% larger, corners stay put. Off with film
+    // effects in Settings. 0 = flat.
+    lens: 0.1,
     spiderFillOutside: 0.12, // x spiderFill outside: in the dark you see the eyes, and the rest only in the beam
   },
   // menu music (js/audio/Music.js): seconds into assets/audio/menu-track.m4a

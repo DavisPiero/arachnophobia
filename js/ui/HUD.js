@@ -2,6 +2,7 @@
 // first-time hints (each shown once per browser, and only while Settings → Gameplay → hints is on).
 import { Config } from '../core/Config.js';
 import { Settings, keyLabel } from '../core/Settings.js';
+import { ICONS } from './Icons.js';
 
 const $ = (id) => document.getElementById(id);
 const HINTS_KEY = 'arachnophobia.hints.v1';
@@ -13,7 +14,7 @@ export class HUD {
     this.mag = $('ammo-mag'); this.stock = $('ammo-stock'); this.ammo = $('ammo');
     this.ammoLabel = this.ammo.querySelector('.label'); this.ammoSep = this.ammo.querySelector('.sep');
     this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages'); this.logsEl = $('logs');
-    this.prompt = $('prompt');
+    this.prompt = $('prompt'); this.clockEl = $('clock-read');
     this.ring = $('reload-ring'); this.ringBar = this.ring.querySelector('.bar');
     this.message = $('message');
     this.noticeEl = $('notice');
@@ -24,6 +25,8 @@ export class HUD {
     try { this.seen = new Set(JSON.parse(localStorage.getItem(HINTS_KEY) || '[]')); } catch (e) { this.seen = new Set(); }
     this._last = {};
   }
+  /** The time left, shown while you look at the wall clock (null hides it). */
+  setClock(text) { this.set('clock', text, (t) => { if (t) this.clockEl.textContent = t; this.clockEl.classList.toggle('show', !!t); }); }
   setAim(v) { this.set('aim', v, (on) => { $('crosshair').style.opacity = on ? '0' : ''; }); }
   show(v) { this.root.classList.toggle('hidden', !v); }
 
@@ -34,15 +37,16 @@ export class HUD {
 
   /** ammoMode: 'gun' (loaded | on table), 'melee' (the last gun's numbers, dimmed), 'flare' (flares left), 'none'. */
   update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, logs = 0, healT = -1 }) {
-    this.set('logs', logs, (n) => { this.logsEl.textContent = ` · ${n} log${n === 1 ? '' : 's'}`; });
-    this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? ` · ${n} bandage${n > 1 ? 's' : ''} ${this.key('bandage', '')}`.replace(/<span class="key"><\/span>/, '') : ''; });
+    this.set('logs', logs, (n) => { this.logsEl.innerHTML = `<i class="sup" title="logs">${ICONS.logs}</i>${n}`; });
+    // less text (session B): a small picture and a number for each supply
+    this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? `<i class="sup" title="bandages">${ICONS.bandage}</i>${n}` : ''; });
     this.ring.classList.toggle('heal', healT >= 0);
     this.set('ammoMode', ammoMode + unit, () => {
       this.ammo.classList.toggle('dim', ammoMode === 'melee');
       this.ammo.classList.toggle('hidden', ammoMode === 'none');
       const flare = ammoMode === 'flare';
       this.ammoSep.style.display = this.stock.style.display = flare ? 'none' : '';
-      this.ammoLabel.textContent = flare ? 'flares' : unit === 'shells' ? 'shells · on table' : 'loaded · on table';
+      this.ammoLabel.textContent = flare ? 'flares' : unit === 'shells' ? 'shells' : '';   // less text (session B): the numbers say it
     });
     this.set('mag', mag, (v) => { this.mag.textContent = v; this.ammo.classList.toggle('empty', v === 0); });
     this.set('stock', stock, (v) => { this.stock.textContent = v; });

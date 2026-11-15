@@ -14,6 +14,7 @@
 //          |   ammo table            |
 //          +----------------[door]---+   south wall (z = +4), door boarded shut
 import * as THREE from 'three';
+import { PLACEMENT } from './placement.js';   // what the placement tool (dev/place.html) moves
 
 export const CABIN = {
   halfX: 4.5,          // interior half-width (x)
@@ -38,16 +39,17 @@ export const WINDOWS = [
 // The door is boarded shut and cannot be opened (decor + a source of noises).
 export const DOOR = { center: new THREE.Vector3(2.55, 1.0, CABIN.halfZ), width: 0.95, height: 2.0 };
 
-// Ammunition table: against the south wall, far from the north and east windows.
+// Ammunition table: a long table run along the south wall (session C), far from the north and east windows. Rounds and
+// the bandages lie on it; you reload and bandage up here. x and length come from the placement tool.
 // position is the floor point under the table centre. Table top at y = 0.8.
 export const AMMO_TABLE = {
-  position: new THREE.Vector3(-1.65, 0, CABIN.halfZ - 0.55),
-  size: { x: 1.5, z: 0.7, h: 0.8 },
+  position: new THREE.Vector3(PLACEMENT.table.x, 0, CABIN.halfZ - 0.4),
+  size: { x: PLACEMENT.table.length, z: 0.7, h: 0.8 },
   interactRadius: 1.35,
 };
 
 // Hanging lantern: the main interior light.
-export const LANTERN = { position: new THREE.Vector3(0.3, 2.3, 0.6) };
+export const LANTERN = { position: new THREE.Vector3(PLACEMENT.lantern.x, 2.3, PLACEMENT.lantern.z) };
 
 // Second light: an oil lamp hanging from an iron bracket on the west wall, at the north end of the room
 // (the far end from the table, which was the darkest corner). position = centre of the flame.
@@ -80,8 +82,8 @@ export const STOVE = {
 // Where you stand to rest on the cot (FURNITURE.cot: north-west corner, along the west wall): beside its middle.
 export const BED = { position: new THREE.Vector3(-CABIN.halfX + 0.05 + 0.8 + 0.35, 0, -CABIN.halfZ + 0.08 + 1.97 / 2) };
 
-// The wall clock: on the south wall above the ammo table, so you see it every time you reload.
-export const WALL_CLOCK = { position: new THREE.Vector3(-1.65, 2.2, CABIN.halfZ - 0.03), radius: 0.17 };
+// The wall clock: on the south wall, bigger since session B (was r 0.17 at x -1.65); look at it to see the time left.
+export const WALL_CLOCK = { position: new THREE.Vector3(PLACEMENT.clock.x, PLACEMENT.clock.y, CABIN.halfZ - 0.03), radius: PLACEMENT.clock.radius };
 
 export function terrainHeight(x, z) {
   const r = Math.hypot(x, z);

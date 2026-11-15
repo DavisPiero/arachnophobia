@@ -17,6 +17,26 @@ const types = {
 
 export function startServer(p = port) {
   const server = http.createServer((req, res) => {
+    // the placement tool (dev/place.html) saves here: only this one file, only numbers it knows
+    if (req.method === 'POST' && req.url === '/save-placement') {
+      let body = '';
+      req.on('data', (c) => { body += c; if (body.length > 4000) req.destroy(); });
+      req.on('end', () => {
+        try {
+          const p = JSON.parse(body), n = (v) => { if (typeof v !== 'number' || !isFinite(v)) throw new Error('bad number'); return v; };
+          const clean = {
+            table: { x: n(p.table.x), length: n(p.table.length) },
+            clock: { x: n(p.clock.x), y: n(p.clock.y), radius: n(p.clock.radius) },
+            lantern: { x: n(p.lantern.x), z: n(p.lantern.z) },
+          };
+          const head = fs.readFileSync(path.join(root, 'js/world/placement.js'), 'utf8').split('export const PLACEMENT')[0];
+          const rows = Object.entries(clean).map(([k, v]) => `  ${JSON.stringify(k)}: ${JSON.stringify(v).replace(/,/g, ', ').replace(/:/g, ': ').replace(/^\{/, '{ ').replace(/\}$/, ' }')}`);
+          fs.writeFileSync(path.join(root, 'js/world/placement.js'), `${head}export const PLACEMENT = {\n${rows.join(',\n')}\n};\n`);
+          res.writeHead(200); res.end('ok');
+        } catch (e) { res.writeHead(400); res.end(String(e.message)); }
+      });
+      return;
+    }
     let urlPath = decodeURIComponent(new URL(req.url, 'http://x').pathname);
     if (urlPath.endsWith('/')) urlPath += 'index.html';
     const file = path.join(root, urlPath);

@@ -1,11 +1,11 @@
 # Hand-off
 
-*Session of 2026-11-15 (horror rework, B+C merged, first part). Replaces any earlier note.*
+*Session of 2026-11-15 (horror rework, B+C merged and done). Replaces any earlier note.*
 
 ## Repo state
-- Branch `claude/horror-bc`, committed, **not merged** (waits for sign-off).
-- `npm test` passes (desktop + phone, 96 s). `node tests/fistbot.mjs 2` runs to the end with no console errors.
-- Feeding, nailing, the fire going out and the no-logs prompt checked by stepping the real game headless. Not played by hand.
+- `claude/horror-bc` merged into `main` and pushed (user: "merge and push when done"); branch deleted.
+- `npm test` passes (73 s). `node tests/fistbot.mjs 2` survives both waves, health 72 then 38 (planks break 1.6x faster now).
+- Logs, nailing, bandaging at the table, the clock reading and the inventory checked headless. Not played by hand.
 
 ## Read first
 1. `STATE.md` (open questions come first).
@@ -20,6 +20,11 @@
 - `Layout.STOVE` (door position, reach). `Lighting.js`: stove PointLight (always present, intensity 0 when out, so the
   shader light count never changes), door slits and a halo; `setFire(level)`. Exposed through `World.js`.
 - `Config.fire`, `Config.logs`.
+
+- Session B/C second half: scroll wheel (`KeyboardMouse.js`, action 'swapBack'), `Config.windows.spiderDamage`, lens
+  in `PostFX.js` (`Config.render.lens`), `js/ui/Icons.js` + new `Inventory.js` cards, HUD supply pictures,
+  `Game.clockReading()` + `#clock-read`, long table (`placement.js` → `Layout.AMMO_TABLE`, middle legs, bandage rolls),
+  `Game.tablePrompt()` (bandage at the table), `Healing.atTable`, `dev/place.html` + POST `/save-placement` in serve.mjs.
 
 ## Known weak spots
 - The wood stack by the stove does not shrink with your log count.

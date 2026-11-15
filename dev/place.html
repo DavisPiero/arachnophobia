@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Placement tool</title>
+<style>
+  body { margin: 0; background: #14110e; color: #d8cbb4; font: 14px Georgia, serif; display: flex; gap: 20px; padding: 16px; flex-wrap: wrap; }
+  canvas { background: #0b0907; border: 1px solid #3a3028; touch-action: none; max-width: 100%; }
+  aside { width: 300px; }
+  h1 { font-size: 22px; font-weight: normal; letter-spacing: 0.08em; margin: 0 0 8px; }
+  label { display: flex; justify-content: space-between; margin: 6px 0; }
+  input { width: 90px; background: #000; color: inherit; border: 1px solid #3a3028; }
+  button { margin-top: 12px; padding: 8px 18px; background: #2a211a; color: inherit; border: 1px solid #8a7d68; cursor: pointer; }
+  #msg { color: #8a7d68; margin-top: 10px; white-space: pre-wrap; }
+  fieldset { border: 1px solid #3a3028; margin: 10px 0; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c" width="560" height="720"></canvas>
+<aside>
+  <h1>Placement</h1>
+  <p>Drag the table (drag its ends to change the length), the lantern, and the clock along the south wall. Save writes
+  <code>js/world/placement.js</code>; reload the game to see it. Saving needs <code>npm start</code>.</p>
+  <fieldset><legend>Long table (south wall)</legend>
+    <label>centre x <input id="table.x" type="number" step="0.05"></label>
+    <label>length <input id="table.length" type="number" step="0.05"></label></fieldset>
+  <fieldset><legend>Wall clock (south wall)</legend>
+    <label>x <input id="clock.x" type="number" step="0.05"></label>
+    <label>height <input id="clock.y" type="number" step="0.05"></label>
+    <label>radius <input id="clock.radius" type="number" step="0.01"></label></fieldset>
+  <fieldset><legend>Hanging lantern</legend>
+    <label>x <input id="lantern.x" type="number" step="0.05"></label>
+    <label>z <input id="lantern.z" type="number" step="0.05"></label></fieldset>
+  <button id="save">Save</button>
+  <div id="msg"></div>
+</aside>
+<script type="module">
+import { CABIN, WINDOWS, DOOR, STOVE, BED } from '../js/world/Layout.js';
+import { PLACEMENT } from '../js/world/placement.js';
+const P = structuredClone(PLACEMENT);
+const cv = document.getElementById('c'), g = cv.getContext('2d');
+const HX = CABIN.halfX, HZ = CABIN.halfZ, K = 50, OX = cv.width / 2, OZ = cv.height / 2;  // 50 px per metre, north up
+const sx = (x) => OX + x * K, sz = (z) => OZ + z * K, wx = (px) => (px - OX) / K, wz = (pz) => (pz - OZ) / K;
+const r2 = (v) => Math.round(v * 100) / 100;
+const fields = ['table.x', 'table.length', 'clock.x', 'clock.y', 'clock.radius', 'lantern.x', 'lantern.z'];
+const get = (k) => k.split('.').reduce((o, p) => o[p], P);
+const set = (k, v) => { const [a, b] = k.split('.'); P[a][b] = r2(v); };
+function clamp() {
+  P.table.length = r2(Math.min(2 * HX - 0.2, Math.max(1, P.table.length)));
+  P.table.x = r2(Math.min(HX - 0.05 - P.table.length / 2, Math.max(-HX + 0.05 + P.table.length / 2, P.table.x)));
+  P.clock.x = r2(Math.min(HX - 0.4, Math.max(-HX + 0.4, P.clock.x)));
+  P.lantern.x = r2(Math.min(HX - 0.5, Math.max(-HX + 0.5, P.lantern.x)));
+  P.lantern.z = r2(Math.min(HZ - 0.5, Math.max(-HZ + 0.5, P.lantern.z)));
+}
+function sync() { for (const k of fields) document.getElementById(k).value = get(k); }
+for (const k of fields) document.getElementById(k).addEventListener('input', (e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) { set(k, v); clamp(); draw(); } });
+
+function draw() {
+  g.clearRect(0, 0, cv.width, cv.height);
+  g.strokeStyle = '#8a7d68'; g.lineWidth = 6; g.strokeRect(sx(-HX), sz(-HZ), 2 * HX * K, 2 * HZ * K);
+  g.lineWidth = 1; g.strokeStyle = '#2a231c';
+  for (let x = -HX; x <= HX; x++) { g.beginPath(); g.moveTo(sx(x), sz(-HZ)); g.lineTo(sx(x), sz(HZ)); g.stroke(); }
+  for (let z = -HZ; z <= HZ; z++) { g.beginPath(); g.moveTo(sx(-HX), sz(z)); g.lineTo(sx(HX), sz(z)); g.stroke(); }
+  g.fillStyle = '#6fa0c8';
+  for (const w of WINDOWS) {
+    const t = new Float32Array([w.normal.z, w.normal.x]);   // along the wall
+    const a = w.width / 2;
+    g.fillRect(sx(w.center.x - Math.abs(t[0]) * a) - 4 * Math.abs(w.normal.x), sz(w.center.z - Math.abs(t[1]) * a) - 4 * Math.abs(w.normal.z),
+      Math.abs(t[0]) * w.width * K + 8 * Math.abs(w.normal.x), Math.abs(t[1]) * w.width * K + 8 * Math.abs(w.normal.z));
+  }
+  g.fillStyle = '#7a4a2a'; g.fillRect(sx(DOOR.center.x - DOOR.width / 2), sz(HZ) - 4, DOOR.width * K, 8);
+  const label = (t, x, z) => { g.fillStyle = '#8a7d68'; g.font = '12px Georgia'; g.fillText(t, sx(x) + 6, sz(z) - 6); };
+  g.fillStyle = '#3a3a3a'; g.fillRect(sx(STOVE.position.x - 0.25), sz(STOVE.position.z - 0.31), 0.5 * K, 0.62 * K); label('stove', STOVE.position.x - 0.6, STOVE.position.z + 0.7);
+  g.fillStyle = '#3a3028'; g.fillRect(sx(-HX + 0.05), sz(-HZ + 0.08), 0.8 * K, 1.97 * K); label('cot', BED.position.x - 0.6, BED.position.z);
+  // table
+  const t = P.table;
+  g.fillStyle = '#9a7a52'; g.fillRect(sx(t.x - t.length / 2), sz(HZ - 0.75), t.length * K, 0.7 * K);
+  g.fillStyle = '#d8cbb4'; for (const e of [-1, 1]) g.fillRect(sx(t.x + e * t.length / 2) - 4, sz(HZ - 0.75), 8, 0.7 * K);
+  label('table', t.x - 0.3, HZ - 0.8);
+  // clock
+  g.fillStyle = '#e8d8a0'; g.beginPath(); g.arc(sx(P.clock.x), sz(HZ) - 6, Math.max(5, P.clock.radius * K * 0.6), 0, 7); g.fill(); label('clock', P.clock.x, HZ - 0.15);
+  // lantern
+  g.fillStyle = '#ffb060'; g.beginPath(); g.arc(sx(P.lantern.x), sz(P.lantern.z), 9, 0, 7); g.fill(); label('lantern', P.lantern.x, P.lantern.z);
+  label('north', -0.3, -HZ - 0.15);
+}
+
+let drag = null;
+cv.addEventListener('pointerdown', (e) => {
+  const r = cv.getBoundingClientRect(), x = wx((e.clientX - r.left) * cv.width / r.width), z = wz((e.clientY - r.top) * cv.height / r.height);
+  const t = P.table;
+  if (Math.hypot(x - P.lantern.x, z - P.lantern.z) < 0.35) drag = { k: 'lantern' };
+  else if (z > HZ - 0.45 && Math.abs(x - P.clock.x) < 0.35 && z > HZ - 0.3) drag = { k: 'clock' };
+  else if (z > HZ - 0.8) {
+    if (Math.abs(x - (t.x - t.length / 2)) < 0.15) drag = { k: 'tableL' };
+    else if (Math.abs(x - (t.x + t.length / 2)) < 0.15) drag = { k: 'tableR' };
+    else if (Math.abs(x - t.x) < t.length / 2) drag = { k: 'table', dx: x - t.x };
+  }
+  if (drag) cv.setPointerCapture(e.pointerId);
+});
+cv.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const r = cv.getBoundingClientRect(), x = wx((e.clientX - r.left) * cv.width / r.width), z = wz((e.clientY - r.top) * cv.height / r.height);
+  const t = P.table;
+  if (drag.k === 'lantern') { P.lantern.x = r2(x); P.lantern.z = r2(z); }
+  if (drag.k === 'clock') P.clock.x = r2(x);
+  if (drag.k === 'table') t.x = r2(x - drag.dx);
+  if (drag.k === 'tableL') { const right = t.x + t.length / 2; t.length = right - x; t.x = (right + x) / 2; }
+  if (drag.k === 'tableR') { const left = t.x - t.length / 2; t.length = x - left; t.x = (left + x) / 2; }
+  clamp(); sync(); draw();
+});
+cv.addEventListener('pointerup', () => { drag = null; });
+
+document.getElementById('save').addEventListener('click', async () => {
+  const msg = document.getElementById('msg');
+  try {
+    const res = await fetch('/save-placement', { method: 'POST', body: JSON.stringify(P) });
+    if (!res.ok) throw new Error(await res.text());
+    msg.textContent = 'Saved. Reload the game to see it.';
+  } catch (e) {
+    msg.textContent = 'Could not save (is it running with npm start?). Paste this into js/world/placement.js:\n\n' + JSON.stringify(P, null, 2);
+  }
+});
+clamp(); sync(); draw();
+</script>
+</body>
+</html>

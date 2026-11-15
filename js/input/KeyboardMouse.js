@@ -38,6 +38,18 @@ export class KeyboardMouse {
     });
     addEventListener('mouseup', (e) => { if (e.button === 0) input.fireHeld = false; if (e.button === 2) input.aimHeld = false; });
     canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+    // scroll wheel: next / previous weapon. Trackpads send a stream of small deltas, so add them up and allow one
+    // switch per notch-sized amount, at most one every 0.15 s.
+    let wheelAcc = 0, wheelLast = 0;
+    addEventListener('wheel', (e) => {
+      if (!this.enabled || !this.locked) return;
+      wheelAcc += e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY;
+      const now = performance.now();
+      if (Math.abs(wheelAcc) >= 50 && now - wheelLast > 150) {
+        input.press(wheelAcc > 0 ? 'swap' : 'swapBack');
+        wheelAcc = 0; wheelLast = now;
+      }
+    }, { passive: true });
     addEventListener('mousemove', (e) => {
       if (!this.locked || !this.enabled) return;
       const s = Config.player.lookSensitivityMouse * Settings.look;

@@ -33,7 +33,7 @@ export class Spider {
     // a sized copy of the species' numbers: health, speeds and damage scale with size
     const c = Config.spiders[type];
     this.cfg = { ...c, health: c.health * sz.health, speed: c.speed * sz.speed, climbSpeed: c.climbSpeed * sz.speed,
-      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage * diff().windowDamage, playerDamage: c.playerDamage * sz.damage * diff().playerDamage };
+      squeezeSpeed: c.squeezeSpeed * sz.squeeze, windowDamage: c.windowDamage * sz.damage * diff().windowDamage * Config.windows.spiderDamage, playerDamage: c.playerDamage * sz.damage * diff().playerDamage };
     this.health = this.cfg.health;
     this.visual = createSpiderVisual(type, mgr.quality, { collision: mgr.collision, size });
     this.root = this.visual.root;
