@@ -159,22 +159,17 @@ body.touch #prompt { top: 64%; font-size: 13px; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* boot gate */
-.boot-gate { text-align: center; font-size: 22px; letter-spacing: 0.12em; line-height: 2; cursor: pointer; }
-.boot-gate .blink-line { color: var(--phos-dim); font-size: 19px; }
-
-/* loading: boot log */
-#screen-loading { place-items: start; padding: calc(24px + var(--safe-t)) calc(28px + var(--safe-r)) 24px calc(28px + var(--safe-l)); overflow: hidden; }
-#boot-log { margin: 0; font: 19px/1.25 'VT323', ui-monospace, monospace; white-space: pre-wrap; max-height: calc(100vh - 80px); overflow: hidden; }
-#boot-log .bad { color: #e0503a; text-shadow: 0 0 6px rgba(224, 80, 58, 0.6); }
-#boot-log .warn { color: #e0c060; }
-#boot-progress { position: absolute; left: calc(28px + var(--safe-l)); bottom: calc(22px + var(--safe-b)); font-size: 19px; color: var(--phos-dim); }
+.boot-center { text-align: center; display: grid; gap: 14px; justify-items: center; cursor: pointer; }
+.boot-title { font-size: clamp(26px, 5vw, 44px); letter-spacing: 0.22em; min-height: 1.2em; white-space: pre; }
+.boot-sub { color: var(--phos-dim); font-size: 19px; letter-spacing: 0.14em; opacity: 0; transition: opacity 0.6s; }
+.boot-sub.show { opacity: 1; animation: blink 1.6s 0.6s infinite; }
+@keyframes blink { 50% { opacity: 0.35; } }
+#boot-bar { width: min(260px, 60vw); height: 2px; background: rgba(116, 224, 143, 0.15); overflow: hidden; }
+#boot-fill { display: block; height: 100%; background: var(--phos); box-shadow: 0 0 8px var(--phos-glow); transform: scaleX(0); transform-origin: left; transition: transform 0.9s ease-out; }
 .scan { position: absolute; inset: 0; pointer-events: none; z-index: 2;
-  background: repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0) 0 2px, rgba(0, 0, 0, 0.35) 2px 3px);
-  animation: flicker 4s infinite; }
-@keyframes flicker { 0%, 100% { opacity: 0.9; } 47% { opacity: 0.9; } 48% { opacity: 0.6; } 49% { opacity: 1; } 70% { opacity: 0.85; } }
-#screen-loading.glitch #boot-log { transform: translateX(3px) skewX(-2deg); filter: blur(0.6px); }
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); }
+#screen-loading.glitch .boot-center { transform: translateX(3px) skewX(-2deg); filter: blur(0.6px); }
 #screen-loading > * { transition: opacity 0.4s ease-in; }
-#screen-loading.cut { background: #000; }
 #screen-loading.cut > * { opacity: 0; }
 
 /* the menu CRT's text dissolving, right before the cut to black when BEGIN is pressed */
@@ -297,7 +292,7 @@ button:disabled { opacity: 0.35; cursor: default; }
 
 
 /* ---------- inventory: Weapons / Items tabs, a row of slots, the picked one large below (2026-11-15) ---------- */
-.spr { display: block; width: 100%; aspect-ratio: 1; background: url(../assets/ui/icons.webp) no-repeat; background-size: 300% 200%; pointer-events: none; }
+.spr { mix-blend-mode: screen; display: block; width: 100%; aspect-ratio: 1; background: url(../assets/ui/icons.webp) no-repeat; background-size: 300% 200%; pointer-events: none; }
 .inv-screen { background: radial-gradient(ellipse at 50% 40%, rgba(40, 28, 14, 0.82), rgba(0, 0, 0, 0.94)); }
 .inv-panel { width: min(640px, 100%); max-height: 100%; overflow-y: auto; color: var(--ink); padding: 8px 12px; }
 .inv-head { display: flex; align-items: flex-end; gap: 24px; border-bottom: 1px solid rgba(216, 203, 180, 0.2); margin-bottom: 16px; }
@@ -330,3 +325,96 @@ button:disabled { opacity: 0.35; cursor: default; }
   #inv-grid { gap: 6px; max-width: 420px; } #inv-detail { margin-top: 8px; min-height: 0; padding: 8px; } .inv-big { width: 80px; }
   #inv-detail h3 { font-size: 20px; } #inv-detail p { font-size: 13px; }
 }
+
+/* ======================================================================================================
+   UI polish (2026-11-15): one design language for everything you see while playing.
+   Ink on near-black, thin warm lines, a faint paper grain, one restrained accent (old brass). The main menu
+   stays on the green terminal in the 3D lab (an object in the world); every in-game screen uses the ink look.
+   ====================================================================================================== */
+:root {
+  --accent: #b8925a; --accent-hi: #e2c38f; --line: rgba(216, 203, 180, 0.16); --line-hi: rgba(216, 203, 180, 0.38);
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.85 0 0 0 0 0.78 0 0 0 0 0.66 0 0 0 0.07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+button { transition: color 0.18s, background-color 0.18s, border-color 0.18s, opacity 0.18s, transform 0.18s var(--ease); }
+
+/* every screen eases in instead of snapping */
+.screen:not(.hidden) { animation: screenIn 0.4s var(--ease) both; }
+@keyframes screenIn { from { opacity: 0; } to { opacity: 1; } }
+.overlay > .term-panel, .inv-panel { animation: panelIn 0.38s var(--ease) both; }
+@keyframes panelIn { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+.inv-screen.closing { animation: screenOut 0.18s ease-in both; }
+@keyframes screenOut { to { opacity: 0; } }
+
+/* ---------- in-game overlays (pause, settings from pause, death): ink, not terminal ---------- */
+body:not(.title) .term-screen.overlay { background: radial-gradient(ellipse at 50% 45%, rgba(26, 19, 12, 0.78), rgba(0, 0, 0, 0.94));
+  color: var(--ink); text-shadow: none; font-family: Georgia, serif; }
+body:not(.title) .term-screen.overlay .term-panel { background: var(--grain), rgba(12, 9, 7, 0.9); border: 1px solid var(--line);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(0, 0, 0, 0.6); padding: 26px 32px; border-radius: 2px; }
+body:not(.title) .term-screen.overlay h2 { font-family: 'IM Fell English SC', Georgia, serif; font-size: 34px; letter-spacing: 0.14em;
+  margin: 0 0 18px; padding-bottom: 10px; border-bottom: 1px solid var(--line); color: var(--ink); }
+body:not(.title) .term-screen.overlay .term-menu button { font: 21px/1.3 'IM Fell English SC', Georgia, serif; letter-spacing: 0.08em;
+  color: var(--dim); padding: 6px 12px 6px 22px; background: none; }
+body:not(.title) .term-screen.overlay .term-menu button::before { content: ''; left: 6px; top: 50%; width: 8px; height: 1px; background: var(--accent);
+  transform: scaleX(0); transform-origin: left; transition: transform 0.2s var(--ease); opacity: 1; }
+body:not(.title) .term-screen.overlay .term-menu button:hover, body:not(.title) .term-screen.overlay .term-menu button:focus-visible,
+body:not(.title) .term-screen.overlay .term-menu button.sel { color: var(--ink); background: none; transform: translateX(4px); }
+body:not(.title) .term-screen.overlay .term-menu button:hover::before, body:not(.title) .term-screen.overlay .term-menu button:focus-visible::before,
+body:not(.title) .term-screen.overlay .term-menu button.sel::before { transform: scaleX(1); }
+body:not(.title) .term-screen.overlay .term-menu button:active { color: var(--accent-hi); }
+body:not(.title) .term-screen.overlay .dimline, body:not(.title) .term-screen.overlay .desc { color: var(--dim); font-family: Georgia, serif; font-size: 14px; }
+body:not(.title) .term-screen.overlay label { font-family: Georgia, serif; font-size: 15px; color: var(--ink); }
+body:not(.title) .term-screen.overlay input[type=range], body:not(.title) .term-screen.overlay input[type=checkbox] { accent-color: var(--accent); }
+body:not(.title) .term-screen.overlay select { font: 14px Georgia, serif; background: #0d0a08; color: var(--ink); border: 1px solid var(--line-hi); }
+body:not(.title) .term-screen.overlay .tabs button { font-family: 'IM Fell English SC', Georgia, serif; color: var(--dim); background: none;
+  border: 0; border-bottom: 2px solid transparent; text-shadow: none; }
+body:not(.title) .term-screen.overlay .tabs button.on { color: var(--ink); border-color: var(--accent); background: none; }
+/* death: the title bleeds in slowly */
+#screen-over:not(.hidden) h2 { color: #b8432f !important; animation: overIn 2.2s ease-out both; }
+@keyframes overIn { from { opacity: 0; letter-spacing: 0.3em; filter: blur(3px); } to { opacity: 1; } }
+#screen-over:not(.hidden) .term-menu { animation: screenIn 0.6s 1.4s both; }
+
+/* ---------- main menu monitor: clearer hierarchy, calmer hover ---------- */
+.on-screen .term-title { margin-bottom: 26px; }
+.on-screen .term-menu li + li { margin-top: 6px; }
+.on-screen .term-menu button { transition: background-color 0.12s, color 0.12s, padding-left 0.2s var(--ease); }
+.on-screen .term-menu button:hover, .on-screen .term-menu button.sel { padding-left: 40px; }
+
+/* ---------- HUD: small, low, quiet ---------- */
+#health { width: 200px; }
+#health .bar { height: 5px; background: rgba(0, 0, 0, 0.55); border: 0; box-shadow: 0 0 0 1px var(--line), 0 0 10px #000; }
+#health-fill { background: linear-gradient(90deg, #8f8070, #d8cbb4); transition: width 0.25s var(--ease), background 0.3s; }
+#ammo { font-family: 'IM Fell English SC', Georgia, serif; letter-spacing: 0.04em; }
+#ammo #ammo-mag { transition: color 0.2s; }
+#weapon-ind { position: absolute; right: calc(28px + var(--safe-r)); bottom: calc(78px + var(--safe-b)); display: flex; align-items: center;
+  gap: 10px; flex-direction: row-reverse; opacity: 0.75; }
+#weapon-icon { width: 38px; height: 38px; filter: drop-shadow(0 0 6px #000); }
+#weapon-name { font: 15px 'IM Fell English SC', Georgia, serif; letter-spacing: 0.1em; color: var(--ink); text-shadow: 0 0 8px #000;
+  opacity: 0; transform: translateX(6px); transition: opacity 0.4s, transform 0.4s var(--ease); }
+#weapon-ind.named #weapon-name { opacity: 1; transform: none; }
+#weapon-ind.swap #weapon-icon { animation: swapIn 0.35s var(--ease); }
+@keyframes swapIn { from { opacity: 0; transform: translateY(6px) scale(0.85); } }
+#prompt.show { animation: promptIn 0.3s var(--ease); }
+@keyframes promptIn { from { opacity: 0; transform: translate(-50%, 4px); } }
+#toast { position: absolute; left: 50%; top: 67%; transform: translateX(-50%); font: italic 14px Georgia, serif; letter-spacing: 0.04em;
+  color: var(--accent-hi); text-shadow: 0 0 8px #000; opacity: 0; white-space: nowrap; pointer-events: none; }
+#toast.show { animation: toast 1.6s ease-out both; }
+@keyframes toast { 0% { opacity: 0; transform: translate(-50%, 6px); } 15% { opacity: 0.9; transform: translate(-50%, 0); } 70% { opacity: 0.9; } 100% { opacity: 0; transform: translate(-50%, -6px); } }
+#reload-ring.show { animation: screenIn 0.25s both; }
+#reload-ring .bar { stroke: var(--accent-hi); transition: stroke-dashoffset 0.1s linear; }
+#reload-ring.heal .bar { stroke: #d8cbb4; }
+#message { font-size: 30px; }
+#hint { border-left-color: var(--accent); background: var(--grain), rgba(0, 0, 0, 0.6); }
+body.touch #weapon-ind { bottom: auto; top: calc(10px + var(--safe-t)); right: calc(240px + var(--safe-r)); }
+body.touch #weapon-name { display: none; }
+body.touch #toast { top: 70%; font-size: 13px; }
+
+/* ---------- inventory touches ---------- */
+.inv-panel { background: var(--grain), rgba(12, 9, 7, 0.88); border: 1px solid var(--line); padding: 20px 24px; border-radius: 2px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.7); }
+.inv-slot { transition: border-color 0.18s, box-shadow 0.25s, transform 0.18s var(--ease); }
+.inv-slot:not(.locked):not(:disabled):hover { transform: translateY(-2px); }
+.inv-slot .spr { transition: transform 0.25s var(--ease); }
+.inv-slot.picked .spr { transform: scale(1.06); }
+#inv-detail { background: var(--grain), rgba(0, 0, 0, 0.35); border: 1px solid var(--line); border-radius: 2px; }
+#inv-detail > * { animation: screenIn 0.3s both; }

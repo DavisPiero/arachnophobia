@@ -14,7 +14,8 @@ export class HUD {
     this.mag = $('ammo-mag'); this.stock = $('ammo-stock'); this.ammo = $('ammo');
     this.ammoLabel = this.ammo.querySelector('.label'); this.ammoSep = this.ammo.querySelector('.sep');
     this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages');
-    this.prompt = $('prompt'); this.clockEl = $('clock-read');
+    this.prompt = $('prompt'); this.toastEl = $('toast'); this.toastT = 0;
+    this.wInd = $('weapon-ind'); this.wIcon = $('weapon-icon'); this.wName = $('weapon-name'); this.wNameT = 0; this.clockEl = $('clock-read');
     this.ring = $('reload-ring'); this.ringBar = this.ring.querySelector('.bar');
     this.message = $('message');
     this.noticeEl = $('notice');
@@ -40,6 +41,16 @@ export class HUD {
     // less text (session B): a small picture and a number for each supply
     this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? `<i class="sup" title="bandages">${icon('bandage')}</i>${n}` : ''; });
     this.ring.classList.toggle('heal', healT >= 0);
+    // weapon indicator: its picture by the ammo; the name shows for a moment when you change
+    this.set('held', held, (h) => {
+      if (!h) return;
+      this.wIcon.innerHTML = icon(h);
+      this.wName.textContent = Config.arsenal.names[h] || h;
+      this.wInd.classList.remove('swap'); void this.wInd.offsetWidth; this.wInd.classList.add('swap', 'named');
+      this.wNameT = 1.8;
+    });
+    if (this.wNameT > 0 && (this.wNameT -= dt) <= 0) this.wInd.classList.remove('named');
+    if (this.toastT > 0 && (this.toastT -= dt) <= 0) this.toastEl.classList.remove('show');
     this.set('ammoMode', ammoMode + unit, () => {
       this.ammo.classList.toggle('dim', ammoMode === 'melee');
       this.ammo.classList.toggle('hidden', ammoMode === 'none');
@@ -78,6 +89,13 @@ export class HUD {
       const [html, secs] = this.hintQueue.shift();
       this.hintEl.innerHTML = html; this.hintEl.classList.add('show'); this.hintTimer = secs;
     }
+  }
+
+  /** A quiet line under the prompt for small things done: a log taken, a plank nailed. */
+  toast(text, seconds = 1.6) {
+    this.toastEl.textContent = text;
+    this.toastEl.classList.remove('show'); void this.toastEl.offsetWidth; this.toastEl.classList.add('show');
+    this.toastT = seconds;
   }
 
   /** Big centred title (waves, a window breaking). */

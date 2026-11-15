@@ -8,45 +8,26 @@ import { Quality, isTouch } from '../core/Quality.js';
 const $ = (id) => document.getElementById(id);
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-// The boot log: [delay before the line in ms, text, class]. Real loading steps are slotted in as they happen.
-const BOOT_LOG = [
-  [300, 'ARACHNE field kernel 2.6.13 #1 Fri Oct 31 03:12:44'],
-  [140, 'memory: 640K ok'],
-  [120, 'hda: ST-251 40MB, 820 cyl'],
-  [380, 'mounting /dev/specimen0 ........ ok'],
-  [160, 'mounting /dev/specimen1 ........ ok'],
-  [160, 'mounting /dev/specimen4 ........ ok'],
-  [700, 'mounting /dev/specimen7 ........ FAILED', 'bad'],
-  [200, 'containment: enclosure 7 seal pressure 0.00 kPa', 'warn'],
-  [240, 'containment: enclosure 7 is empty', 'warn'],
-  [500, 'net: field station link up (cabin, 3 windows)'],
-  [260, 'checking window glass ........ 3 intact'],
-  [300, 'checking ammunition ........ 40 rounds on the table'],
-  [600, 'sensor 2: movement under the floor', 'warn'],
-  [900, 'sensor 2: movement under the floor', 'warn'],
-  [300, 'they are already inside the walls', 'bad'],
-  // the log runs down into a string of failures before the prompt (user: end it overrun with failures).
-  // The gaps are timed against assets/audio/menu-track.m4a's own build-up into the "kick" (Config.music.kick):
-  // a crude onset scan of that stretch (scratchpad analysis, not confirmed by ear) found hits clustering at
-  // roughly +8.6s/+8.8s/+9.0s into the loading screen, which is where the last three lines below land.
-  [420, 'mounting /dev/specimen2 ........ FAILED', 'bad'],
-  [260, 'mounting /dev/specimen4 ........ FAILED', 'bad'],
-  [220, 'containment: seal pressure 0.00 kPa, all enclosures', 'bad'],
-  [380, 'sensor 1: movement under the floor', 'warn'],
-  [260, 'sensor 3: movement under the floor', 'warn'],
-  [1790, 'uplink: field station not responding', 'bad'],
-  [180, 'mounting /dev/specimen1 ........ FAILED', 'bad'],
-  [281, 'do not let the fire go out'],
-];
+// The boot (user, 2026-11-15: shorter, centred, no scrolling log): garbled letters decode into ARACHNOPHOBIA TERMINAL
+// (tap to start), then UPDATING, CALIBRATING, INITIATING each decode in the middle over a thin bar, then the menu.
+const BOOT_STEPS = ['UPDATING', 'CALIBRATING', 'INITIATING'];
+const GARBLE = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&@$/<>';
 
-// played again when you pick begin: the link out to the cabin
-const ENTER_LOG = [
-  [200, 'connecting to field station ........ ok'],
-  [300, 'camera 1: cabin interior'],
-  [400, 'camera 2: no signal', 'bad'],
-  [350, 'lantern lit. rifle loaded.'],
-  [500, 'good luck'],
-];
+/** Garbled characters settle left to right into `text` over `ms`. */
+function decode(el, text, ms = 700) {
+  const t0 = performance.now();
+  return new Promise((resolve) => {
+    const tick = () => {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      const fixed = Math.floor(k * text.length);
+      let out = text.slice(0, fixed);
+      for (let i = fixed; i < text.length; i++) out += text[i] === ' ' ? ' ' : GARBLE[(Math.random() * GARBLE.length) | 0];
+      el.textContent = out;
+      if (k < 1) requestAnimationFrame(tick); else resolve();
+    };
+    tick();
+  });
+}
 
 export class Menu {
   constructor(audio, keyboard) {
@@ -60,10 +41,10 @@ export class Menu {
     this.settings = $('screen-settings');
     this.startBtn = $('btn-start');
     this.loading = $('loading-text');
-    this.log = $('boot-log');
     this.onOptions = null;      // game sets this: called when a graphics option changes
     this.settingsFrom = null;   // the screen to go back to
     this.startBtn.disabled = true;
+    decode($('boot-text'), 'ARACHNOPHOBIA TERMINAL', 1100).then(() => $('boot-tap').classList.add('show'));
 
     // stop clicks on menus from reaching the game
     for (const s of [this.boot, this.loadingScreen, this.start, this.pause, this.over, this.settings]) s.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -90,55 +71,23 @@ export class Menu {
     });
   }
 
-  /** The loading screen: types the boot log while `loaded` (a promise) finishes, for at least Config.loading.minSeconds. */
-  async runLoading(loaded, log = BOOT_LOG, minSeconds = Config.loading.minSeconds) {
+  /** The loading screen: the steps decode in turn over a thin bar while `loaded` finishes (at least minSeconds). */
+  async runLoading(loaded, steps = BOOT_STEPS, minSeconds = Config.loading.minSeconds) {
     this.boot.classList.add('hidden');
-    this.log.textContent = '';
     this.loadingScreen.classList.remove('hidden', 'cut');
     const t0 = performance.now();
-    this.logT0 = t0;
     let done = false;
     loaded.then(() => { done = true; });
-    const progress = $('boot-progress');
-    const bar = () => {
-      const k = done ? 1 : Math.min(0.95, (performance.now() - t0) / 1000 / (minSeconds + 2));
-      const n = Math.round(k * 24);
-      progress.textContent = `[${'#'.repeat(n)}${'.'.repeat(24 - n)}] ${done ? 'ready' : 'loading'}`;
-    };
-    const total = log.reduce((s, l) => s + l[0], 0);
-    const scale = Math.min(1, (minSeconds * 1000 - 600) / total);
-    for (const [ms, text, cls] of log) {
-      await wait(ms * scale);
-      this.logLine(text, cls);
-      bar();
-      if (cls === 'bad') this.glitch();
+    const stepEl = $('boot-step'), fill = $('boot-fill');
+    const per = minSeconds * 1000 / steps.length;
+    for (let i = 0; i < steps.length; i++) {
+      fill.style.transform = `scaleX(${(i + 1) / steps.length})`;
+      await decode(stepEl, steps[i], Math.min(500, per * 0.5));
+      await wait(per * 0.5);
     }
-    while (!done || performance.now() - t0 < minSeconds * 1000) { bar(); await wait(120); }
-    bar();
-    if (log === BOOT_LOG) this.logPrompt('login: ');
-    await wait(450);
-    // a hard cut to black, then the menu
-    this.glitch(); await wait(120);
+    while (!done) await wait(100);
     this.loadingScreen.classList.add('cut');
-    await wait(380);
-  }
-
-  logLine(text, cls = '') {
-    const t = ((performance.now() - (this.logT0 || 0)) / 1000).toFixed(6).padStart(11, ' ');
-    const line = document.createElement('span');
-    if (cls) line.className = cls;
-    line.textContent = `[${t}] ${text}\n`;
-    this.log.appendChild(line);
-    // keep the newest lines on screen
-    while (this.log.scrollHeight > this.log.clientHeight + 4 && this.log.firstChild) this.log.removeChild(this.log.firstChild);
-  }
-
-  // the trailing prompt, with a real blinking terminal cursor rather than a static underscore
-  logPrompt(text) {
-    const line = document.createElement('span');
-    const t = ((performance.now() - (this.logT0 || 0)) / 1000).toFixed(6).padStart(11, ' ');
-    line.append(`[${t}] ${text}`, Object.assign(document.createElement('span'), { className: 'cursor', textContent: '_' }), '\n');
-    this.log.appendChild(line);
+    await wait(450);
   }
 
   glitch() {
@@ -153,7 +102,7 @@ export class Menu {
     await wait(420);
     this.start.classList.add('hidden');
     menuScreen.classList.remove('dissolving');
-    await this.runLoading(Promise.resolve(), ENTER_LOG, 2.4);
+    await this.runLoading(Promise.resolve(), ['INITIATING'], 0.9);
     this.loadingScreen.classList.add('hidden');
   }
 
