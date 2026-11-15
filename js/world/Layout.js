@@ -64,6 +64,14 @@ export const FURNITURE = {
   hooks:   { wall: 'west', z0: 3.3, z1: 4.1, y: 1.72 },                // coat hooks, rope and bag, south of the west window
 };
 
+// The stove (FURNITURE.stove, built in Cabin.js): its fire lights the room through the door on its west face.
+// You feed it logs standing in front of it. position = floor under its middle; door = middle of the door.
+export const STOVE = {
+  position: new THREE.Vector3(CABIN.halfX - FURNITURE.stove.inset, 0, -CABIN.halfZ + FURNITURE.stove.inset),
+  door: new THREE.Vector3(CABIN.halfX - FURNITURE.stove.inset - 0.27, 0.40, -CABIN.halfZ + FURNITURE.stove.inset),
+  interactRadius: 1.7,   // from the door, on the floor
+};
+
 // Ground height outside. Flat (CABIN.groundY) near the cabin, then each side has its own shape:
 //  north: dense forest, ground rises gently away from the cabin
 //  east:  open clearing, nearly flat, long sightline to a dead tree line at x ~ 32

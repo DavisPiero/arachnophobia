@@ -59,6 +59,8 @@ export function buildWorld(scene, renderer, quality, events) {
       update: lighting.update,
       flash: lighting.flash,
       muzzleFlash: lighting.muzzleFlash,
+      setFire: lighting.setFire,
+      stoveLight: lighting.stoveLight,
       get flashLevel() { return lighting.flashLevel; },
     },
     update,

@@ -12,7 +12,7 @@ export class HUD {
     this.root = $('hud');
     this.mag = $('ammo-mag'); this.stock = $('ammo-stock'); this.ammo = $('ammo');
     this.ammoLabel = this.ammo.querySelector('.label'); this.ammoSep = this.ammo.querySelector('.sep');
-    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages');
+    this.health = $('health'); this.healthFill = $('health-fill'); this.healthTrail = $('health-trail'); this.bandEl = $('bandages'); this.logsEl = $('logs');
     this.prompt = $('prompt');
     this.ring = $('reload-ring'); this.ringBar = this.ring.querySelector('.bar');
     this.message = $('message');
@@ -33,7 +33,8 @@ export class HUD {
   key(action, touchName) { return `<span class="key">${this.isTouch ? touchName : keyLabel(Settings.keys[action])}</span>`; }
 
   /** ammoMode: 'gun' (loaded | on table), 'melee' (the last gun's numbers, dimmed), 'flare' (flares left), 'none'. */
-  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, healT = -1 }) {
+  update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, logs = 0, healT = -1 }) {
+    this.set('logs', logs, (n) => { this.logsEl.textContent = ` · ${n} log${n === 1 ? '' : 's'}`; });
     this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? ` · ${n} bandage${n > 1 ? 's' : ''} ${this.key('bandage', '')}`.replace(/<span class="key"><\/span>/, '') : ''; });
     this.ring.classList.toggle('heal', healT >= 0);
     this.set('ammoMode', ammoMode + unit, () => {

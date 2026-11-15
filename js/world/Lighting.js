@@ -4,9 +4,11 @@
 //  - Hemisphere: weak cold fill for the exterior.
 //  - Interior materials are patched (interiorMaterial) so the moon and hemisphere barely reach inside;
 //    the walls would otherwise let the moon "leak" in on the low tier, which has no moon shadows.
+//  - Stove fire: an orange PointLight low in front of the stove door and glowing slits in the door; setFire(level)
+//    (0 = out, 1 = full) from js/systems/Firewood.js. No shadows (cheap on every tier).
 //  - flash(strength): lightning. muzzleFlash(position): 60 ms warm burst.
 import * as THREE from 'three';
-import { LANTERN, WALL_LAMP, CABIN } from './Layout.js';
+import { LANTERN, WALL_LAMP, CABIN, STOVE } from './Layout.js';
 import { Config } from '../core/Config.js';
 const MUZZLE = Config.weapon.muzzleLight;
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
@@ -175,6 +177,32 @@ export function buildLighting(scene, renderer, quality) {
   wallLampModel.position.copy(WALL_LAMP.position);
   group.add(wallLampModel);
 
+  // ---------------------------------------------------------- stove fire
+  const FIRE = Config.fire;
+  const fireColor = new THREE.Color().setRGB(1.0, 0.42, 0.12, THREE.LinearSRGBColorSpace); // redder than the lantern
+  const stoveLight = new THREE.PointLight(fireColor, 0, FIRE.range, 2);
+  stoveLight.position.copy(STOVE.door).add(new THREE.Vector3(-0.22, 0.02, 0)); // just out from the door, low
+  group.add(stoveLight);
+  const fireGlow = new THREE.Group();
+  {
+    // three draught slits across the door (the door is a 0.02 m plate on the stove's west face)
+    const mat = new THREE.MeshBasicMaterial({ color: new THREE.Color(1.0, 0.45, 0.12), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    for (let i = 0; i < 3; i++) {
+      const m = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 0.018), mat);
+      m.rotation.y = -Math.PI / 2;
+      m.position.set(STOVE.door.x - 0.022, STOVE.door.y - 0.08 + i * 0.035, STOVE.door.z);
+      fireGlow.add(m);
+    }
+    const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glow(), color: new THREE.Color(1.0, 0.4, 0.12), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    halo.scale.setScalar(0.5);
+    halo.position.set(STOVE.door.x - 0.06, STOVE.door.y - 0.04, STOVE.door.z);
+    fireGlow.add(halo);
+    fireGlow.userData = { slits: mat, halo };
+  }
+  group.add(fireGlow);
+  let fireLevel = 0;
+  function setFire(level) { fireLevel = Math.max(0, Math.min(1, level)); }
+
   // ---------------------------------------------------------- muzzle flash
   const muzzle = new THREE.PointLight(new THREE.Color().setRGB(1, 0.72, 0.4, THREE.SRGBColorSpace), 0, 16, 2);
   group.add(muzzle);
@@ -220,6 +248,14 @@ export function buildLighting(scene, renderer, quality) {
       e.light.intensity = e.base * g;
       if (e.sprite) e.sprite.scale.setScalar(e.spriteBase * (0.9 + 0.1 * g));
     }
+    // stove fire: livelier than the lantern, and embers (low level) pulse slowly
+    {
+      const g = 1 + (wobble(clock * 4.2, 21) - 0.5) * 0.35 + (wobble(clock * 17, 23) - 0.5) * 0.15;
+      const k = fireLevel * g;
+      stoveLight.intensity = FIRE.light * k;
+      fireGlow.userData.slits.opacity = Math.min(1, 0.25 + 0.75 * fireLevel) * (fireLevel > 0 ? g : 0);
+      fireGlow.userData.halo.material.opacity = 0.35 * k;
+    }
     // lightning envelope
     let fl = 0;
     for (let i = flashes.length - 1; i >= 0; i--) {
@@ -244,7 +280,7 @@ export function buildLighting(scene, renderer, quality) {
 
   return {
     group, lantern, wallLamp, moon, hemi, sky, lanternModel,
-    update, flash, muzzleFlash, addFlame,
+    stoveLight, update, flash, muzzleFlash, addFlame, setFire,
     get flashLevel() { return flashLevel; },
   };
 }

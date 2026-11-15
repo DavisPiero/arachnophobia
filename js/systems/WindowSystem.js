@@ -6,7 +6,7 @@
 // When every board is gone the window is breached and spiders climb in.
 //
 // `stage` is how many boards are gone (0 .. boards.length); breached when stage >= BREACHED (4).
-// Room for later: `addBoard(win)` nails one back on (boarding up, session C); a big spider can reach through a gap
+// `addBoard(win)` nails a fallen plank back on (a log, js/systems/Firewood.js). Room for later: a big spider can reach through a gap
 // (`gapAt(win, y)` tells where the gaps are) to grab the player.
 //
 // Visibility: `closeness` (1 = standing at the window looking out) still drives the watcher, which slips away.
@@ -19,7 +19,7 @@ const WC = Config.windows;
 export const BREACHED = 4;
 // WINDOWS[i].center sits on the INNER face of the wall; the wall runs outward from there.
 const BOARD_Z = CABIN.wallThickness + 0.02;   // planks nailed across the outer face of the wall
-const BOARD_H = 0.15;   // 4 planks leave five gaps of ~13 cm to see and shoot through
+const BOARD_H = 0.15;   // plank height; where they sit is Config.windows.boardSpots
 
 export class WindowSystem {
   constructor({ scene, audio, events, camera }) {
@@ -44,11 +44,11 @@ export class WindowSystem {
     group.rotation.y = yaw;
     this.scene.add(group);
     const w = def.width, h = def.height;
-    const count = WC.boards;
-    const gap = (h - count * BOARD_H) / (count + 1);
+    const spots = WC.boardSpots;
+    const count = spots.length;
     const boards = [];
     for (let i = 0; i < count; i++) {
-      const y = -h / 2 + gap * (i + 1) + BOARD_H * (i + 0.5);
+      const y = spots[i] * (h / 2 - BOARD_H / 2);
       const len = w + 0.3 + (i % 2) * 0.06;
       const rot = [0.035, -0.025, 0.02, -0.04, 0.03][i % 5];
       const pivot = new THREE.Group(); // pivot at the left nail so a loose board swings
@@ -124,6 +124,22 @@ export class WindowSystem {
       if (w.stage >= BREACHED) this.events.emit('windowBreached', { id: w.id });
       this.updateOpenness();
     } else this.recount(w);
+  }
+
+  /** Nail one plank back on (the lowest gone). Returns false if none is missing. */
+  addBoard(w) {
+    const b = w.boards.find((x) => x.fallen);
+    if (!b) return false;
+    const wasBreached = w.stage >= BREACHED;
+    b.pivot.parent?.remove(b.pivot);
+    w.group.add(b.pivot);
+    b.pivot.position.copy(b.homePos);
+    b.pivot.rotation.set(0, 0, b.baseRot);
+    b.fallen = false; b.loose = 0; b.health = WC.boardHealth; b.wobble = 1;
+    this.recount(w);
+    this.updateOpenness();
+    this.events.emit('windowRepaired', { id: w.id, stage: w.stage, wasBreached });
+    return true;
   }
 
   dropBoard(w, b) {

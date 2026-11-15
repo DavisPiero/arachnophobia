@@ -86,7 +86,9 @@ export const Config = {
   },
   windows: {
     // no glass: planks nailed across the outside are the barrier (user's call 2026-11-15). Was one 100-point window.
-    boards: 4,               // planks per window; you shoot through the gaps between them
+    // where each plank sits: -1 = bottom of the opening, 1 = top. Two low, two high, a wide gap at eye level
+    // (user, 2026-11-15: move the boards away from the centre so you can see out). Was four evenly spaced.
+    boardSpots: [-1, -0.55, 0.55, 1],   // planks per window = how many spots; shoot through the gaps
     boardHealth: 80,         // each plank; all four gone = breached (320 in all, 3.2x the old window)
     // how close the player is to a window (distance from the eye to the window centre, adjusted for angle).
     // Only used to tell a watcher it has been seen; windows no longer darken from afar.
@@ -141,7 +143,7 @@ export const Config = {
     time: [3.5, 6],          // seconds at the same window (closeness above `closeness`) before it happens
     closeness: 0.6,
     cooldown: [16, 28],      // seconds before it can happen again
-    damage: 14,              // claws through the gaps (or the leap, through a breached window)
+    damage: 6,               // claws through the gaps (was 14: too much for a scare, user 2026-11-15) (or the leap, through a breached window)
     boardDamage: 12,         // the slam into the planks
     reach: 1.7,              // the player is hurt if this close to the window (m, horizontally)
     types: ['runner', 'climber', 'weeper'],
@@ -172,6 +174,25 @@ export const Config = {
     bandage: { max: 3, amount: 35, time: 1.6 },   // health back, seconds it takes (you can still walk, slowly)
     bed: { time: 4, radius: 1.3 },                 // seconds lying down; how close to the cot you must stand
     bandageMove: 0.5,                              // walk speed x this while bandaging
+  },
+  // The stove fire (js/systems/Firewood.js): it burns down and you feed it logs. Light only for now; warmth is session D.
+  fire: {
+    light: 9,                // stove light intensity at a full fire (the hanging lantern is 15)
+    range: 10,
+    burnPerLog: 55,          // seconds one log keeps it going
+    maxFuel: 220,            // it holds about four logs
+    startFuel: 110,          // two logs' worth at the start of the night
+    dimBelow: 50,            // over its last 50 s of fuel the fire shrinks to embers, then goes out
+    feedTime: 1.2,           // seconds to put a log in (you stand still)
+  },
+  // Logs: one stock, spent on the fire or on nailing a plank back over a window. Never quite enough for both
+  // (user, 2026-11-15). A full fire for a wave and its break takes ~2.2 logs; each plank costs one.
+  logs: {
+    start: 3,
+    perWave: 3,              // added for each wave survived
+    max: 12,
+    boardTime: 2.4,          // seconds to nail one plank back on (you stand still)
+    boardReach: 1.6,         // how close to the window centre you must stand (m, on the floor)
   },
   // Settings → Gameplay → difficulty. Multiplies spiders per wave and the damage they do.
   difficulty: {

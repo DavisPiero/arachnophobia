@@ -153,9 +153,11 @@ Every loaded model has a code-made fallback.
 7. Horror rework (playtest notes and brief, 2026-11-15), in six sessions:
    - A. Horror and combat basics: no glass, planks with gaps, leg clipping, attacks timed to the animation and
      sooner, leaps, the window jump, faster spiders, darker night, stronger beam, phone visibility. *(done 2026-11-15)*
-   - B. UI: inventory in the in-game style with pictures of the weapons and bandages, less text on screen, the clock
-     bigger and moved, its time left shown when you look at it.
-   - C. Cabin: placement tool, the ammo table run along the wall (bandages lie on it, heal there), planks and boarding up.
+   - B+C (merged by the user, 2026-11-15). *(started: planks moved off the middle, window jump softer, the stove fire
+     lights the room and burns down, logs each wave for the fire or for nailing planks back on)*
+     Still to do: inventory in the in-game style with pictures of the weapons and bandages, less text on screen, the
+     clock bigger and moved with its time left shown when you look at it; placement tool, the ammo table run along the
+     wall (bandages lie on it, heal there).
    - D. Warmth (only draws spiders when low) and lights; gunshots draw nearby spiders.
    - E. Creatures: two species per size (small, medium, large), human-spider fusion, faces sculpted from the
      user's references, behaviours per species (reactions to being shot, ambush, retreat). Replaces the fat Sac.
