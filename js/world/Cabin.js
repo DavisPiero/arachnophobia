@@ -6,7 +6,7 @@
 // so the whole cabin is a handful of draw calls.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { CABIN, WINDOWS, DOOR, AMMO_TABLE, LANTERN, FURNITURE, terrainHeight, roofHeight } from './Layout.js';
+import { CABIN, WINDOWS, DOOR, AMMO_TABLE, MED_TABLE, WOODPILE, LANTERN, FURNITURE, terrainHeight, roofHeight } from './Layout.js';
 import * as T from './Textures.js';
 import { interiorMaterial, limitShadow, CANDLE_COLOR, buildLanternModel } from './Lighting.js';
 
@@ -406,42 +406,54 @@ export function buildCabin(quality) {
   }
 
   // wood stove in the north-east corner, pipe through the roof
+  const stoveGroup = new THREE.Group(); stoveGroup.name = 'stove';
   {
+    const sb = new Builder(M);
     const cx = HX - FURNITURE.stove.inset, cz = -HZ + FURNITURE.stove.inset, sx = 0.5, sz = 0.62, legH = 0.14, bodyH = 0.5;
-    for (const dx of [-1, 1]) for (const dz of [-1, 1]) b.box('iron', 0.05, legH, 0.05, cx + dx * (sx / 2 - 0.05), legH / 2, cz + dz * (sz / 2 - 0.06), {});
-    b.box('iron', sx, bodyH, sz, cx, legH + bodyH / 2, cz, {});
-    b.box('iron', sx + 0.06, 0.03, sz + 0.06, cx, legH + bodyH + 0.015, cz, {});
-    b.box('iron', sx + 0.02, 0.025, sz + 0.02, cx, legH + 0.012, cz, {});
+    for (const dx of [-1, 1]) for (const dz of [-1, 1]) sb.box('iron', 0.05, legH, 0.05, cx + dx * (sx / 2 - 0.05), legH / 2, cz + dz * (sz / 2 - 0.06), {});
+    sb.box('iron', sx, bodyH, sz, cx, legH + bodyH / 2, cz, {});
+    sb.box('iron', sx + 0.06, 0.03, sz + 0.06, cx, legH + bodyH + 0.015, cz, {});
+    sb.box('iron', sx + 0.02, 0.025, sz + 0.02, cx, legH + 0.012, cz, {});
     // door on the west face, handle, ash lip
-    b.box('iron', 0.02, 0.28, 0.32, cx - sx / 2 - 0.01, legH + 0.26, cz, {});
-    b.box('iron', 0.04, 0.02, 0.07, cx - sx / 2 - 0.035, legH + 0.32, cz + 0.12, {});
-    b.box('iron', 0.08, 0.02, sz * 0.8, cx - sx / 2 - 0.04, legH + 0.02, cz, {});
+    sb.box('iron', 0.02, 0.28, 0.32, cx - sx / 2 - 0.01, legH + 0.26, cz, {});
+    sb.box('iron', 0.04, 0.02, 0.07, cx - sx / 2 - 0.035, legH + 0.32, cz + 0.12, {});
+    sb.box('iron', 0.08, 0.02, sz * 0.8, cx - sx / 2 - 0.04, legH + 0.02, cz, {});
     const pipeTop = WH + 0.04;
     const pg = new THREE.CylinderGeometry(0.065, 0.065, pipeTop - (legH + bodyH + 0.03), 16, 1, true);
     pg.translate(cx, (pipeTop + legH + bodyH + 0.03) / 2, cz + 0.1);
-    b.geo('iron', pg, {});
-    b.geo('iron', new THREE.CylinderGeometry(0.075, 0.075, 0.05, 16).translate(cx, legH + bodyH + 0.05, cz + 0.1), {});
-    b.geo('iron', new THREE.CylinderGeometry(0.16, 0.16, 0.01, 16).translate(cx, WH - 0.005, cz + 0.1), {});
+    sb.geo('iron', pg, {});
+    sb.geo('iron', new THREE.CylinderGeometry(0.075, 0.075, 0.05, 16).translate(cx, legH + bodyH + 0.05, cz + 0.1), {});
+    sb.geo('iron', new THREE.CylinderGeometry(0.16, 0.16, 0.01, 16).translate(cx, WH - 0.005, cz + 0.1), {});
     // outside: through the roof
     const ry = roofHeight(cx);
-    b.geo('ironOut', new THREE.CylinderGeometry(0.075, 0.075, 0.9, 16, 1, true).translate(cx, ry + 0.35, cz + 0.1), {});
-    b.geo('ironOut', new THREE.ConeGeometry(0.16, 0.12, 16, 1, true).translate(cx, ry + 0.86, cz + 0.1), {});
-    b.geo('ironOut', new THREE.CylinderGeometry(0.17, 0.17, 0.03, 16).translate(cx, ry + 0.02, cz + 0.1), {});
+    sb.geo('ironOut', new THREE.CylinderGeometry(0.075, 0.075, 0.9, 16, 1, true).translate(cx, ry + 0.35, cz + 0.1), {});
+    sb.geo('ironOut', new THREE.ConeGeometry(0.16, 0.12, 16, 1, true).translate(cx, ry + 0.86, cz + 0.1), {});
+    sb.geo('ironOut', new THREE.CylinderGeometry(0.17, 0.17, 0.03, 16).translate(cx, ry + 0.02, cz + 0.1), {});
+    sb.build(stoveGroup, shadows);
+    colliders.push({ minX: cx - sx / 2 - 0.15, maxX: HX, minZ: -HZ, maxZ: cz + sz / 2 + 0.05 });
+  }
+  group.add(stoveGroup);
+  // firewood stack on its own, east of the north window
+  const pileGroup = new THREE.Group(); pileGroup.name = 'woodpile';
+  {
+    const wb = new Builder(M);
     // firewood stack beside it, along the north wall
     const R = T.rng(5);
     for (let row = 0; row < 3; row++) for (let k = 0; k < 5 - row; k++) {
       const r = 0.055 + R() * 0.02, len = 0.42 + R() * 0.08;
-      const x = cx - 0.62 - (row * 0.06) + k * 0.13 - 0.25, y = r + row * 0.11, z = -HZ + 0.3 + (R() - 0.5) * 0.04;
+      const x = WOODPILE.position.x - 0.3 + k * 0.13 + row * 0.065, y = r + row * 0.11, z = WOODPILE.position.z + (R() - 0.5) * 0.04;
       const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, R() * 6, 0)), new THREE.Vector3(1, 1, 1));
-      b.geo('bark', new THREE.CylinderGeometry(r, r * 1.05, len, 7, 1, true), { m, grain: 'y' });
+      wb.geo('bark', new THREE.CylinderGeometry(r, r * 1.05, len, 7, 1, true), { m, grain: 'y' });
       for (const s of [-1, 1]) {
         const c = new THREE.CircleGeometry(r, 7).rotateX(s * -Math.PI / 2).translate(0, s * len / 2, 0);
         c.applyMatrix4(m);
-        b.geo('endGrain', c, { uv: false });
+        wb.geo('endGrain', c, { uv: false });
       }
     }
-    colliders.push({ minX: cx - 1.0, maxX: HX, minZ: -HZ, maxZ: cz + sz / 2 + 0.05 });
+    wb.build(pileGroup, shadows);
+    colliders.push({ minX: WOODPILE.position.x - 0.45, maxX: WOODPILE.position.x + 0.45, minZ: -HZ, maxZ: WOODPILE.position.z + 0.15 });
   }
+  group.add(pileGroup);
 
   // shelves on the east wall (south part) with jars and tins
   {
@@ -519,13 +531,43 @@ export function buildCabin(quality) {
     minZ: AMMO_TABLE.position.z - AMMO_TABLE.size.z / 2 - 0.03, maxZ: HZ,
   });
 
+  // medical table: small, metal, apart from the ammo table; bandage rolls on it (Game shows one per bandage)
+  const medGroup = new THREE.Group(); medGroup.name = 'medTable';
+  const medBandages = [];
+  {
+    const P = MED_TABLE.position, S = MED_TABLE.size, top = S.h;
+    const steel = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x9aa0a4, metalness: 0.45, roughness: 0.42 }));
+    const mb = new Builder({ steel });
+    mb.boxMM('steel', P.x - S.x / 2, P.x + S.x / 2, top - 0.03, top, P.z - S.z / 2, P.z + S.z / 2, {});
+    mb.boxMM('steel', P.x - S.x / 2 + 0.04, P.x + S.x / 2 - 0.04, 0.25, 0.27, P.z - S.z / 2 + 0.04, P.z + S.z / 2 - 0.04, {});   // lower shelf
+    for (const dx of [-1, 1]) for (const dz of [-1, 1]) mb.box('steel', 0.03, top - 0.03, 0.03, P.x + dx * (S.x / 2 - 0.03), (top - 0.03) / 2, P.z + dz * (S.z / 2 - 0.03), {});
+    mb.build(medGroup, shadows);
+    const lint = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0xd6cfbf, roughness: 0.95 }));
+    const roll = new THREE.CylinderGeometry(0.035, 0.035, 0.07, 14);
+    for (let i = 0; i < 3; i++) {
+      const m = new THREE.Mesh(roll, lint);
+      m.position.set(P.x - 0.2 + i * 0.13, top + 0.035, P.z + (i % 2 ? 0.06 : -0.04));
+      m.castShadow = false; m.receiveShadow = shadows;
+      medGroup.add(m); medBandages.push(m);
+    }
+    const tin = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.09, 0.14), interiorMaterial(new THREE.MeshStandardMaterial({ color: 0xb8b2a4, metalness: 0.5, roughness: 0.5 })));
+    tin.position.set(P.x + 0.22, top + 0.045, P.z); medGroup.add(tin);
+    const cross = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.06), new THREE.MeshBasicMaterial({ color: 0x8c1a10 }));
+    cross.rotation.x = -Math.PI / 2; cross.position.set(P.x + 0.22, top + 0.091, P.z); medGroup.add(cross);
+  }
+  group.add(medGroup);
+  colliders.push({ minX: MED_TABLE.position.x - MED_TABLE.size.x / 2 - 0.03, maxX: MED_TABLE.position.x + MED_TABLE.size.x / 2 + 0.03, minZ: MED_TABLE.position.z - MED_TABLE.size.z / 2 - 0.03, maxZ: HZ });
+
   b.build(group, shadows);
+  // things you can use get their own materials, so Game can warm them gold when you are at them
+  const interactables = { stove: stoveGroup, woodpile: pileGroup, ammo: ammoTable.group, med: medGroup };
+  for (const g of Object.values(interactables)) g.traverse((o) => { if (o.isMesh && o.material.isMeshStandardMaterial) o.material = cloneMat(o.material); });
 
   function floorTypeAt(x, z) {
     return x >= RUG.minX && x <= RUG.maxX && z >= RUG.minZ && z <= RUG.maxZ ? 'rug' : 'wood';
   }
 
-  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies, bandages: ammoTable.bandages }, windowFrames, candle: ammoTable.candle };
+  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies }, medBandages, interactables, windowFrames, candle: ammoTable.candle };
 }
 
 function cloneMat(m) {
@@ -663,22 +705,7 @@ function buildAmmoTable(M, shadows) {
     candle.light = light; candle.sprite = model.userData.glow; candle.model = model;
   }
 
-  // bandage rolls at the west end of the table: one shown per bandage you have (Game sets .visible)
-  const bandages = [];
-  {
-    const lint = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0xcfc6b2, roughness: 0.95 }));
-    const roll = new THREE.CylinderGeometry(0.035, 0.035, 0.07, 14);
-    for (let i = 0; i < 3; i++) {
-      const o = new THREE.Group();
-      const m = mesh(roll, lint); m.position.y = i === 2 ? 0.035 + 0.07 : 0.035;
-      if (i === 2) { m.rotation.z = Math.PI / 2; m.position.y = 0.035; }
-      o.add(m);
-      const tail = mesh(new THREE.PlaneGeometry(0.06, 0.12), lint); tail.rotation.x = -Math.PI / 2; tail.position.set(0.04, 0.002, 0.07); tail.rotation.z = 0.3;
-      if (i === 0) o.add(tail);
-      bandages.push(place(o, x0 + 0.22 + i * 0.1, z0 + 0.2 + (i % 2) * 0.08, i * 0.7));
-    }
-  }
-  return { group, supplies, candle, bandages };
+  return { group, supplies, candle };
 }
 
 // A rifle cartridge standing upright, base at y = 0 (vertex colours: brass case, copper bullet).

@@ -27,6 +27,7 @@ export function startServer(p = port) {
           const clean = {
             table: { x: n(p.table.x), length: n(p.table.length) },
             clock: { x: n(p.clock.x), y: n(p.clock.y), radius: n(p.clock.radius) },
+            med: { x: n(p.med.x) },
             lantern: { x: n(p.lantern.x), z: n(p.lantern.z) },
           };
           const head = fs.readFileSync(path.join(root, 'js/world/placement.js'), 'utf8').split('export const PLACEMENT')[0];

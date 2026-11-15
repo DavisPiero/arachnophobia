@@ -26,11 +26,13 @@
 <canvas id="c" width="560" height="720"></canvas>
 <aside>
   <h1>Placement</h1>
-  <p>Drag the table (drag its ends to change the length), the lantern, and the clock along the south wall. Save writes
+  <p>Drag the ammo table (its ends change the length), the medical table, the lantern, and the clock along the south wall. Save writes
   <code>js/world/placement.js</code>; reload the game to see it. Saving needs <code>npm start</code>.</p>
   <fieldset><legend>Long table (south wall)</legend>
     <label>centre x <input id="table.x" type="number" step="0.05"></label>
     <label>length <input id="table.length" type="number" step="0.05"></label></fieldset>
+  <fieldset><legend>Medical table (south wall)</legend>
+    <label>centre x <input id="med.x" type="number" step="0.05"></label></fieldset>
   <fieldset><legend>Wall clock (south wall)</legend>
     <label>x <input id="clock.x" type="number" step="0.05"></label>
     <label>height <input id="clock.y" type="number" step="0.05"></label>
@@ -49,12 +51,13 @@ const cv = document.getElementById('c'), g = cv.getContext('2d');
 const HX = CABIN.halfX, HZ = CABIN.halfZ, K = 50, OX = cv.width / 2, OZ = cv.height / 2;  // 50 px per metre, north up
 const sx = (x) => OX + x * K, sz = (z) => OZ + z * K, wx = (px) => (px - OX) / K, wz = (pz) => (pz - OZ) / K;
 const r2 = (v) => Math.round(v * 100) / 100;
-const fields = ['table.x', 'table.length', 'clock.x', 'clock.y', 'clock.radius', 'lantern.x', 'lantern.z'];
+const fields = ['table.x', 'table.length', 'med.x', 'clock.x', 'clock.y', 'clock.radius', 'lantern.x', 'lantern.z'];
 const get = (k) => k.split('.').reduce((o, p) => o[p], P);
 const set = (k, v) => { const [a, b] = k.split('.'); P[a][b] = r2(v); };
 function clamp() {
   P.table.length = r2(Math.min(2 * HX - 0.2, Math.max(1, P.table.length)));
   P.table.x = r2(Math.min(HX - 0.05 - P.table.length / 2, Math.max(-HX + 0.05 + P.table.length / 2, P.table.x)));
+  P.med.x = r2(Math.min(HX - 0.45, Math.max(-HX + 0.45, P.med.x)));
   P.clock.x = r2(Math.min(HX - 0.4, Math.max(-HX + 0.4, P.clock.x)));
   P.lantern.x = r2(Math.min(HX - 0.5, Math.max(-HX + 0.5, P.lantern.x)));
   P.lantern.z = r2(Math.min(HZ - 0.5, Math.max(-HZ + 0.5, P.lantern.z)));
@@ -84,6 +87,7 @@ function draw() {
   g.fillStyle = '#9a7a52'; g.fillRect(sx(t.x - t.length / 2), sz(HZ - 0.75), t.length * K, 0.7 * K);
   g.fillStyle = '#d8cbb4'; for (const e of [-1, 1]) g.fillRect(sx(t.x + e * t.length / 2) - 4, sz(HZ - 0.75), 8, 0.7 * K);
   label('table', t.x - 0.3, HZ - 0.8);
+  g.fillStyle = '#7c8286'; g.fillRect(sx(P.med.x - 0.4), sz(HZ - 0.55), 0.8 * K, 0.5 * K); label('medical', P.med.x - 0.3, HZ - 0.6);
   // clock
   g.fillStyle = '#e8d8a0'; g.beginPath(); g.arc(sx(P.clock.x), sz(HZ) - 6, Math.max(5, P.clock.radius * K * 0.6), 0, 7); g.fill(); label('clock', P.clock.x, HZ - 0.15);
   // lantern
@@ -97,6 +101,7 @@ cv.addEventListener('pointerdown', (e) => {
   const t = P.table;
   if (Math.hypot(x - P.lantern.x, z - P.lantern.z) < 0.35) drag = { k: 'lantern' };
   else if (z > HZ - 0.45 && Math.abs(x - P.clock.x) < 0.35 && z > HZ - 0.3) drag = { k: 'clock' };
+  else if (z > HZ - 0.6 && Math.abs(x - P.med.x) < 0.4) drag = { k: 'med', dx: x - P.med.x };
   else if (z > HZ - 0.8) {
     if (Math.abs(x - (t.x - t.length / 2)) < 0.15) drag = { k: 'tableL' };
     else if (Math.abs(x - (t.x + t.length / 2)) < 0.15) drag = { k: 'tableR' };
@@ -110,6 +115,7 @@ cv.addEventListener('pointermove', (e) => {
   const t = P.table;
   if (drag.k === 'lantern') { P.lantern.x = r2(x); P.lantern.z = r2(z); }
   if (drag.k === 'clock') P.clock.x = r2(x);
+  if (drag.k === 'med') P.med.x = r2(x - drag.dx);
   if (drag.k === 'table') t.x = r2(x - drag.dx);
   if (drag.k === 'tableL') { const right = t.x + t.length / 2; t.length = right - x; t.x = (right + x) / 2; }
   if (drag.k === 'tableR') { const left = t.x - t.length / 2; t.length = x - left; t.x = (left + x) / 2; }

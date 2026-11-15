@@ -28,6 +28,8 @@
 
 - Follow-up: `Inventory.js` rewritten (grid + detail, pointer drag calls `arsenal.assign`); `Firewood.carrying`, `held` mesh on the camera, `Layout.WOODPILE`. HUD no longer shows logs.
 
+- Inventory tabs + sprite icons (`Icons.icon(name)`), `Layout.MED_TABLE` / `WOODPILE`, `cabin.interactables` (own cloned materials), `Game.currentPrompt()` / `updateHighlight()`.
+
 ## Known weak spots
 - The wood stack by the stove does not shrink with your log count.
 - No fire sound yet (crackle wanted with F's sound batch, or sooner).

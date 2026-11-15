@@ -108,6 +108,7 @@ export const Config = {
     // lens: slight barrel distortion ("optics compensation"), the middle ~10% larger, corners stay put. Off with film
     // effects in Settings. 0 = flat.
     lens: 0.1,
+    highlight: 0.018,        // gold glow on the thing you can use where you stand (emissive strength)
     spiderFillOutside: 0.12, // x spiderFill outside: in the dark you see the eyes, and the rest only in the beam
   },
   // menu music (js/audio/Music.js): seconds into assets/audio/menu-track.m4a

@@ -89,9 +89,10 @@
  <!-- inventory (I): the game pauses; weapons in order, locked ones greyed; pick one, then a number to remap it -->
 <div id="screen-inventory" class="screen overlay inv-screen hidden">
   <div class="inv-panel">
-    <h2>Inventory</h2>
-    <div class="inv-body"><div id="inv-grid"></div><div id="inv-detail"></div></div>
-    <div class="inv-actions"><span class="dim">Drag to change the order · keys 1–5 follow it</span><button id="btn-inv-hold">Hold it</button><button id="btn-inv-done">Close</button></div>
+    <div class="inv-head"><h2>Inventory</h2><nav><button id="tab-weapons">Weapons</button><button id="tab-items">Items</button></nav></div>
+    <div id="inv-grid"></div>
+    <div id="inv-detail"></div>
+    <div class="inv-actions"><span id="inv-tip" class="dim"></span><button id="btn-inv-hold">Hold it</button><button id="btn-inv-done">Close</button></div>
   </div>
 </div>
 

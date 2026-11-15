@@ -16,8 +16,7 @@ F (weapons, sounds, a fire crackle).
 **Open with you:**
 - **Clock:** where should it hang? It is on the south wall, just left of the table's middle (my guess). Move it with
   `dev/place.html` (run `npm start`, open http://localhost:8173/dev/place.html, drag, Save).
-- **Bandages only at the table** (SPEC said "heal there"). H away from the table now says "bandages are on the table".
-  Keep it, or let H work anywhere again?
+- **Bandages only at the metal medical table.** H elsewhere says so. Keep it, or let H work anywhere again?
 - **Logs:** you carry one at a time from the stack (floats in front of you for now; hands later?). Numbers still guesses: 3 at the start, +3 a wave, 55 s a log. The stack does not shrink yet.
 - **Phones:** lower the fists' guard so a spider 2 m ahead is not hidden? (Recommendation: yes.) Which device?
 - **"Targeting lights":** lanterns that spiders go for and put out, which you relight? (my guess, for D)

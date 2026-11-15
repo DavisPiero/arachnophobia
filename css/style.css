@@ -33,6 +33,8 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
   opacity: 0; transition: opacity 0.25s; white-space: nowrap;
 }
 #prompt.show { opacity: 1; }
+#prompt { text-align: center; }
+#prompt small { display: block; font-family: 'IM Fell English SC', Georgia, serif; font-size: 13px; letter-spacing: 0.14em; color: #c9a46a; margin-bottom: 3px; }
 #clock-read { position: absolute; left: 50%; top: 40%; transform: translateX(-50%); white-space: nowrap;
   font-family: 'IM Fell English SC', Georgia, serif; font-size: 20px; letter-spacing: 0.1em; color: var(--ink);
   text-shadow: 0 0 8px #000, 0 0 2px #000; opacity: 0; transition: opacity 0.3s; }
@@ -59,8 +61,7 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #health .label { font-family: 'VT323', monospace; font-size: 15px; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; margin-bottom: 3px; }
 #health .label { display: flex; align-items: center; gap: 10px; }
 #health .label > span { display: inline-flex; align-items: center; gap: 2px; color: var(--ink); letter-spacing: 0.05em; }
-#health .sup { display: inline-block; width: 30px; height: 15px; color: var(--ink); --icon-fill: rgba(0, 0, 0, 0.5); }
-#health .sup svg { width: 100%; height: 100%; }
+#health .sup { display: inline-block; width: 18px; height: 18px; }
 #health .bar { position: relative; height: 9px; background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(216, 203, 180, 0.3); box-shadow: 0 0 8px #000; }
 #health-fill, #health-trail { position: absolute; left: 1px; top: 1px; bottom: 1px; width: calc(100% - 2px); }
 #health-fill { background: linear-gradient(#c9b9a2, #8f8070); transition: background 0.3s; }
@@ -295,38 +296,37 @@ button:disabled { opacity: 0.35; cursor: default; }
 /* inventory (I): weapon list, then five number slots */
 
 
-/* ---------- inventory: dark square slots, the picked item large on the right (user's references, 2026-11-15) ---------- */
-.inv-screen { background: radial-gradient(ellipse at 70% 50%, rgba(40, 28, 14, 0.82), rgba(0, 0, 0, 0.92)); --icon-fill: #1d1712; }
-.inv-panel { width: min(900px, 100%); max-height: 100%; overflow-y: auto; color: var(--ink); padding: 8px 12px; }
-.inv-panel h2 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 34px; letter-spacing: 0.12em; margin: 0 0 14px;
-  border-bottom: 1px solid rgba(216, 203, 180, 0.2); padding-bottom: 8px; }
-.inv-body { display: flex; gap: 28px; align-items: flex-start; }
-#inv-grid { display: grid; grid-template-columns: repeat(4, 96px); gap: 8px; flex: none; }
-.inv-slot { position: relative; width: 96px; height: 96px; padding: 10px; background: rgba(20, 16, 12, 0.85); border: 1px solid rgba(216, 203, 180, 0.12);
-  border-radius: 3px; color: var(--ink); touch-action: none; }
-.inv-slot svg { width: 100%; height: 100%; pointer-events: none; }
-.inv-slot.empty { border-style: dashed; opacity: 0.4; }
-.inv-slot.locked { opacity: 0.35; }
-.inv-slot.picked { border-color: #b8925a; box-shadow: inset 0 0 18px rgba(184, 146, 90, 0.25); }
-.inv-slot.dragging { opacity: 0.25; }
+/* ---------- inventory: Weapons / Items tabs, a row of slots, the picked one large below (2026-11-15) ---------- */
+.spr { display: block; width: 100%; aspect-ratio: 1; background: url(../assets/ui/icons.webp) no-repeat; background-size: 300% 200%; pointer-events: none; }
+.inv-screen { background: radial-gradient(ellipse at 50% 40%, rgba(40, 28, 14, 0.82), rgba(0, 0, 0, 0.94)); }
+.inv-panel { width: min(640px, 100%); max-height: 100%; overflow-y: auto; color: var(--ink); padding: 8px 12px; }
+.inv-head { display: flex; align-items: flex-end; gap: 24px; border-bottom: 1px solid rgba(216, 203, 180, 0.2); margin-bottom: 16px; }
+.inv-head h2 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 32px; letter-spacing: 0.12em; margin: 0 auto 6px 0; }
+.inv-head nav button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 6px 14px; color: var(--dim);
+  font-family: 'IM Fell English SC', Georgia, serif; font-size: 20px; letter-spacing: 0.06em; margin-bottom: -1px; }
+.inv-head nav button.on { color: var(--ink); border-color: #b8925a; }
+#inv-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.inv-slot { position: relative; aspect-ratio: 1; padding: 12px; background: rgba(20, 16, 12, 0.9); border: 1px solid rgba(216, 203, 180, 0.14);
+  border-radius: 4px; color: var(--ink); touch-action: none; cursor: grab; }
+.inv-slot:hover { border-color: rgba(216, 203, 180, 0.4); }
+.inv-slot.locked { opacity: 0.3; cursor: default; }
+.inv-slot.picked { border-color: #b8925a; box-shadow: inset 0 0 22px rgba(184, 146, 90, 0.28); }
+.inv-slot.dragging { opacity: 0.2; }
 .inv-ghost { position: fixed; left: 0; top: 0; width: 80px; height: 80px; pointer-events: none; z-index: 50; opacity: 0.85; }
-.inv-key { position: absolute; left: 6px; top: 3px; font-family: 'VT323', monospace; font-size: 17px; color: var(--dim); }
-.inv-note { position: absolute; right: 6px; bottom: 3px; font-size: 12px; color: var(--dim); }
-#inv-detail { flex: 1; min-width: 0; }
-#inv-detail h3 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 28px; margin: 0 0 8px; }
-#inv-detail p { font-size: 15px; line-height: 1.5; margin: 0 0 8px; }
-.inv-big { width: 100%; max-width: 340px; aspect-ratio: 2 / 1; color: var(--ink); filter: drop-shadow(0 0 18px rgba(255, 170, 80, 0.15)); }
-.inv-big svg { width: 100%; height: 100%; }
+.inv-key { position: absolute; left: 7px; top: 4px; font-family: 'VT323', monospace; font-size: 18px; color: var(--dim); }
+.inv-note { position: absolute; right: 7px; bottom: 4px; font-size: 12px; color: var(--dim); }
+#inv-detail { display: flex; gap: 20px; align-items: center; margin-top: 18px; min-height: 140px; padding: 12px; background: rgba(0, 0, 0, 0.35); border-radius: 4px; }
+.inv-big { width: 130px; flex: none; filter: drop-shadow(0 0 16px rgba(255, 170, 80, 0.18)); }
+#inv-detail h3 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 26px; margin: 0 0 6px; }
+#inv-detail p { font-size: 15px; line-height: 1.5; margin: 0 0 6px; }
 .dim { color: var(--dim); }
-.inv-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 16px; font-size: 13px; }
+.inv-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 14px; font-size: 13px; }
 .inv-actions .dim { margin-right: auto; }
 .inv-actions button { background: none; border: 0; border-bottom: 1px solid rgba(216, 203, 180, 0.35); padding: 6px 16px; color: var(--ink); font-family: Georgia, serif; }
 .inv-actions button:hover:not(:disabled) { border-color: #b8925a; color: #e8c890; }
 .inv-actions button:disabled { opacity: 0.3; }
-@media (max-width: 700px), (max-height: 520px) {
-  .inv-panel h2 { font-size: 24px; margin-bottom: 8px; }
-  #inv-grid { grid-template-columns: repeat(4, 64px); gap: 6px; }
-  .inv-slot { width: 64px; height: 64px; padding: 6px; }
-  .inv-big { max-width: 200px; }
+@media (max-height: 520px) {
+  .inv-head h2 { font-size: 22px; } .inv-head nav button { font-size: 16px; }
+  #inv-grid { gap: 6px; max-width: 420px; } #inv-detail { margin-top: 8px; min-height: 0; padding: 8px; } .inv-big { width: 80px; }
   #inv-detail h3 { font-size: 20px; } #inv-detail p { font-size: 13px; }
 }

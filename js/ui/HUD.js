@@ -2,7 +2,7 @@
 // first-time hints (each shown once per browser, and only while Settings → Gameplay → hints is on).
 import { Config } from '../core/Config.js';
 import { Settings, keyLabel } from '../core/Settings.js';
-import { ICONS } from './Icons.js';
+import { icon } from './Icons.js';
 
 const $ = (id) => document.getElementById(id);
 const HINTS_KEY = 'arachnophobia.hints.v1';
@@ -38,7 +38,7 @@ export class HUD {
   /** ammoMode: 'gun' (loaded | on table), 'melee' (the last gun's numbers, dimmed), 'flare' (flares left), 'none'. */
   update(dt, { mag, stock, health, prompt, reloadT, reloading, muted, held, ammoMode = 'gun', unit = 'rounds', bandages = 0, healT = -1 }) {
     // less text (session B): a small picture and a number for each supply
-    this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? `<i class="sup" title="bandages">${ICONS.bandage}</i>${n}` : ''; });
+    this.set('band', bandages, (n) => { this.bandEl.innerHTML = n > 0 ? `<i class="sup" title="bandages">${icon('bandage')}</i>${n}` : ''; });
     this.ring.classList.toggle('heal', healT >= 0);
     this.set('ammoMode', ammoMode + unit, () => {
       this.ammo.classList.toggle('dim', ammoMode === 'melee');
@@ -60,9 +60,10 @@ export class HUD {
       }
     });
     const ptext = prompt ? prompt.text : '';
-    this.set('prompt', ptext + (prompt?.can ? '1' : '0'), () => {
+    const ptitle = prompt?.title || '';
+    this.set('prompt', ptitle + ptext + (prompt?.can ? '1' : '0'), () => {
       if (!prompt) { this.prompt.classList.remove('show'); return; }
-      this.prompt.innerHTML = prompt.can ? `${this.key('interact', 'USE')}${ptext}` : ptext;
+      this.prompt.innerHTML = (prompt.title ? `<small>${prompt.title}</small>` : '') + (prompt.can ? `${this.key('interact', 'USE')}${ptext}` : ptext);
       this.prompt.classList.add('show');
     });
     this.ring.classList.toggle('show', reloading || healT >= 0);
