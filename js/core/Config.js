@@ -176,7 +176,9 @@ export const Config = {
   // The two game modes (picked on the main menu, or ?mode=waves|survival). count: waves until dawn (Infinity = it
   // never ends); breakTime: seconds between waves. Survival is still the one night for now; SURVIVAL.md is the plan.
   modes: {
-    survival: { name: 'Survival', count: 10, breakTime: 30 },
+    // survival: `count` waves make one night (they keep counting up across nights, so later nights are harder and
+    // weapons still arrive every two waves); logsPerWave 0: wood comes from gathering by day (S1, guesses)
+    survival: { name: 'Survival', count: 3, breakTime: 30, logsPerWave: 0 },
     waves:    { name: 'Waves', count: Infinity, breakTime: 15 },   // always in action (user, 2026-11-15)
   },
   // Healing. Bandages: one per wave survived, carry at most `max`, used with H. The cot: once per break, hold USE.
@@ -203,6 +205,30 @@ export const Config = {
     max: 12,
     boardTime: 2.4,          // seconds to nail one plank back on (you stand still)
     boardReach: 2.1,         // how close to the window centre you must stand (m, on the floor)
+  },
+  // Survival by day (SURVIVAL.md S1). Seconds of each part of the day; guesses to tune by playing.
+  survival: {
+    dayTime: 480,            // 8 min of daylight (user agreed to try 8 / 1 / 6)
+    duskTime: 60,            // the light goes; the first wave starts when dusk ends
+    dawnTime: 12,            // after the last wave of the night, before the day starts again
+    clock: { dayStart: 7, duskStart: 19, nightStart: 21 },  // the wall clock's hour at each change (night runs to 6)
+    leash: 58,               // how far from the cabin you can walk (m) before the forest turns you back (the basin's cliffs are S2)
+    huntRange: 24,           // outside at night: spiders on the ground within this range leave their lane for you
+    pack: 6,                 // things you can carry at once
+    items: {                 // what lies in the forest each morning: how many, and what one is worth when you get home
+      branches: { count: 9, logs: 1, label: 'Dry branches' },
+      ammo:     { count: 3, rounds: 8, shells: 4, label: 'Ammo tin' },
+      herbs:    { count: 3, bandages: 1, label: 'Yarrow' },
+    },
+    itemRange: [9, 50],      // how far from the cabin they lie (m)
+  },
+  // Daylight (DayCycle drives Lighting.setDaylight from 0 = night to 1 = noon). Overcast and misty: the basin's fog.
+  day: {
+    sun: 1.6,                // directional light at full day (the moon light becomes the sun)
+    hemi: 1.5,
+    fogDensity: 0.028,
+    fogColor: [0.24, 0.26, 0.27],   // linear RGB: pale grey mist
+    exposure: 0.85,          // x the night exposure at full day
   },
   // Settings → Gameplay → difficulty. Multiplies spiders per wave and the damage they do.
   difficulty: {

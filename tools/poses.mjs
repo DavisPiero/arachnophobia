@@ -22,7 +22,7 @@ const ctx = await browser.newContext(mobile
 const page = await ctx.newPage();
 page.on('pageerror', (e) => console.log('[pageerror]', e.message));
 page.on('console', (m) => { if (m.type() === 'error') console.log('[error]', m.text()); });
-await page.goto(`http://localhost:${port}/index.html?mute=1&autostart=1&quality=${mobile ? 'low' : 'high'}`);
+await page.goto(`http://localhost:${port}/index.html?mute=1&autostart=1&mode=waves&quality=${mobile ? 'low' : 'high'}`);
 await page.waitForFunction(() => window.game && window.game.state === 'playing', null, { timeout: 60000 });
 await page.waitForTimeout(2500);
 

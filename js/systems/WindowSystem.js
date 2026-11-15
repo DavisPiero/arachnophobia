@@ -164,7 +164,7 @@ export class WindowSystem {
   updateOpenness() {
     let open = 0;
     for (const w of this.windows) open += w.stage >= BREACHED ? 0.5 : w.stage * 0.08;
-    this.audio.setExteriorOpenness(Math.min(1, open));
+    this.audio.setExteriorOpenness(Math.min(1, open + (this.extraOpen || 0)));   // extraOpen: the door, or you standing outside (Game)
   }
 
   update(dt, eye, scene) {

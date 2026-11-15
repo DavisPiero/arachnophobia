@@ -21,14 +21,25 @@ export class WaveSystem {
     this.phase = 'calm';          // 'calm' (before a wave), 'wave', 'dawn' (the night is over)
     this.timer = WV.firstDelay;
     this.waveT = 0;               // seconds into the current wave
-    this.elapsed = 0;             // seconds into the night (drives the wall clock)
+    this.elapsed = 0;             // seconds of waves and breaks so far (drives the wall clock)
+    this.nightStart = 0;          // elapsed when this night began (Survival)
     this.queue = [];
     this.spawnTimer = 0;
     this.kills = 0;
     this.spawnedThisWave = [];
+    this.lastWave = this.rules.count;   // the wave that ends this night (Survival: one night of `count` waves after another)
+  }
+  /** Survival: the next night starts (after a day). The wave count carries on, so each night is harder than the last. */
+  nextNight() {
+    this.phase = 'calm';
+    this.timer = WV.firstDelay;
+    this.lastWave = this.wave + this.rules.count;
+    this.nightStart = this.elapsed;
   }
   /** Which game mode's rules the waves follow (Config.modes). */
-  setMode(id) { this.rules = Config.modes[id] || Config.modes.survival; }
+  setMode(id) { this.rules = Config.modes[id] || Config.modes.survival; this.lastWave = this.rules.count; }
+  /** Survival has days between nights: the run only ends when you die. */
+  get nights() { return this.rules === Config.modes.survival; }
   get endless() { return !isFinite(this.rules.count); }
 
   get betweenWaves() { return this.phase === 'calm'; }
@@ -97,7 +108,7 @@ export class WaveSystem {
         this.queue = this.composition(this.wave);
         this.spawnTimer = 0.5;
         this.spawnedThisWave = [];
-        this.events.emit('waveStart', { wave: this.wave, last: this.wave === this.rules.count });
+        this.events.emit('waveStart', { wave: this.wave, last: this.wave === this.lastWave });
       }
       return;
     }
@@ -120,8 +131,10 @@ export class WaveSystem {
     } else if (timeUp && this.spawnedThisWave.every((s) => !s?.alive)) {
       // time is up and the last of them is dead: survived
       this.queue = [];
-      this.events.emit('waveEnd', { wave: this.wave, last: this.wave >= this.rules.count });
-      if (this.wave >= this.rules.count) { this.phase = 'dawn'; this.events.emit('dawn', { wave: this.wave }); return; }
+      const nightOver = this.wave >= this.lastWave;
+      // last: the run is over (Waves never ends; Survival goes on to the next day)
+      this.events.emit('waveEnd', { wave: this.wave, last: nightOver && !this.nights, nightOver });
+      if (nightOver) { this.phase = 'dawn'; this.events.emit('dawn', { wave: this.wave, nights: this.nights }); return; }
       this.phase = 'calm';
       this.timer = this.rules.breakTime;
     }

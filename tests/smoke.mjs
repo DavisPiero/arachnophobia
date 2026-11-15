@@ -329,10 +329,39 @@ await Promise.all(['desktop', 'phone'].map(async (device) => {
     const waves = endWave('waves');
     W.timer = 0; W.update(0.01);
     const next = W.wave;
-    return { waves, next, survival: endWave('survival'), buttons: !!document.getElementById('btn-waves') };
+    const survival = endWave('survival');
+    for (let i = 0; i < 10; i++) g.update(0.05);
+    survival.cycle = g.survival.cycle.phase; survival.state = g.state; survival.dawnTimer = g.dawnTimer || 0;
+    return { waves, next, survival, buttons: !!document.getElementById('btn-waves') };
   });
   check(modes.waves.phase === 'calm' && modes.waves.timer === 15 && modes.next === 11, `Waves mode goes on past wave 10 with 15 s breaks (${JSON.stringify(modes.waves)}, next ${modes.next})`);
-  check(modes.survival.phase === 'dawn' && modes.buttons, `Survival still ends in dawn; the menu has both modes (${modes.survival.phase})`);
+  check(modes.survival.phase === 'dawn' && modes.survival.cycle === 'dawn' && modes.survival.state === 'playing' && !modes.survival.dawnTimer && modes.buttons,
+    `Survival's night ends in dawn and the run goes on into the next day; the menu has both modes (${JSON.stringify(modes.survival)})`);
+
+  // Survival S1: the door opens, you can walk out onto the ground, things lie in the forest, the pack empties at home
+  const s1 = await page.evaluate(() => {
+    const g = window.game, S = g.survival, p = g.player;
+    g.restart(); g.setMode('survival');
+    const items = S.pickups.items.length, boards = S.door.boards.visible;
+    p.position.set(2.55, 0, 5.2); p.yaw = Math.PI;
+    for (let i = 0; i < 30; i++) { g.input.getMove = () => ({ x: 0, y: 1 }); g.update(0.033); }
+    const shutZ = p.position.z;
+    S.use('door');
+    for (let i = 0; i < 120; i++) { g.input.getMove = () => ({ x: 0, y: 1 }); g.update(0.033); }
+    const out = { z: p.position.z, y: p.position.y, outside: p.outside };
+    S.pickups.pack = ['branches', 'ammo'];
+    const logs = g.firewood.logs;
+    p.position.set(2.55, 0, 3); g.update(0.033); g.update(0.033);
+    delete g.input.getMove;
+    const r = { items, boards, shutZ, out, logsGot: g.firewood.logs - logs, pack: S.pickups.pack.length, light: S.light, wavesRun: S.wavesRun };
+    g.setMode('waves');
+    r.wavesBoards = S.door.boards.visible; r.wavesLeave = p.canLeave;
+    return r;
+  });
+  check(s1.items > 0 && !s1.boards && s1.shutZ < 6, `Survival starts by day with things to gather and an unboarded door that stops you while shut (${JSON.stringify(s1)})`);
+  check(s1.out.outside && s1.out.z > 8 && s1.out.y < -0.1, 'Survival: through the open door and down onto the ground outside');
+  check(s1.logsGot === 1 && s1.pack === 0 && s1.light === 1 && !s1.wavesRun, 'Survival: back inside, the pack is emptied onto the woodpile; no waves by day');
+  check(s1.wavesBoards && !s1.wavesLeave, 'Waves mode keeps the door boarded and you inside');
   check(errors.length === 0, `no console errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   await ctx.close();
 }).concat(menuCheck));

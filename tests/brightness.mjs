@@ -27,7 +27,7 @@ async function measure(tier) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}index.html?mute=1&autostart=1&quality=${tier}`);
+  await page.goto(`${base}index.html?mute=1&autostart=1&mode=waves&quality=${tier}`);
   await page.waitForFunction(() => window.game && window.game.state === 'playing', null, { timeout: 90000 });
   const out = await page.evaluate(async () => {
     const g = window.game;

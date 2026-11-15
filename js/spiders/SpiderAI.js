@@ -13,7 +13,7 @@ import { createSpiderVisual } from './SpiderModel.js';
 import { SpiderVoice } from '../audio/SpiderVoice.js';
 import { Behaviour } from './Behaviour.js';
 import { SpiderCollision } from './SpiderCollision.js';
-import { groundRoute, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
+import { groundRoute, groundNode, climbToSlot, bruteSlot, climberRoute, enterPath, WALL_OUT } from './SpiderPaths.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const GORE = Config.gore;
@@ -98,7 +98,7 @@ export class Spider {
     if ((this.surface === 'ground' || this.surface === 'floor') && this.type !== 'brute') {
       const push = GORE.knockback * (body ? 1 : 0.4) * (by === 'axe' ? 1.6 : by === 'fists' ? 1.3 : 1) / Math.max(0.6, this.cfg.scale);
       this.root.position.x += dir.x * push; this.root.position.z += dir.z * push;
-      if (this.state === 'inside') this.collide();
+      if (this.state === 'inside' || this.state === 'hunt') this.collide(this.state === 'hunt');
     }
     // brutes stagger each time they lose another quarter of their health
     const q = this.cfg.health * GORE.staggerEvery;
@@ -183,6 +183,12 @@ export class Spider {
       this.attackT = Math.max(this.attackT, this.stagger + 0.2);
     }
     this.senseUpdate(player, dt);
+    // Survival: you are outside at night. Those on the ground nearby leave their lane and come for you; back in the
+    // cabin, they go back to their window (SURVIVAL.md S1). The stalker keeps to its watching.
+    const H = this.mgr.hunt;
+    if (H.on && player.outside && !player.dead && this.state === 'approach' && this.surface === 'ground' && this.type !== 'stalker'
+        && !this.fleeing && this.distToPlayer < H.range) this.startHunt();
+    else if (this.state === 'hunt' && (!H.on || !player.outside || player.dead)) this.stopHunt();
     let mode = 'walk';
     let moveSpeed = 0;
 
@@ -214,7 +220,7 @@ export class Spider {
         this.updateLeap(dt, player);
         mode = 'idle';
         break;
-      case 'inside':
+      case 'inside': case 'hunt':
         moveSpeed = this.updateInside(dt, player);
         mode = moveSpeed > 0.05 ? 'walk' : 'idle';
         break;
@@ -240,7 +246,7 @@ export class Spider {
     this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, pose: this.beh.pose, air: this.leap?.air || 0 });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
-        : this.state === 'attackWindow' || this.state === 'leap' ? 'attackWindow'
+        : this.state === 'attackWindow' || this.state === 'leap' || this.state === 'hunt' ? 'attackWindow'
         : this.state === 'inside' || this.state === 'enter' && this.surface === 'floor' ? 'inside'
         : this.state === 'watch' ? 'watch'
         : this.state === 'wait' || this.state === 'vanish' ? 'idle'
@@ -411,12 +417,31 @@ export class Spider {
     this.mgr.events.emit('spiderInside', { spider: this });
   }
 
+  /** Leave the lane and go for the player out in the open. */
+  startHunt() {
+    this.releaseSlot();
+    this.path = null; this.pathDone = null;
+    this.state = 'hunt';
+    this.mgr.events.emit('spiderHunting', { spider: this });
+  }
+  /** The player is back inside: walk back onto this spider's lane and carry on to the window. */
+  stopHunt() {
+    const route = groundRoute(this.window.id, this.routeIndex, { zigzag: 0.2 });
+    const p = this.root.position;
+    let best = 0, bd = Infinity;
+    route.forEach((n, i) => { const d = Math.hypot(n.p.x - p.x, n.p.z - p.z) + (route.length - i) * 0.6; if (d < bd) { bd = d; best = i; } });
+    this.state = 'approach';
+    this.surface = 'ground';
+    this.follow([groundNode(p.x, p.z), ...route.slice(best)], () => this.arriveAtWindow());
+  }
+
   updateInside(dt, player) {
     const p = this.root.position;
+    const outdoors = this.state === 'hunt', st = this.state;
     const to = _d.set(player.position.x - p.x, 0, player.position.z - p.z);
     const dist = to.length();
     const reach = this.visual.radius + 0.55;
-    this.surface = 'floor';
+    this.surface = outdoors ? 'ground' : 'floor';
     this.up.copy(UP);
     if (dist > 0.01) this.fwd.copy(to).normalize();
     // it does not run straight at you: it circles in from the side, and the further away the wider the arc
@@ -429,14 +454,15 @@ export class Spider {
     if (L && !this.beh.attacking && this.leapCD <= 0 && dist > 2 && dist < L.range && this.flinch <= 0 && !player.dead
         && Math.random() < dt * L.chance) {
       const to = _f.copy(player.position).addScaledVector(this.fwd, -reach * 0.4).setY(0);
-      this.startLeap(p.clone(), to.clone(), { crouch: L.crouch, apex: 0.45 + dist * 0.08, damage: this.cfg.playerDamage * L.damage, onLand: () => { this.state = 'inside'; } });
+      if (outdoors) to.setY(groundAt(to.x, to.z));
+      this.startLeap(p.clone(), to.clone(), { crouch: L.crouch, apex: 0.45 + dist * 0.08, damage: this.cfg.playerDamage * L.damage, surface: this.surface, onLand: () => { this.state = st; } });
       return 0;
     }
     if (dist > reach && !this.beh.attacking) {
       v = this.cfg.speed * (this.flinch > 0 ? 0.2 : 1) * (this.pause > 0 ? 0 : 1) * this.beh.speedK;
       if (this.pause > 0) this.pause -= dt;
       p.addScaledVector(move, Math.min(v * dt, dist - reach));
-      this.collide();
+      this.collide(outdoors);
       this.closeIn = false;
     } else {
       // just reached you: no standing about, it goes for you at once
@@ -451,12 +477,12 @@ export class Spider {
     // the strike carries the body at you, so what you see land is what hurts (user: sync attacks to the animation)
     if (this.beh.attacking && this.beh.pose.lunge > 0.25 && dist > reach * 0.55) {
       p.addScaledVector(this.fwd, Math.min(dt * 4 * this.beh.pose.lunge, dist - reach * 0.55));
-      this.collide();
+      this.collide(outdoors);
     }
     if (this.beh.strike && !player.dead && dist < reach + 0.35) {
       player.damage(this.cfg.playerDamage * this.beh.strike, this.root.position);
     }
-    p.y = 0;
+    p.y = outdoors ? groundAt(p.x, p.z) : 0;
     return v;
   }
 
@@ -506,10 +532,13 @@ export class Spider {
     }
   }
 
-  collide() {
+  collide(outdoors = false) {
     const p = this.root.position, r = Math.min(0.5, this.visual.radius * 0.6);
-    p.x = THREE.MathUtils.clamp(p.x, -CABIN.halfX + r, CABIN.halfX - r);
-    p.z = THREE.MathUtils.clamp(p.z, -CABIN.halfZ + r, CABIN.halfZ - r);
+    if (outdoors) this.mgr.obstacles?.push(p, r);   // around trunks and rocks, and (below) the cabin's outside walls
+    else {
+      p.x = THREE.MathUtils.clamp(p.x, -CABIN.halfX + r, CABIN.halfX - r);
+      p.z = THREE.MathUtils.clamp(p.z, -CABIN.halfZ + r, CABIN.halfZ - r);
+    }
     for (const b of this.mgr.colliders) {
       const cx = THREE.MathUtils.clamp(p.x, b.minX, b.maxX), cz = THREE.MathUtils.clamp(p.z, b.minZ, b.maxZ);
       const dx = p.x - cx, dz = p.z - cz, d2 = dx * dx + dz * dz;
@@ -608,6 +637,8 @@ export class SpiderManager {
     this.targets = [];
     this.gore = null;         // set by the game (js/fx/Gore.js)
     this.flared = new Set();  // ids of windows with a flare burning (js/player/Flares.js): spiders keep away
+    this.hunt = { on: false, range: Config.survival.huntRange };   // Survival: hunt a player who is outside (set by the game)
+    this.obstacles = null;    // js/world/Obstacles.js, for hunting outside
     events.on('flareLit', ({ window }) => {
       this.flared.add(window);
       for (const s of this.spiders) if (s.alive && s.window?.id === window) s.flee();
@@ -745,7 +776,7 @@ export class SpiderManager {
     let d = 0;
     for (const s of this.spiders) {
       if (!s.alive) continue;
-      if (s.state === 'inside' || s.state === 'enter' || s.state === 'leap') d += 0.6;
+      if (s.state === 'inside' || s.state === 'enter' || s.state === 'leap' || s.state === 'hunt' && s.distToPlayer < 12) d += 0.6;
       else if (s.state === 'attackWindow') d += 0.22;
       else if (s.distToPlayer < 15) d += 0.08;
       else d += 0.02;

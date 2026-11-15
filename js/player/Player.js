@@ -1,7 +1,7 @@
 // First-person player: walking, looking, collisions inside the cabin, footsteps, health.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
-import { CABIN } from '../world/Layout.js';
+import { CABIN, DOOR } from '../world/Layout.js';
 
 const C = Config.player;
 
@@ -22,6 +22,11 @@ export class Player {
     this.locked = false;     // true while reloading (cannot move)
     this.colliders = [];
     this.floorTypeAt = () => 'wood';
+    // outside (Survival, SURVIVAL.md S1): set by the game. canLeave false keeps you inside the walls as before.
+    this.canLeave = false;
+    this.obstacles = null;            // js/world/Obstacles.js: trunks, rocks, logs
+    this.groundAt = () => 0;          // ground height outside
+    this.leash = 60;                  // how far from the cabin you can go
     this.stepTimer = 0;
     this.bobPhase = 0;
     this.shake = 0;
@@ -35,12 +40,15 @@ export class Player {
   }
   reset() {
     this.position.set(0, 0, 2.2);
+    this.onPorch = false;
     this.velocity.set(0, 0, 0);
     this.yaw = 0; this.pitch = 0; this.recoil = 0; this.recoilYaw = 0; this.push.set(0, 0, 0); this.dip = 0;
     this.health = C.maxHealth; this.dead = false; this.locked = false; this.sprinting = false; this.aiming = false;
     this.shake = 0; this.hurtFlash = 0;
   }
   get eye() { return this.camera.position; }
+  /** True when standing outside the cabin's walls. */
+  get outside() { return Math.abs(this.position.x) > CABIN.halfX || Math.abs(this.position.z) > CABIN.halfZ; }
   forward(out = new THREE.Vector3()) {
     return out.set(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
   }
@@ -68,6 +76,7 @@ export class Player {
     if (this.locked) this.velocity.multiplyScalar(0.5);
     this.position.addScaledVector(this.velocity, dt);
     this.collide();
+    this.followGround(dt);
 
     // --- footsteps and head bob ---
     const speed = Math.hypot(this.velocity.x, this.velocity.z);
@@ -79,7 +88,7 @@ export class Player {
         this.stepTimer = C.stepInterval;
         const surface = this.floorTypeAt(this.position.x, this.position.z);
         const loud = this.sprinting ? C.sprintStepVolume : 1;
-        this.audio.play(surface === 'rug' ? 'footRug' : 'footWood', { volume: Math.min(1.2, (0.55 + 0.25 * Math.min(1, speed / C.walkSpeed)) * loud), reverb: 0.15 });
+        this.audio.play(this.outside && !this.onPorch ? 'footForest' : surface === 'rug' ? 'footRug' : 'footWood', { volume: Math.min(1.2, (0.55 + 0.25 * Math.min(1, speed / C.walkSpeed)) * loud), reverb: 0.15 });
       }
     } else {
       this.stepTimer = Math.min(this.stepTimer, 0.12);
@@ -106,11 +115,35 @@ export class Player {
     );
   }
 
+  /** Feet on the floor inside, on the step by the door, on the ground outside (smoothed so steps do not jolt). */
+  followGround(dt) {
+    const p = this.position;
+    const W = CABIN.wallThickness;
+    let y = 0;
+    this.onPorch = false;
+    if (this.canLeave && (Math.abs(p.x) > CABIN.halfX + W * 0.5 || Math.abs(p.z) > CABIN.halfZ + W * 0.5)) {
+      const g = this.groundAt(p.x, p.z);
+      // the doorstep: from the sill down to the ground over the first metre out of the door
+      const out = p.z - (CABIN.halfZ + W);
+      if (Math.abs(p.x - DOOR.center.x) < 0.9 && out < 1.0) { this.onPorch = true; y = THREE.MathUtils.lerp(0, Math.min(0, g), THREE.MathUtils.clamp(out, 0, 1)); }
+      else y = g;
+    }
+    const k = 1 - Math.exp(-14 * dt);
+    p.y += (y - p.y) * (dt > 0 ? k : 1);
+  }
+
   collide() {
     const p = this.position, r = C.radius;
-    // stay inside the cabin
-    p.x = THREE.MathUtils.clamp(p.x, -CABIN.halfX + r, CABIN.halfX - r);
-    p.z = THREE.MathUtils.clamp(p.z, -CABIN.halfZ + r, CABIN.halfZ - r);
+    if (!this.canLeave) {
+      // stay inside the cabin
+      p.x = THREE.MathUtils.clamp(p.x, -CABIN.halfX + r, CABIN.halfX - r);
+      p.z = THREE.MathUtils.clamp(p.z, -CABIN.halfZ + r, CABIN.halfZ - r);
+    } else {
+      // outside: the trees and rocks, and the dark past the leash turns you back
+      this.obstacles?.push(p, r);
+      const d = Math.hypot(p.x, p.z);
+      if (d > this.leash) { p.x *= this.leash / d; p.z *= this.leash / d; }
+    }
     // push out of furniture boxes (circle vs box), a few passes for corners
     for (let pass = 0; pass < 2; pass++) {
       for (const b of this.colliders) {

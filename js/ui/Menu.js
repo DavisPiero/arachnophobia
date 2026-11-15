@@ -139,9 +139,10 @@ export class Menu {
   }
   showOver(v, stats) {
     if (stats) {
-      $('over-title').textContent = stats.dawn ? 'Dawn.' : 'They got in.';
+      $('over-title').textContent = stats.dawn ? 'Dawn.' : stats.mode === 'survival' && stats.outside ? 'Caught outside.' : 'They got in.';
       $('over-stats').textContent = stats.dawn
         ? `The sun is up and they are gone. You survived all ${stats.wave} waves. Spiders killed: ${stats.kills}.`
+        : stats.mode === 'survival' ? `You lived until day ${stats.day}${stats.wave ? `, wave ${stats.wave}` : ''}. Spiders killed: ${stats.kills}.`
         : `${stats.mode === 'waves' ? 'Waves. ' : ''}You held out until wave ${stats.wave}. Spiders killed: ${stats.kills}.`;
     }
     this.over.classList.toggle('hidden', !v);

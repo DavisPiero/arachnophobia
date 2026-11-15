@@ -312,7 +312,8 @@ export function buildCabin(quality) {
     windowFrames[win.id] = fg;
   }
 
-  // ---------------- boarded door
+  // ---------------- the door (boarded in Waves; opens in Survival)
+  let door;
   {
     const w = WALLS.south;
     const x0 = DOOR.center.x - DOOR.width / 2, x1 = DOOR.center.x + DOOR.width / 2, top = DOOR.height;
@@ -321,20 +322,31 @@ export function buildCabin(quality) {
     W('beam', x0 - OPEN_MARGIN, x0, 0, top + OPEN_MARGIN, -0.005, WT + 0.005, { grain: 'y' });
     W('beam', x1, x1 + OPEN_MARGIN, 0, top + OPEN_MARGIN, -0.005, WT + 0.005, { grain: 'y' });
     W('beam', x0, x1, top, top + OPEN_MARGIN, -0.005, WT + 0.005, {});
-    // door leaf: vertical boards (inside face) + outside face
-    const nb = 5;
-    for (let i = 0; i < nb; i++) {
-      const a = x0 + (i / nb) * (x1 - x0), c = x0 + ((i + 1) / nb) * (x1 - x0) - 0.006;
-      W('furn', a, c, 0.005, top - 0.005, 0.05, 0.09, { grain: 'y' });
-    }
-    W('wallOut', x0, x1, 0.005, top - 0.005, 0.09, 0.12, { grain: 'y' });
-    // ledges and brace on the door leaf (inside)
-    W('furn', x0 + 0.04, x1 - 0.04, 0.3, 0.42, 0.03, 0.05, {});
-    W('furn', x0 + 0.04, x1 - 0.04, 1.55, 1.67, 0.03, 0.05, {});
     // casing
     W('beam', x0 - OPEN_MARGIN - 0.09, x0 - OPEN_MARGIN, 0, top + OPEN_MARGIN, -0.022, 0, { grain: 'y' });
     W('beam', x1 + OPEN_MARGIN, x1 + OPEN_MARGIN + 0.09, 0, top + OPEN_MARGIN, -0.022, 0, { grain: 'y' });
     W('beam', x0 - OPEN_MARGIN - 0.12, x1 + OPEN_MARGIN + 0.12, top + OPEN_MARGIN, top + OPEN_MARGIN + 0.12, -0.026, 0, {});
+    // the leaf swings on its west edge (survival: a real door; Waves: boarded shut). Built in place, then hung
+    // on a pivot at the hinge so turning the pivot opens it inward.
+    const db = new Builder(M);
+    const DW = (key, t0, t1, y0, y1, n0, n1, o) => wallBox(db, key, w, t0, t1, y0, y1, n0, n1, o);
+    // door leaf: vertical boards (inside face) + outside face
+    const nb = 5;
+    for (let i = 0; i < nb; i++) {
+      const a = x0 + (i / nb) * (x1 - x0), c = x0 + ((i + 1) / nb) * (x1 - x0) - 0.006;
+      DW('furn', a, c, 0.005, top - 0.005, 0.05, 0.09, { grain: 'y' });
+    }
+    DW('wallOut', x0, x1, 0.005, top - 0.005, 0.09, 0.12, { grain: 'y' });
+    // ledges and brace on the door leaf (inside)
+    DW('furn', x0 + 0.04, x1 - 0.04, 0.3, 0.42, 0.03, 0.05, {});
+    DW('furn', x0 + 0.04, x1 - 0.04, 1.55, 1.67, 0.03, 0.05, {});
+    const pivot = new THREE.Group(); pivot.name = 'door';
+    pivot.position.set(x0, 0, HZ);
+    const leafGroup = new THREE.Group(); leafGroup.position.set(-x0, 0, -HZ);
+    db.build(leafGroup, shadows);
+    pivot.add(leafGroup);
+    group.add(pivot);
+    const pb = new Builder(M);
     // planks nailed across (inside), slightly crooked, with nail heads
     const boardsIn = [[0.45, 0.04], [1.05, -0.06], [1.62, 0.03], [0.85, 0.5]];
     for (const [y, rot] of boardsIn) {
@@ -342,10 +354,10 @@ export function buildCabin(quality) {
       const g = new THREE.BoxGeometry(len, 0.14, 0.035);
       g.rotateZ(rot);
       g.translate(DOOR.center.x, y + 0.2 * (rot > 0.3 ? 1 : 0), HZ - 0.045);
-      b.geo('furn', g, {});
+      pb.geo('furn', g, {});
       for (const s of [-1, 1]) {
         const nx = DOOR.center.x + s * Math.cos(rot) * (len / 2 - 0.12), ny = y + 0.2 * (rot > 0.3 ? 1 : 0) + s * Math.sin(rot) * (len / 2 - 0.12);
-        for (const dy of [-0.035, 0.035]) b.box('iron', 0.014, 0.014, 0.01, nx, ny + dy, HZ - 0.066, {});
+        for (const dy of [-0.035, 0.035]) pb.box('iron', 0.014, 0.014, 0.01, nx, ny + dy, HZ - 0.066, {});
       }
     }
     // planks across outside (an X and a bar)
@@ -353,8 +365,13 @@ export function buildCabin(quality) {
       const g = new THREE.BoxGeometry(rot === 0.05 ? 1.35 : 2.0, 0.14, 0.03);
       g.rotateZ(rot);
       g.translate(DOOR.center.x, y, HZ + WT + 0.04);
-      b.geo('trimOut', g, {});
+      pb.geo('trimOut', g, {});
     }
+    const boards = new THREE.Group(); boards.name = 'doorBoards';
+    pb.build(boards, shadows);
+    group.add(boards);
+    door = { pivot, boards, collider: { minX: x0, maxX: x1, minZ: HZ, maxZ: HZ + 0.6 }, closed: { minX: x0, maxX: x1 },
+      leaf: { minX: 1e6, maxX: 1e6, minZ: HZ - (x1 - x0), maxZ: HZ }, open: { minX: x0 - 0.02, maxX: x0 + 0.14 } };
   }
 
   // ---------------- furniture
@@ -362,7 +379,10 @@ export function buildCabin(quality) {
     { minX: -HX - 0.6, maxX: -HX, minZ: -HZ - 0.6, maxZ: HZ + 0.6 },
     { minX: HX, maxX: HX + 0.6, minZ: -HZ - 0.6, maxZ: HZ + 0.6 },
     { minX: -HX - 0.6, maxX: HX + 0.6, minZ: -HZ - 0.6, maxZ: -HZ },
-    { minX: -HX - 0.6, maxX: HX + 0.6, minZ: HZ, maxZ: HZ + 0.6 },
+    // south wall in two parts around the door, and the door itself (moved away while it stands open)
+    { minX: -HX - 0.6, maxX: DOOR.center.x - DOOR.width / 2, minZ: HZ, maxZ: HZ + 0.6 },
+    { minX: DOOR.center.x + DOOR.width / 2, maxX: HX + 0.6, minZ: HZ, maxZ: HZ + 0.6 },
+    door.collider, door.leaf,   // the leaf only stops you while it stands open (Survival)
   ];
 
   // cot in the north-west corner
@@ -567,7 +587,7 @@ export function buildCabin(quality) {
     return x >= RUG.minX && x <= RUG.maxX && z >= RUG.minZ && z <= RUG.maxZ ? 'rug' : 'wood';
   }
 
-  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies }, medBandages, interactables, windowFrames, candle: ammoTable.candle };
+  return { group, colliders, floorTypeAt, ammoTable: { group: ammoTable.group, supplies: ammoTable.supplies }, medBandages, interactables, windowFrames, candle: ammoTable.candle, door };
 }
 
 function cloneMat(m) {

@@ -51,8 +51,9 @@ export function buildWorld(scene, renderer, quality, events) {
       interactables: cabin.interactables,
       windowFrames: cabin.windowFrames,
       candle: cabin.candle.light,
+      door: cabin.door,
     },
-    forest: { group: forest.group, update: forestUpdate, rain: forest.rain },
+    forest: { group: forest.group, update: forestUpdate, rain: forest.rain, obstacles: forest.obstacles },
     lighting: {
       lantern: lighting.lantern,
       wallLamp: lighting.wallLamp,
@@ -62,6 +63,7 @@ export function buildWorld(scene, renderer, quality, events) {
       flash: lighting.flash,
       muzzleFlash: lighting.muzzleFlash,
       setFire: lighting.setFire,
+      setDaylight: lighting.setDaylight,
       stoveLight: lighting.stoveLight,
       get flashLevel() { return lighting.flashLevel; },
     },

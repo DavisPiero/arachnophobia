@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { CABIN, WINDOWS, ROUTES, LANDMARKS, CREEK_X, terrainHeight, smooth } from './Layout.js';
 import * as T from './Textures.js';
 import { uvWorld } from './Cabin.js';
+import { Obstacles } from './Obstacles.js';
 
 const LANE_CLEAR = 1.6;     // trunks/rocks/logs stay this far from a route polyline
 const TERRAIN_EXTENT = 120;
@@ -18,6 +19,8 @@ const TERRAIN_EXTENT = 120;
 export function creekCenter(z) {
   return CREEK_X + Math.sin(z * 0.07) * 0.8 + Math.sin(z * 0.19 + 1) * 0.3;
 }
+/** Ground height outside, creek bed included (what you walk on). */
+export function groundHeight(x, z) { return terrainHeight(x, z) + creekCarve(x, z); }
 function creekCarve(x, z) {
   const d = Math.abs(x - creekCenter(z));
   return -0.5 * (1 - smooth(0.8, 2.4, d));
@@ -260,6 +263,9 @@ function crossedCards(w, h, n, yaw0 = 0) {
 
 // ------------------------------------------------------------------ build
 export function buildForest(scene, quality, lighting) {
+  const obstacles = new Obstacles();
+  const _pos = new THREE.Vector3(), _q = new THREE.Quaternion(), _s = new THREE.Vector3();
+  const trunks = (list, k) => { for (const m of list) { m.decompose(_pos, _q, _s); obstacles.circle(_pos.x, _pos.z, k * _s.x); } };
   const group = new THREE.Group();
   group.name = 'forest';
   const high = quality.tier === 'high';
@@ -418,6 +424,11 @@ export function buildForest(scene, quality, lighting) {
     mkInst(v.geo.foliage, needleMat, v.list, 'foliage-' + name, cast, needleDepth);
   }
   // dead trees
+  // what stops you outside (the young firs are small enough to brush through)
+  for (const v of Object.values(variants)) trunks(v.list.filter((m) => !youngList.includes(m)), 0.32);
+  trunks(farList, 0.32); trunks(deadList, 0.3); trunks(snagList, 0.3);
+  obstacles.circle(shedPos.x, shedPos.z, 1.9);
+  for (const l of logSegs) obstacles.capsule(...l, 0.4);
   mkInst(deadTreeGeometry(21, 12, false), deadMat, deadList, 'dead', cast);
   mkInst(deadTreeGeometry(33, 10, true), deadMat, snagList, 'snag', cast);
   // distant impostors: two crossed cards each
@@ -510,6 +521,7 @@ export function buildForest(scene, quality, lighting) {
       if (Math.abs(x - creekCenter(z)) < 1.2) return false;
       if (Math.hypot(x - shedPos.x, z - shedPos.z) < 3) return false;
       const y = terrainHeight(x, z) + creekCarve(x, z) - s * 0.2;
+      if (s > 0.4) obstacles.circle(x, z, s * 0.85);   // small ones you step over
       list.push(new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler((R() - 0.5) * 0.4, R() * 6, (R() - 0.5) * 0.4)), new THREE.Vector3(s * (0.8 + R() * 0.5), s, s * (0.8 + R() * 0.5))));
       return true;
     };
@@ -676,7 +688,7 @@ export function buildForest(scene, quality, lighting) {
     return true;
   }
 
-  return { group, update, rain: rain.mesh, useRocks };
+  return { group, update, rain: rain.mesh, useRocks, obstacles };
 }
 
 // Close-up sharpness for the baked rocks: a small tiling grain (normal + brightness) on top of the atlas.

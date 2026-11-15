@@ -32,7 +32,7 @@ Read `SPEC.md` (what makes it good, what is not in yet), `SURVIVAL.md` (the plan
 - Blender check tools (run with `Blender -b --factory-startup -P <tool> -- ...`): `blender/tools/viewmodel.py hip|aim|axe|arm_<name>`
   (studio-lit render of the first-person layout, to `shots/`), `blender/tools/clipcheck.py` (does any hand pass through the rifle?)
 
-URL switches: `mute=1`, `autostart=1` (skip the start screen), `menu=1` (straight to the 3D main menu), `mode=waves|survival` (with autostart; default survival), `quality=low|high`, `debug=1` (stats + free keys; G unlocks every weapon, N ends the wave), `assets=0` (code-made models).
+URL switches: `mute=1`, `autostart=1` (skip the start screen), `menu=1` (straight to the 3D main menu), `mode=waves|survival` (with autostart; default survival), `quality=low|high`, `debug=1` (stats + free keys; G unlocks every weapon, N ends the wave, T skips to the end of the day, dusk or dawn), `assets=0` (code-made models).
 
 ## Layout of the code
 
@@ -54,4 +54,4 @@ assets/     Exported .glb models and the parameter files shared by Blender and t
 ## Out of scope for now (but wanted later — do not treat as rejected)
 
 More weapons, crouch, score, story, recorded audio. See SPEC.md "Later". The day cycle, the crater, gathering,
-upgrades and saves are planned in `SURVIVAL.md` (steps S1–S7): build a step only when the user starts it.
+upgrades and saves are planned in `SURVIVAL.md` (steps S1–S4): build a step only when the user starts it.
