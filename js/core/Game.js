@@ -80,7 +80,7 @@ export class Game {
     this.waves = new WaveSystem({ spiders: this.spiders, events, quality: Quality, player: this.player });
     this.flares = new Flares({ scene: this.scene, camera: this.camera, windows: this.windows, weapon: this.weapon, arsenal: this.arsenal, audio: this.audio, events, player: this.player });
     this.healing = new Healing({ player: this.player, weapon: this.weapon, waves: this.waves, audio: this.audio, events });
-    this.firewood = new Firewood({ player: this.player, weapon: this.weapon, windows: this.windows, spiders: this.spiders, lighting: this.world.lighting, audio: this.audio, events });
+    this.firewood = new Firewood({ player: this.player, weapon: this.weapon, windows: this.windows, spiders: this.spiders, lighting: this.world.lighting, audio: this.audio, events, camera: this.camera });
     this.clock = new WallClock(this.scene);
     this.director = new Director(this.audio, events);
     this.postfx = new PostFX(renderer, this.scene, this.camera, this.weapon.viewScene, Quality);
@@ -89,9 +89,9 @@ export class Game {
     this.music = new Music(this.audio);
     this.menu = new Menu(this.audio, this.input.keyboard);
     this.menu.onOptions = () => this.postfx.setOptions(Settings);
-    this.inventory = new Inventory({ arsenal: this.arsenal, weapon: this.weapon, keyboard: this.input.keyboard, isTouch });
+    this.inventory = new Inventory({ arsenal: this.arsenal, weapon: this.weapon, isTouch });
     this.healing.atTable = () => this.table.inReach();
-    this.inventory.supplies = () => ({ bandages: this.healing.bandages, logs: this.firewood.logs });
+    this.inventory.supplies = () => ({ bandages: this.healing.bandages });
     this.inventory.onClose = () => { this.input.endFrame(); this.resume(); };
     this.postfx.setOptions(Settings);
     onSettingsChange((key) => { if (key === 'fov') this.resize(); this.applyHudSettings(); });
@@ -159,14 +159,14 @@ export class Game {
       this.newWeapon = { title: `New: ${label.toLowerCase()}`, sub: `Take it up with ${how}.` };
       if (name === 'flare') this.hud.hint('flare', `Hold a flare and throw it at a window you are looking at. While it burns, they keep away from that window.`, 8);
       if (name === 'shotgun') this.hud.hint('shotgun', 'The shotgun loads at the ammo table too, from its own box of shells.', 6);
-      this.hud.hint('inventory', `Press ${this.hud.key('inventory', 'pause → inventory')} to see your weapons and change their keys.`, 6);
+      this.hud.hint('inventory', `Press ${this.hud.key('inventory', 'pause → inventory')} to see your weapons. Drag them to change the order.`, 6);
     });
     events.on('waveEnd', ({ wave, last }) => {
       if (last) return;   // dawn has its own screen
       const nw = this.newWeapon; this.newWeapon = null;
       if (nw) { this.hud.flash(`Wave ${wave} survived`, `${nw.title} · ${nw.sub}`, 5); return; }
       this.hud.flash(`Wave ${wave} survived`, `+${Config.logs.perWave} logs · a bandage`, 4);
-      if (wave === 1) this.hud.hint('logs', `Logs: feed the stove, or nail planks back on a window (${this.hud.key('interact', 'USE')}). Never enough for both.`, 8);
+      if (wave === 1) this.hud.hint('logs', `Take a log from the stack by the stove (${this.hud.key('interact', 'USE')}): feed the fire, or nail it over a window. Never enough for both.`, 8);
       if (wave === 1) this.hud.hint('heal', `Hurt? Bandages are on the ammo table. Or rest on the cot once a break.`, 7);
     });
     events.on('dawn', () => { this.dawnTimer = 3; this.hud.flash('Dawn', 'The light is coming up through the trees.', 3); });
@@ -174,7 +174,7 @@ export class Game {
       this.hud.notice('NO AMMO', 'Reload at the ammo table');
       this.hud.hint('reload', `Your rounds are on the ammo table. Stand at it and press ${this.hud.key('interact', 'USE')} to reload.`, 6);
     });
-    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', `A plank is gone. A log nails it back on: stand at the window and press ${this.hud.key('interact', 'USE')}.`); });
+    events.on('windowDamaged', ({ stage }) => { if (stage === 1) this.hud.hint('crack', `A plank is gone. Bring a log from the stack and press ${this.hud.key('interact', 'USE')}.`); });
     events.on('windowBreached', ({ id }) => {
       const w = WINDOWS.find((x) => x.id === id);
       this.hud.flash(`The ${w.label.toLowerCase()} window is broken`, '', 3);
@@ -454,7 +454,7 @@ export class Game {
       mag: flareHeld ? this.arsenal.flares : this.weapon.ammo[shownGun], stock: this.table.stocks[shownGun], health: this.player.health,
       ammoMode: flareHeld ? 'flare' : this.weapon.isGun(want) ? 'gun' : anyGun ? 'melee' : 'none', unit: shownGun === 'shotgun' ? 'shells' : 'rounds',
       prompt, reloadT: this.weapon.reloadT, reloading: this.table.reloading, muted: this.audio.muted, held: want,
-      bandages: this.healing.bandages, logs: this.firewood.logs,
+      bandages: this.healing.bandages,
       healT: this.healing.bandageT >= 0 ? this.healing.bandageT : this.healing.bedT >= 0 ? this.healing.bedT : this.firewood.progress,
     });
     const next = this.arsenal.next(want);

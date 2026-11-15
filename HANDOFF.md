@@ -26,6 +26,8 @@
   `Game.clockReading()` + `#clock-read`, long table (`placement.js` → `Layout.AMMO_TABLE`, middle legs, bandage rolls),
   `Game.tablePrompt()` (bandage at the table), `Healing.atTable`, `dev/place.html` + POST `/save-placement` in serve.mjs.
 
+- Follow-up: `Inventory.js` rewritten (grid + detail, pointer drag calls `arsenal.assign`); `Firewood.carrying`, `held` mesh on the camera, `Layout.WOODPILE`. HUD no longer shows logs.
+
 ## Known weak spots
 - The wood stack by the stove does not shrink with your log count.
 - No fire sound yet (crackle wanted with F's sound batch, or sooner).

@@ -1,26 +1,36 @@
 // Logs and the stove fire. Numbers: Config.logs and Config.fire.
 //
-// You have one stock of logs (start + perWave for each wave survived, user 2026-11-15: "just not enough"). Spend a log
-// on either:
+// The logs lie in the stack by the stove (start + perWave for each wave survived, user 2026-11-15: "just not enough").
+// You do not keep them (user, 2026-11-15): USE at the stack picks one up and it floats in front of you; carry it to
 //  - the stove: stand by it and press USE; the fire gets burnPerLog more seconds (up to maxFuel). The fire burns down
 //    all the time, shrinks over its last dimBelow seconds and goes out. It lights the room (Lighting.setFire).
 //  - a window: stand at it (inside) and press USE to nail a fallen plank back on (boardTime seconds, you stand still).
 //    Not while a spider is in the frame or at the planks right there.
 // Warmth (spiders bolder when the fire is low, frost on the screen) comes in session D and will read `level`.
 import { Config } from '../core/Config.js';
-import { STOVE } from '../world/Layout.js';
+import * as THREE from 'three';
+import { STOVE, WOODPILE } from '../world/Layout.js';
 
 const F = Config.fire, L = Config.logs;
 
 export class Firewood {
-  constructor({ player, weapon, windows, spiders, lighting, audio, events }) {
+  constructor({ player, weapon, windows, spiders, lighting, audio, events, camera }) {
     Object.assign(this, { player, weapon, windows, spiders, lighting, audio, events });
+    // the log you carry: floats low in front of you (a placeholder until there are hands for it)
+    const bark = new THREE.MeshStandardMaterial({ color: 0x4a3524, roughness: 0.95 });
+    const end = new THREE.MeshStandardMaterial({ color: 0x9a7a52, roughness: 0.9 });
+    this.held = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.06, 0.45, 8), [bark, end, end]);
+    this.held.position.set(0.12, -0.32, -0.55);
+    this.held.rotation.set(0.15, 0, Math.PI / 2 - 0.25);
+    this.held.visible = false;
+    camera?.add(this.held);
     this.reset();
     events.on('waveEnd', () => { this.logs = Math.min(L.max, this.logs + L.perWave); });
   }
 
   reset() {
-    this.logs = L.start;
+    this.logs = L.start;     // in the stack
+    this.carrying = false;
     this.fuel = F.startFuel;
     this.job = null;        // { kind: 'feed' | 'board', t: 0..1, window }
     this.lighting.setFire(this.level);
@@ -29,6 +39,11 @@ export class Firewood {
   /** 0 = out, 1 = a full fire. */
   get level() { return this.fuel <= 0 ? 0 : Math.min(1, 0.12 + 0.88 * this.fuel / F.dimBelow); }
   get busy() { return !!this.job; }
+
+  nearPile() {
+    const p = this.player.position;
+    return Math.hypot(p.x - WOODPILE.position.x, p.z - WOODPILE.position.z) < WOODPILE.interactRadius;
+  }
   get progress() { return this.job ? this.job.t : -1; }
 
   nearStove() {
@@ -69,24 +84,25 @@ export class Firewood {
   prompt() {
     if (this.player.dead) return null;
     if (this.job) return { text: this.job.kind === 'feed' ? 'Feeding the fire…' : 'Nailing a plank…', can: false };
-    if (this.nearStove()) {
-      if (this.fuel > F.maxFuel - F.burnPerLog) return { text: `${this.fireWord()} · ${this.logText()}`, can: false };
-      if (this.logs <= 0) return { text: `${this.fireWord()} · no logs`, can: false };
-      return { text: `Put a log on the fire · ${this.logText()}`, can: true };
+    if (this.carrying) {
+      if (this.nearStove()) return this.fuel > F.maxFuel - F.burnPerLog ? { text: this.fireWord(), can: false } : { text: 'Put the log on the fire', can: true };
+      const w = this.atWindow();
+      if (w && w.boards.some((b) => b.fallen)) return this.blockedBy(w) ? { text: 'Something is in the way', can: false } : { text: 'Nail it over the window', can: true };
+      return null;
     }
-    const w = this.atWindow();
-    if (w) {
-      if (!w.boards.some((b) => b.fallen)) return null;      // nothing to mend: no prompt at an intact window
-      if (this.logs <= 0) return { text: 'A plank is missing · no logs', can: false };
-      if (this.blockedBy(w)) return { text: 'Something is in the way', can: false };
-      return { text: `Nail a plank back on · ${this.logText()}`, can: true };
-    }
+    if (this.nearPile()) return this.logs > 0 ? { text: `Take a log · ${this.logText()} left`, can: true } : { text: 'No logs left', can: false };
+    if (this.nearStove()) return { text: this.fireWord(), can: false };
     return null;
   }
 
   tryStart() {
     const pr = this.prompt();
     if (!pr || !pr.can || this.weapon.reloading) return false;
+    if (!this.carrying) {   // at the stack: pick one up
+      this.logs--; this.carrying = true;
+      this.audio.play('woodScrape', { position: WOODPILE.position, volume: 0.6, reverb: 0.2 });
+      return true;
+    }
     const kind = this.nearStove() ? 'feed' : 'board';
     this.job = { kind, t: 0, window: kind === 'board' ? this.atWindow() : null, hits: 0 };
     this.player.locked = true;
@@ -97,6 +113,7 @@ export class Firewood {
   stop() { this.job = null; this.player.locked = false; }
 
   update(dt) {
+    this.held.visible = this.carrying && !this.player.dead;
     if (this.fuel > 0) this.fuel = Math.max(0, this.fuel - dt);
     this.lighting.setFire(this.level);
     const j = this.job;
@@ -115,10 +132,10 @@ export class Firewood {
     if (j.t < 1) return;
     if (j.kind === 'feed') {
       this.fuel = Math.min(F.maxFuel, Math.max(this.fuel, 0) + F.burnPerLog);
-      this.logs--;
+      this.carrying = false;
       this.audio.play('boardHit', { position: STOVE.door, volume: 0.4, rate: 0.7, reverb: 0.2 });
       this.events.emit('fireFed', { fuel: this.fuel, logs: this.logs });
-    } else if (this.windows.addBoard(j.window)) this.logs--;
+    } else if (this.windows.addBoard(j.window)) this.carrying = false;
     this.stop();
   }
 }

@@ -293,46 +293,40 @@ button:disabled { opacity: 0.35; cursor: default; }
 }
 
 /* inventory (I): weapon list, then five number slots */
-#inv-slots { display: flex; gap: 8px; margin: 14px 0 4px; }
-#inv-slots button { flex: 1; min-width: 0; font: 20px/1.1 'VT323', ui-monospace, monospace; color: var(--ink); background: none;
-  border: 1px solid rgba(216, 203, 180, 0.3); padding: 6px 4px; display: flex; flex-direction: column; align-items: center; cursor: pointer; }
-#inv-slots button b { font-size: 30px; font-weight: normal; }
-#inv-slots button span { color: var(--dim); font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-#inv-slots button:hover { background: var(--phos); color: #021008; }
-#inv-slots button:hover span { color: var(--ink); }
-#inv-slots button.locked span { opacity: 0.45; }
 
-/* ---------- inventory (in-game style: the HUD's ink colours and serif titles, not the terminal) ---------- */
-.inv-screen { background: rgba(0, 0, 0, 0.7); --icon-fill: #1d1712; }
-.inv-panel { width: min(760px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid rgba(216, 203, 180, 0.22);
-  box-shadow: 0 0 40px #000; padding: 18px 24px; color: var(--ink); }
-.inv-panel h2 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 34px; letter-spacing: 0.12em; margin: 2px 0 14px; }
-#inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); gap: 10px; }
-.inv-card { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 6px 8px;
-  background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(216, 203, 180, 0.18); border-radius: 3px; color: var(--ink); }
-.inv-card:hover, .inv-card:focus-visible { border-color: rgba(216, 203, 180, 0.5); outline: none; }
-.inv-card.picked { border-color: var(--ink); background: rgba(216, 203, 180, 0.08); }
-.inv-card:disabled { opacity: 0.32; cursor: default; }
-.inv-pic { display: block; width: 100%; max-width: 120px; aspect-ratio: 2 / 1; color: var(--ink); }
-.inv-pic svg { width: 100%; height: 100%; }
-.inv-name { font-family: 'IM Fell English SC', Georgia, serif; font-size: 17px; letter-spacing: 0.06em; }
-.inv-note { font-size: 12px; color: var(--dim); min-height: 15px; }
-.inv-key { position: absolute; left: 7px; top: 5px; font-family: 'VT323', monospace; font-size: 18px; color: var(--dim); }
-#inv-supplies { display: flex; gap: 10px; margin: 12px 0 4px; }
-.inv-supply { flex: 1; display: flex; align-items: center; gap: 10px; padding: 4px 10px; border-top: 1px solid rgba(216, 203, 180, 0.15); }
-.inv-supply .inv-pic { width: 64px; }
-.inv-supply b { margin-left: auto; font-size: 24px; font-weight: normal; font-variant-numeric: tabular-nums; }
-#inv-help { font-size: 13px; color: var(--dim); min-height: 18px; margin: 8px 0; }
-.inv-actions { display: flex; gap: 10px; justify-content: flex-end; }
-.inv-actions button { background: rgba(0, 0, 0, 0.35); border: 1px solid rgba(216, 203, 180, 0.3); border-radius: 3px;
-  padding: 6px 16px; color: var(--ink); font-family: Georgia, serif; }
-.inv-actions button:hover:not(:disabled), #inv-slots button:hover { border-color: var(--ink); }
-.inv-actions button:disabled { opacity: 0.35; }
-@media (max-height: 520px) {
-  .inv-panel { padding: 10px 16px; }
-  .inv-panel h2 { font-size: 24px; margin: 0 0 8px; }
-  #inv-grid { grid-template-columns: repeat(5, 1fr); gap: 6px; }
-  .inv-pic { max-width: 90px; }
-  .inv-name { font-size: 14px; }
-  .inv-supply .inv-pic { width: 44px; }
+
+/* ---------- inventory: dark square slots, the picked item large on the right (user's references, 2026-11-15) ---------- */
+.inv-screen { background: radial-gradient(ellipse at 70% 50%, rgba(40, 28, 14, 0.82), rgba(0, 0, 0, 0.92)); --icon-fill: #1d1712; }
+.inv-panel { width: min(900px, 100%); max-height: 100%; overflow-y: auto; color: var(--ink); padding: 8px 12px; }
+.inv-panel h2 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 34px; letter-spacing: 0.12em; margin: 0 0 14px;
+  border-bottom: 1px solid rgba(216, 203, 180, 0.2); padding-bottom: 8px; }
+.inv-body { display: flex; gap: 28px; align-items: flex-start; }
+#inv-grid { display: grid; grid-template-columns: repeat(4, 96px); gap: 8px; flex: none; }
+.inv-slot { position: relative; width: 96px; height: 96px; padding: 10px; background: rgba(20, 16, 12, 0.85); border: 1px solid rgba(216, 203, 180, 0.12);
+  border-radius: 3px; color: var(--ink); touch-action: none; }
+.inv-slot svg { width: 100%; height: 100%; pointer-events: none; }
+.inv-slot.empty { border-style: dashed; opacity: 0.4; }
+.inv-slot.locked { opacity: 0.35; }
+.inv-slot.picked { border-color: #b8925a; box-shadow: inset 0 0 18px rgba(184, 146, 90, 0.25); }
+.inv-slot.dragging { opacity: 0.25; }
+.inv-ghost { position: fixed; left: 0; top: 0; width: 80px; height: 80px; pointer-events: none; z-index: 50; opacity: 0.85; }
+.inv-key { position: absolute; left: 6px; top: 3px; font-family: 'VT323', monospace; font-size: 17px; color: var(--dim); }
+.inv-note { position: absolute; right: 6px; bottom: 3px; font-size: 12px; color: var(--dim); }
+#inv-detail { flex: 1; min-width: 0; }
+#inv-detail h3 { font-family: 'IM Fell English SC', Georgia, serif; font-weight: normal; font-size: 28px; margin: 0 0 8px; }
+#inv-detail p { font-size: 15px; line-height: 1.5; margin: 0 0 8px; }
+.inv-big { width: 100%; max-width: 340px; aspect-ratio: 2 / 1; color: var(--ink); filter: drop-shadow(0 0 18px rgba(255, 170, 80, 0.15)); }
+.inv-big svg { width: 100%; height: 100%; }
+.dim { color: var(--dim); }
+.inv-actions { display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-top: 16px; font-size: 13px; }
+.inv-actions .dim { margin-right: auto; }
+.inv-actions button { background: none; border: 0; border-bottom: 1px solid rgba(216, 203, 180, 0.35); padding: 6px 16px; color: var(--ink); font-family: Georgia, serif; }
+.inv-actions button:hover:not(:disabled) { border-color: #b8925a; color: #e8c890; }
+.inv-actions button:disabled { opacity: 0.3; }
+@media (max-width: 700px), (max-height: 520px) {
+  .inv-panel h2 { font-size: 24px; margin-bottom: 8px; }
+  #inv-grid { grid-template-columns: repeat(4, 64px); gap: 6px; }
+  .inv-slot { width: 64px; height: 64px; padding: 6px; }
+  .inv-big { max-width: 200px; }
+  #inv-detail h3 { font-size: 20px; } #inv-detail p { font-size: 13px; }
 }
