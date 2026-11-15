@@ -81,7 +81,7 @@ export class Healing {
       p.health = Math.min(Config.player.maxHealth, p.health + (target - this.healed));
       this.healed = target;
       p.slow = H.bandageMove;
-      if (this.bandageT >= 1) { this.bandageT = -1; p.slow = 1; }
+      if (this.bandageT >= 1) { this.bandageT = -1; p.slow = 1; this.events.emit('healed', { from: 'bandage' }); }
     }
     if (this.bedT >= 0) {
       // a wave starting (or dying, somehow) gets you straight up
@@ -92,7 +92,7 @@ export class Healing {
   }
 
   endBed(ok) {
-    if (ok) this.player.health = Config.player.maxHealth;
+    if (ok) { this.player.health = Config.player.maxHealth; this.events.emit('healed', { from: 'bed' }); }
     this.bedT = -1;
     this.player.locked = false;
     this.events.emit('restEnd', { ok });

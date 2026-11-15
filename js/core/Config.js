@@ -177,7 +177,7 @@ export const Config = {
   // Healing. Bandages: one per wave survived, carry at most `max`, used with H. The cot: once per break, hold USE.
   heal: {
     bandage: { max: 3, amount: 35, time: 1.6 },   // health back, seconds it takes (you can still walk, slowly)
-    bed: { time: 4, radius: 1.3 },                 // seconds lying down; how close to the cot you must stand
+    bed: { time: 7.5, radius: 1.3 },               // seconds for the whole rest (lie down, ~5 s dark with a tip, get up); how close to the cot
     bandageMove: 0.5,                              // walk speed x this while bandaging
   },
   // The stove fire (js/systems/Firewood.js): it burns down and you feed it logs. Light only for now; warmth is session D.
