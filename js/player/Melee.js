@@ -95,8 +95,7 @@ export class Melee {
     if (best) {
       const c = best.visual.hitbox.getWorldPosition(_c);
       const win = this.windowBetween(eye, c);
-      if (win === 'wall') best = null;
-      else if (win && win.stage === 0) { this.hitGlass(win, c, A); return; }
+      if (win === 'wall') best = null;   // through a window: fists and axe reach through the gaps in the boards
     }
     if (best) {
       const c = best.visual.hitbox.getWorldPosition(_c);
@@ -107,22 +106,13 @@ export class Melee {
       this.events.emit('axeHit', { spider: best, by });
       return;
     }
-    // nothing alive in reach: did we hit glass or wood?
-    const glass = this.glassInFront(eye, fwd, A.reach);
-    if (glass && glass.win.stage === 0) { this.hitGlass(glass.win, glass.point, A); return; }
+    // nothing alive in reach: wood (walls, boards) thuds; the player never damages a window
     this.ray.set(eye, fwd); this.ray.far = A.reach;
     const wood = this.ray.intersectObjects(this.weapon.worldMeshes, false)[0];
     if (wood) {
       this.audio.play('bulletImpactWood', { position: wood.point, volume: by === 'fists' ? 0.35 : 0.6, rate: by === 'fists' ? 0.5 : 0.7, exterior: false });
       this.player.shake = Math.max(this.player.shake, by === 'fists' ? 0.15 : 0.25);
     }
-  }
-
-  hitGlass(win, point, A = M.axe) {
-    this.windows.damage(win.id, A.windowDamage, point);
-    this.audio.play(A === M.axe ? 'glassCrack' : 'glassTap', { position: win.center, volume: 0.8 });
-    this.player.shake = Math.max(this.player.shake, 0.3);
-    this.events.emit('axeHit', { window: win });
   }
 
   /** The window the line eye -> p passes through, 'wall' if it leaves the cabin through a wall, or null if it stays inside. */
@@ -139,18 +129,6 @@ export class Melee {
       }
     }
     return crossesOut ? 'wall' : null;
-  }
-
-  glassInFront(eye, fwd, reach) {
-    for (const w of this.windows.windows) {
-      const denom = fwd.dot(w.normal);
-      if (denom <= 0.05) continue;
-      const t = _a.subVectors(w.center, eye).dot(w.normal) / denom;
-      if (t < 0 || t > reach) continue;
-      const hit = _h.copy(eye).addScaledVector(fwd, t);
-      if (this.inWindow(w, hit, 0)) return { win: w, point: hit.clone() };
-    }
-    return null;
   }
 
   inWindow(w, p, margin) {

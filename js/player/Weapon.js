@@ -156,7 +156,11 @@ export class Weapon {
       this.raycaster.far = gun === 'shotgun' ? SG.range : W.range;
       const sh = this.raycaster.intersectObjects(this.targets, false)[0];
       const wh = this.raycaster.intersectObjects(this.worldMeshes, false)[0];
-      if (sh && (!wh || sh.distance < wh.distance)) {
+      // a board in the way stops the shot even when the spider's forgiving hitbox pokes through to this side of it:
+      // you shoot through the gaps, not through the planks
+      const board = wh && wh.object.userData.board;
+      const blocked = wh && (!sh || wh.distance < sh.distance || (board && sh.object.userData.spider?.state !== 'inside' && sh.object.userData.spider?.state !== 'enter'));
+      if (sh && !blocked) {
         const s = sh.object.userData.spider;
         if (!hitSpider) { hitSpider = s; hitPoint = sh.point.clone(); }
         let dmg = W.damage;
@@ -166,7 +170,6 @@ export class Weapon {
         if (!hitPoint) hitPoint = wh.point.clone();
         if (i < 4 || pellets === 1) this.placeHole(wh);
         if (!woodSound) { woodSound = true; this.audio.play('bulletImpactWood', { position: wh.point, volume: 0.7, exterior: false }); }
-        const board = wh.object.userData.board;
         if (board) board.onShot?.();
       }
     }

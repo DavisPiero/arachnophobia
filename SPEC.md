@@ -12,8 +12,9 @@ The core loop: **listen → pick a window → look and shoot → run low → cro
 
 ## Pillars
 
-1. **Darkness outside, not in the glass.** The windows are always clear; the night itself gets darker with distance.
-   You still only see one window at a time. A flashlight helps but shows only what it points at.
+1. **Darkness outside.** The night itself gets darker with distance; outside you see eyes, and the rest only in
+   the flashlight beam (`node tests/brightness.mjs` measures a spider 7 m out, dark and lit, on phone and desktop).
+   You still only see one window at a time, through the gaps between its planks.
 2. **Sound tells you where to go.** 3D positional sound for every spider; you hear them before you see them.
 3. **Reloading is a commitment.** Only at the table, takes ~3 s, cannot move or shoot, spiders keep coming.
 4. **Spiders that are mistakes.** Spider bodies grown wrong: swollen sacs, lopsided bodies, growths, soft fleshy legs,
@@ -49,9 +50,13 @@ unseen was removed, user's call 2026-11-10.) Inside they circle in rather than r
 
 ## Windows
 
-Windows are 1.32 × 1.2 m, sill at 1.0 m. Cracks are thin, light-blue and branching (impact glass), so you can still
-see out. Stages: intact → cracked → shattered → boards splintering → **breached**. After a breach, spiders climb inside and attack you.
-They grip the window frame and pull themselves through; a big one is stuck in the frame for a few seconds.
+Windows are 1.32 × 1.2 m holes, sill at 1.0 m, **no glass** (user's call, 2026-11-15). Four planks are nailed across
+the outside, with gaps of about 13 cm between them: you see, shoot and punch through the gaps; a plank stops a bullet,
+and nothing the player does damages a window. Spiders stand on the planks and tear at the one nearest their claws; a
+hurt plank hangs loose, a dead one falls into the yard. When all four are gone the window is **breached** and spiders
+climb inside. They grip the frame and pull themselves through. Stand at one window too long while spiders are out
+and one springs at the planks in your face and rakes you through the gaps (through an open window it leaps in).
+Coming (session C): nailing planks back on. Later: big spiders reaching through a gap to grab you and pull you out.
 You have health; at zero it is game over (restart at wave 1).
 
 ## Weapon and ammo
@@ -61,8 +66,8 @@ Lever-action rifle, 8 rounds in the tube, hitscan, one lever cycle (0.5 s) betwe
 gate one by one, cannot move or shoot, cannot be cancelled. Supplies on the table visibly run down.
 
 Weapon switch: **1** the rifle, **2** the axe (~0.45 s to swap). The axe is held in the right hand and swung with the
-fire button (no ammo, ~0.7 s swing): it hits a spider within reach in front of you, inside or at the window you stand at.
-Through intact glass it only cracks your own glass. Reloading at the table brings the rifle back up. The held axe is
+fire button (no ammo, ~0.7 s swing): it hits a spider within reach in front of you, inside or at the window you stand at
+(through the gaps between the planks). Reloading at the table brings the rifle back up. The held axe is
 the start of chopping firewood later. Stomp: kills small spiders on the floor in front of you, shoves bigger ones back.
 
 Hits show on the spider: dark red spray and splats that fade after a few seconds (so they never block a window), a jolt (body hit) or a kicked leg (leg hit),
@@ -98,8 +103,8 @@ support hand is under the barrel: thumb up the left side, fingers up the right. 
 
 ## Flashlight
 
-Toggled with Q or the Light button. A warm, narrow beam from the hand that reaches ~45 m; no battery. The window glass is
-unlit, so the beam never glares back off it. A watcher caught in the beam slips away.
+Toggled with Q or the Light button. A warm, narrow, strong beam from the hand; it falls off slowly, so it lights a
+spider at 15 m; no battery. It is the way to see outside. A watcher caught in the beam slips away.
 
 ## Screens and text
 
@@ -143,13 +148,25 @@ Every loaded model has a code-made fallback.
       ceiling spiders that snuff lights (rarer on easy).
    6. Spiders: new human-faced and gaunt models (pick from rendered variants first), retreat when hurt, resistances,
       an egg-layer outside, webs on windows you hit to clear, window jump scares (a real spider, at most once a wave).
+   *(Sessions 4–6 are folded into the horror rework below, 2026-11-15.)*
 6. Environment from Blender: trees, foliage, cabin props, walls, floors, ceilings.
+7. Horror rework (playtest notes and brief, 2026-11-15), in six sessions:
+   - A. Horror and combat basics: no glass, planks with gaps, leg clipping, attacks timed to the animation and
+     sooner, leaps, the window jump, faster spiders, darker night, stronger beam, phone visibility. *(done 2026-11-15)*
+   - B. UI: inventory in the in-game style with pictures of the weapons and bandages, less text on screen, the clock
+     bigger and moved, its time left shown when you look at it.
+   - C. Cabin: placement tool, the ammo table run along the wall (bandages lie on it, heal there), planks and boarding up.
+   - D. Warmth (only draws spiders when low) and lights; gunshots draw nearby spiders.
+   - E. Creatures: two species per size (small, medium, large), human-spider fusion, faces sculpted from the
+     user's references, behaviours per species (reactions to being shot, ambush, retreat). Replaces the fat Sac.
+   - F. Weapons and sound: fists → axe → pistol → rifle → shotgun (+ flares), Blender models, a new sound batch.
 
 The long-term goal is a semi-open-world survival horror; behaviours and assets should carry over to it.
 
 ## Later (wanted, not scheduled)
 
-Crouch, score and saves, story/intro, recorded audio. (Barricade repair and more weapons moved into milestone 5.)
+Crouch, score and saves, story/intro, recorded audio, a day/night survival cycle. (Barricade repair and more weapons
+moved into milestone 5.)
 
 ## Not building
 

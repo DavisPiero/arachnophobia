@@ -1,18 +1,25 @@
-// The three windows: how visible the outside is, and how they get damaged and broken.
+// The three windows: open holes with planks nailed across the OUTSIDE of the wall (no glass, user's call 2026-11-15).
 //
-// Visibility: the windows are always clear (the darkening veil was removed, user's call). `closeness`
-// (1 = standing at the window looking out) still drives the watcher, which slips away when you come close.
+// The boards are the barrier. Each board has its own health; spiders tear at the board nearest their claws, a hurt
+// board hangs loose, a dead one falls off into the yard. You shoot (or punch) through the gaps between the boards;
+// a bullet that meets a board stops there and does not hurt it (the player never damages a window).
+// When every board is gone the window is breached and spiders climb in.
 //
-// Damage stages: 0 intact, 1 cracked, 2 shattered (glass gone), 3 boards splintering, 4 breached.
+// `stage` is how many boards are gone (0 .. boards.length); breached when stage >= BREACHED (4).
+// Room for later: `addBoard(win)` nails one back on (boarding up, session C); a big spider can reach through a gap
+// (`gapAt(win, y)` tells where the gaps are) to grab the player.
+//
+// Visibility: `closeness` (1 = standing at the window looking out) still drives the watcher, which slips away.
 import * as THREE from 'three';
 import { Config } from '../core/Config.js';
-import { WINDOWS, CABIN } from '../world/Layout.js';
+import { WINDOWS, CABIN, terrainHeight } from '../world/Layout.js';
 import { interiorMaterial } from '../world/Lighting.js';
 
 const WC = Config.windows;
+export const BREACHED = 4;
 // WINDOWS[i].center sits on the INNER face of the wall; the wall runs outward from there.
-const GLASS_Z = CABIN.wallThickness / 2;   // glass in the middle of the wall
-const BOARD_Z = -0.11;                     // boards nailed on the inside, clear of the window stool
+const BOARD_Z = CABIN.wallThickness + 0.02;   // planks nailed across the outer face of the wall
+const BOARD_H = 0.15;   // 4 planks leave five gaps of ~13 cm to see and shoot through
 
 export class WindowSystem {
   constructor({ scene, audio, events, camera }) {
@@ -21,9 +28,9 @@ export class WindowSystem {
     this.events = events;
     this.camera = camera;
     this.flash = 0;
+    this.boardMat = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x5b4532, roughness: 0.85, map: makeBoardTexture() }));
     this.windows = WINDOWS.map((def) => this.buildWindow(def));
     this.byId = Object.fromEntries(this.windows.map((w) => [w.id, w]));
-    this.shards = [];
     this.baseFog = null;
     events.on('lightning', ({ strength }) => { this.flash = Math.max(this.flash, 0.6 + strength * 0.4); });
     events.on('muzzleFlash', () => { this.flash = Math.max(this.flash, 0.18); });
@@ -37,55 +44,33 @@ export class WindowSystem {
     group.rotation.y = yaw;
     this.scene.add(group);
     const w = def.width, h = def.height;
-
-    // glass: a faint tint only, unlit, so the flashlight never glares back off it (user's call)
-    const glassMat = new THREE.MeshBasicMaterial({ color: 0x1a2426, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide });
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), glassMat);
-    glass.position.z = GLASS_Z;
-    glass.renderOrder = 11;
-    group.add(glass);
-
-    // cracks, drawn on a canvas as damage builds up
-    const crackCanvas = document.createElement('canvas');
-    crackCanvas.width = crackCanvas.height = 512;
-    const crackTex = new THREE.CanvasTexture(crackCanvas);
-    crackTex.colorSpace = THREE.SRGBColorSpace;
-    const crack = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: crackTex, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide }));
-    crack.position.z = GLASS_Z - 0.002;
-    crack.renderOrder = 12;
-    group.add(crack);
-
-    // boards nailed across the inside of the opening
+    const count = WC.boards;
+    const gap = (h - count * BOARD_H) / (count + 1);
     const boards = [];
-    const boardMat = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x5b4532, roughness: 0.85, map: makeBoardTexture() }));
-    const boardDefs = [
-      { y: -h * 0.36, rot: 0.05, len: w + 0.34 },
-      { y: h * 0.38, rot: -0.06, len: w + 0.3 },
-    ];
-    for (const bd of boardDefs) {
+    for (let i = 0; i < count; i++) {
+      const y = -h / 2 + gap * (i + 1) + BOARD_H * (i + 0.5);
+      const len = w + 0.3 + (i % 2) * 0.06;
+      const rot = [0.035, -0.025, 0.02, -0.04, 0.03][i % 5];
       const pivot = new THREE.Group(); // pivot at the left nail so a loose board swings
-      pivot.position.set(-bd.len / 2 + 0.06, bd.y, BOARD_Z);
-      pivot.rotation.z = bd.rot;
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(bd.len, 0.13, 0.03), boardMat);
-      mesh.position.x = bd.len / 2 - 0.06;
+      pivot.position.set(-len / 2 + 0.06, y, BOARD_Z);
+      pivot.rotation.z = rot;
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, BOARD_H, 0.035), this.boardMat);
+      mesh.position.x = len / 2 - 0.06;
       mesh.castShadow = true; mesh.receiveShadow = true;
       pivot.add(mesh);
       group.add(pivot);
-      const board = { pivot, mesh, homePos: pivot.position.clone(), baseRot: bd.rot, loose: 0, fallen: false, fallV: new THREE.Vector3(), wobble: 0, onShot: null };
-      board.onShot = () => { board.wobble = 1; };
+      const board = { pivot, mesh, y, homePos: pivot.position.clone(), baseRot: rot, health: WC.boardHealth, loose: 0, fallen: false, fallV: new THREE.Vector3(), wobble: 0, onShot: null };
+      board.onShot = () => { board.wobble = Math.max(board.wobble, 0.6); };
       mesh.userData.board = board;
       boards.push(board);
     }
-
-    const win = {
-      id: def.id, label: def.label, def, group, glass, crack, crackCanvas, crackTex, boards,
-      health: WC.maxHealth, stage: 0, closeness: 0, cracks: [],
+    return {
+      id: def.id, label: def.label, def, group, boards,
+      health: WC.boardHealth * count, maxHealth: WC.boardHealth * count, stage: 0, closeness: 0,
       center: def.center.clone(), normal: n, width: def.width, height: def.height,
-      // world-space point on the outside face of the glass, used by spiders
+      // world-space point just off the boards, used by spiders
       outside: def.center.clone().addScaledVector(n, CABIN.wallThickness + 0.02),
     };
-    this.drawCracks(win);
-    return win;
   }
 
   /** Meshes that stop bullets (boards still attached). */
@@ -97,197 +82,72 @@ export class WindowSystem {
 
   reset() {
     for (const w of this.windows) {
-      w.health = WC.maxHealth; w.stage = 0; w.cracks = [];
-      w.glass.visible = true;
       for (const b of w.boards) {
-        b.fallen = false; b.loose = 0; b.wobble = 0;
+        b.fallen = false; b.loose = 0; b.wobble = 0; b.health = WC.boardHealth;
         if (b.pivot.parent !== w.group) { b.pivot.parent?.remove(b.pivot); w.group.add(b.pivot); }
         b.pivot.position.copy(b.homePos);
         b.pivot.rotation.set(0, 0, b.baseRot);
       }
-      this.drawCracks(w);
+      this.recount(w);
     }
-    for (const s of this.shards) this.scene.remove(s.mesh);
-    this.shards = [];
     this.updateOpenness();
   }
 
-  stageFor(health) {
-    const f = health / WC.maxHealth;
-    if (f <= 0) return 4;
-    if (f < WC.stages[2]) return 3;
-    if (f < WC.stages[1]) return 2;
-    if (f < WC.stages[0]) return 1;
-    return 0;
+  recount(w) {
+    w.health = w.boards.reduce((a, b) => a + (b.fallen ? 0 : b.health), 0);
+    w.stage = Math.min(BREACHED, w.boards.filter((b) => b.fallen).length * BREACHED / w.boards.length);
   }
 
-  /** A spider hits the window. `point` is where (world space), optional. */
+  /** A spider tears at the window. `point` is where (world space), optional: the board nearest it takes the hit. */
   damage(id, amount, point) {
     const w = this.byId[id];
-    if (!w || w.stage >= 4) return;
-    w.health = Math.max(0, w.health - amount);
-    const before = w.stage;
-    const after = this.stageFor(w.health);
-    const pos = point || w.outside;
-
-    if (w.stage < 2) {
-      // add a crack where it was hit (only some hits make a new one, so the glass stays see-through)
-      const local = w.group.worldToLocal(pos.clone());
-      if (w.cracks.length < 4 && (w.cracks.length === 0 || Math.random() < 0.4)) this.addCrack(w, local.x / w.def.width + 0.5, 0.5 - local.y / w.def.height, 0.4 + amount / 25);
-      if (Math.random() < 0.6 || after > before) this.audio.play('glassCrack', { position: pos, volume: 0.5 + amount / 30, reverb: 0.25 });
-    } else {
-      this.audio.play('boardHit', { position: w.center, volume: 0.6 + amount / 30, reverb: 0.2 });
-      for (const b of w.boards) if (!b.fallen) b.wobble = Math.min(1.5, b.wobble + amount / 15);
+    if (!w || w.stage >= BREACHED) return;
+    const standing = w.boards.filter((b) => !b.fallen);
+    let board = standing[0];
+    if (point) {
+      const ly = w.group.worldToLocal(_a.copy(point)).y;
+      let bd = Infinity;
+      for (const b of standing) { const d = Math.abs(b.y - ly); if (d < bd) { bd = d; board = b; } }
     }
-
-    if (after !== before) {
-      w.stage = after;
-      if (after >= 2 && before < 2) this.shatter(w);
-      if (after >= 3) this.loosenBoard(w, 0);
-      if (after >= 4) {
-        this.dropBoard(w, 0); this.dropBoard(w, 1);
-        this.events.emit('windowBreached', { id: w.id });
-      }
-      this.events.emit('windowDamaged', { id: w.id, stage: after, health: w.health });
+    board.health -= amount;
+    board.wobble = Math.min(1.5, board.wobble + amount / 12);
+    this.audio.play('boardHit', { position: w.outside, volume: 0.6 + amount / 30, reverb: 0.2 });
+    if (!board.loose && board.health < WC.boardHealth * 0.4) {
+      board.loose = 1;
+      this.audio.play('boardBreak', { position: w.outside, volume: 0.6, reverb: 0.2 });
+    }
+    if (board.health <= 0) {
+      this.dropBoard(w, board);
+      const before = w.stage;
+      this.recount(w);
+      this.events.emit('windowDamaged', { id: w.id, stage: w.stage, health: w.health, before });
+      if (w.stage >= BREACHED) this.events.emit('windowBreached', { id: w.id });
       this.updateOpenness();
-    }
-    // inside stage 3, the first board falls halfway down
-    if (w.stage === 3 && w.health < WC.maxHealth * 0.12) this.dropBoard(w, 0);
+    } else this.recount(w);
   }
 
-  shatter(w) {
-    w.glass.visible = false;
-    w.cracks = [];
-    this.drawCracks(w, true);
-    this.audio.play('glassShatter', { position: w.center, volume: 1, reverb: 0.3 });
-    // glass shards fall into the room
-    const mat = interiorMaterial(new THREE.MeshStandardMaterial({ color: 0x9fb0b0, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false }));
-    for (let i = 0; i < 18; i++) {
-      const s = 0.03 + Math.random() * 0.07;
-      const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(s, Math.random() * s, 0), new THREE.Vector3(Math.random() * s, s * 1.4, 0)]);
-      geo.computeVertexNormals();
-      const m = new THREE.Mesh(geo, mat);
-      m.position.copy(w.center).add(new THREE.Vector3((Math.random() - 0.5) * w.def.width, (Math.random() - 0.5) * w.def.height, 0).applyAxisAngle(_up, w.group.rotation.y));
-      const v = w.normal.clone().multiplyScalar(-(0.6 + Math.random() * 1.6));
-      v.x += (Math.random() - 0.5); v.z += (Math.random() - 0.5) * 0.5; v.y = Math.random() * 1.2;
-      this.scene.add(m);
-      this.shards.push({ mesh: m, v, spin: new THREE.Vector3(Math.random() * 9, Math.random() * 9, Math.random() * 9), rest: false, life: 30 });
-    }
-  }
-
-  loosenBoard(w, i) {
-    const b = w.boards[i];
-    if (b.fallen || b.loose) return;
-    b.loose = 1;
-    this.audio.play('boardBreak', { position: w.center, volume: 0.6, reverb: 0.2 });
-  }
-
-  dropBoard(w, i) {
-    const b = w.boards[i];
+  dropBoard(w, b) {
     if (b.fallen) return;
-    b.fallen = true;
-    // move to world space and let it fall
+    b.fallen = true; b.health = 0;
+    // move to world space and let it fall outside, torn away from the wall
     const wp = new THREE.Vector3(); const wq = new THREE.Quaternion();
     b.pivot.getWorldPosition(wp); b.pivot.getWorldQuaternion(wq);
     w.group.remove(b.pivot);
     this.scene.add(b.pivot);
     b.pivot.position.copy(wp); b.pivot.quaternion.copy(wq);
-    b.fallV.copy(w.normal).multiplyScalar(-1.2); b.fallV.y = 0.5;
-    this.audio.play('boardBreak', { position: w.center, volume: 1, reverb: 0.3 });
+    b.fallV.copy(w.normal).multiplyScalar(1.4 + Math.random()); b.fallV.y = 1.0;
+    b.groundY = terrainHeight(wp.x + w.normal.x * 0.8, wp.z + w.normal.z * 0.8) + 0.03;
+    this.audio.play('boardBreak', { position: w.outside, volume: 1, reverb: 0.3 });
   }
 
-  addCrack(w, u, v, size) {
-    // impact glass: long radial cracks that split and split again as they run (a fractal tree), joined near the
-    // impact by short jagged web lines. Stored as polylines with a width so a redraw gives the same picture.
-    const lines = [];
-    const branch = (x, y, ang, len, width, depth) => {
-      const pts = [[x, y]];
-      const segs = 5 + Math.floor(Math.random() * 5);
-      for (let s = 0; s < segs; s++) {
-        ang += (Math.random() - 0.5) * 0.45;
-        x += Math.cos(ang) * len / segs; y += Math.sin(ang) * len / segs;
-        pts.push([x, y]);
-        // fork: a thinner, shorter crack splits off to one side
-        if (depth > 0 && s > 0 && Math.random() < 0.32) {
-          const side = Math.random() < 0.5 ? -1 : 1;
-          branch(x, y, ang + side * (0.35 + Math.random() * 0.55), len * (0.35 + Math.random() * 0.3), width * 0.62, depth - 1);
-        }
-        if (x < -0.02 || x > 1.02 || y < -0.02 || y > 1.02) break;
-      }
-      lines.push({ pts, width });
-      return pts;
-    };
-    const n = 3 + Math.floor(Math.random() * 3);
-    const radials = [];
-    for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-      radials.push(branch(u, v, a, (0.2 + Math.random() * 0.45) * size, 1.6 + Math.random() * 0.8, 2));
-    }
-    // web: two or three rings of short jagged lines joining neighbouring radials
-    const rings = Math.random() < 0.5 ? 1 : 0;
-    for (let k = 1; k <= rings; k++) {
-      for (let i = 0; i < n; i++) {
-        if (Math.random() < 0.25) continue;
-        const A = radials[i], B = radials[(i + 1) % n];
-        const ia = Math.min(A.length - 1, k * 2), ib = Math.min(B.length - 1, k * 2 + (Math.random() < 0.5 ? 0 : 1));
-        const [x0, y0] = A[ia], [x1, y1] = B[ib];
-        const mx = (x0 + x1) / 2 + (Math.random() - 0.5) * 0.02, my = (y0 + y1) / 2 + (Math.random() - 0.5) * 0.02;
-        lines.push({ pts: [[x0, y0], [mx, my], [x1, y1]], width: 0.7 + Math.random() * 0.4 });
-      }
-    }
-    w.cracks.push({ u, v, lines, ring: 0.012 * size });
-    this.drawCracks(w);
-  }
-
-  drawCracks(w, shattered = false) {
-    const c = w.crackCanvas, g = c.getContext('2d');
-    g.clearRect(0, 0, c.width, c.height);
-    const S = c.width;
-    if (shattered) {
-      // jagged shards left in the frame edges
-      g.fillStyle = 'rgba(170,210,240,0.08)';
-      g.strokeStyle = 'rgba(200,232,255,0.75)';
-      g.lineWidth = 1.2;
-      const edge = (x0, y0, x1, y1, inward) => {
-        g.beginPath(); g.moveTo(x0 * S, y0 * S);
-        const steps = 6;
-        for (let i = 1; i < steps; i++) {
-          const t = i / steps;
-          const d = Math.random() * 0.18;
-          g.lineTo((x0 + (x1 - x0) * t + inward[0] * d) * S, (y0 + (y1 - y0) * t + inward[1] * d) * S);
-        }
-        g.lineTo(x1 * S, y1 * S); g.closePath(); g.fill(); g.stroke();
-      };
-      edge(0, 0, 1, 0, [0, 1]); edge(1, 0, 1, 1, [-1, 0]); edge(1, 1, 0, 1, [0, -1]); edge(0, 1, 0, 0, [1, 0]);
-    } else {
-      // thin light-blue lines: a soft glow pass under a sharp core, so they read but the glass stays clear
-      g.lineCap = 'round'; g.lineJoin = 'round';
-      const k = S / 512;
-      for (const pass of [0, 1]) {
-        g.strokeStyle = pass ? 'rgba(215,235,250,0.5)' : 'rgba(140,190,235,0.05)';
-        for (const cr of w.cracks) {
-          for (const ln of cr.lines) {
-            g.lineWidth = (pass ? ln.width * 0.3 : ln.width * 1.2) * k;
-            g.beginPath();
-            ln.pts.forEach(([x, y], i) => (i ? g.lineTo(x * S, y * S) : g.moveTo(x * S, y * S)));
-            g.stroke();
-          }
-        }
-      }
-      // the crushed point of each impact: a small frosted spot
-      for (const cr of w.cracks) {
-        const gr = g.createRadialGradient(cr.u * S, cr.v * S, 0, cr.u * S, cr.v * S, cr.ring * S * 0.9);
-        gr.addColorStop(0, 'rgba(215,238,255,0.25)'); gr.addColorStop(1, 'rgba(160,205,245,0)');
-        g.fillStyle = gr;
-        g.beginPath(); g.arc(cr.u * S, cr.v * S, cr.ring * S * 0.9, 0, Math.PI * 2); g.fill();
-      }
-    }
-    w.crackTex.needsUpdate = true;
+  /** Is there a gap (no standing board) at local height y in this window? */
+  gapAt(w, y) {
+    return !w.boards.some((b) => !b.fallen && Math.abs(b.y - y) < BOARD_H / 2);
   }
 
   updateOpenness() {
     let open = 0;
-    for (const w of this.windows) if (w.stage >= 2) open += w.stage >= 4 ? 0.5 : 0.3;
+    for (const w of this.windows) open += w.stage >= BREACHED ? 0.5 : w.stage * 0.08;
     this.audio.setExteriorOpenness(Math.min(1, open));
   }
 
@@ -306,11 +166,11 @@ export class WindowSystem {
       // boards: wobble and loose swing
       for (const b of w.boards) {
         if (b.fallen) {
-          if (b.pivot.position.y > 0.05) {
+          if (b.pivot.position.y > b.groundY) {
             b.fallV.y -= 9.8 * dt;
             b.pivot.position.addScaledVector(b.fallV, dt);
             b.pivot.rotation.z += dt * 3;
-            if (b.pivot.position.y <= 0.05) { b.pivot.position.y = 0.05; b.pivot.rotation.set(-Math.PI / 2, b.pivot.rotation.y, b.pivot.rotation.z); this.audio.play('boardHit', { position: b.pivot.position, volume: 0.5 }); }
+            if (b.pivot.position.y <= b.groundY) { b.pivot.position.y = b.groundY; b.pivot.rotation.set(-Math.PI / 2, b.pivot.rotation.y, b.pivot.rotation.z); this.audio.play('boardHit', { position: b.pivot.position, volume: 0.4, exterior: true }); }
           }
           continue;
         }
@@ -318,14 +178,6 @@ export class WindowSystem {
         const hang = b.loose ? -0.9 : 0;
         b.pivot.rotation.z = b.baseRot + hang + Math.sin(performance.now() * 0.04) * b.wobble * 0.04;
       }
-    }
-    // shards falling to the floor
-    for (const s of this.shards) {
-      if (s.rest) continue;
-      s.v.y -= 9.8 * dt;
-      s.mesh.position.addScaledVector(s.v, dt);
-      s.mesh.rotation.x += s.spin.x * dt; s.mesh.rotation.y += s.spin.y * dt;
-      if (s.mesh.position.y < 0.01) { s.mesh.position.y = 0.01; s.rest = true; s.mesh.rotation.x = -Math.PI / 2; }
     }
     // fog thins a little when you are at a window: more detail outside
     if (scene.fog && scene.fog.density !== undefined) {
@@ -365,4 +217,3 @@ function makeBoardTexture() {
 }
 
 const _a = new THREE.Vector3();
-const _up = new THREE.Vector3(0, 1, 0);

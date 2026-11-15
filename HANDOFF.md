@@ -1,38 +1,34 @@
 # Hand-off
 
-*Session of 2026-11-14 (second half of session 2). Replaces any earlier note.*
+*Session of 2026-11-15 (horror rework, session A). Replaces any earlier note.*
 
 ## Repo state
-- Session 2 signed off (pre-approved by the user): `claude/waves-weapons` merged into `main`, pushed, branch deleted.
-- `npm test` passes with the new checks (fists at start, rifle locked, punch, unlock after wave 2, shotgun fire and
-  reload, flare at a window, inventory remap). `node tests/fistbot.mjs` survives waves 1–2 on normal (lowest health 59).
-  Not played by hand.
+- Branch `claude/horror-a` merged into `main` and pushed (user pre-approved "merge and push when done").
+- `npm test` passes (desktop + phone, 72 s). `node tests/brightness.mjs` passes with the new outside check.
+- `node tests/fistbot.mjs`: survives waves 1–2, health 64 at the end (baseline before: 100). Windows now hold
+  97–240 s against a bot that does not fight at the windows.
+- `node tests/locomotion.mjs` fails its pop limit, as it did before this session (0.87% → ~1.0%; knees 0.37% → 0.30%).
+- Not played by hand.
 
 ## Read first
-1. `STATE.md`: the open question about broken windows comes first.
-2. `SPEC.md` "Second iteration" 5.4 (next session: the cabin).
+1. `STATE.md` (open questions come first).
+2. `SPEC.md` "Second iteration" 7 (sessions B–F).
 
 ## What was built
-- `js/player/Arsenal.js` (new): unlocks by wave, the 1–5 slot map (saved in Settings), flare count.
-- `js/player/Flares.js` (new): throw at the aimed window, one pre-made light per window (no shader recompiles),
-  `flareLit`/`flareOut` events. `SpiderAI`: `flee()`; flared windows are skipped by `WaveSystem.pickWindow`.
-- `js/ui/Inventory.js` (new) + `#screen-inventory` in `index.html`.
-- `Weapon.js`: `held` is fists/rifle/axe/shotgun/flare; `ammo` per gun (`mag` is now a read-only getter); shotgun pellets.
-- `Melee.js`: `tryPunch()`, shares `axeHit(params, by)`. `AmmoTable.js`: loads the held gun; `stocks.rifle/shotgun`.
-- `ViewModel.js`: code-made shotgun (rifle space, same grips), flare in hand, punch and throw keyframes. Fists:
-  see the 2026-11-15 note below.
-- Settings keys: `slot1`–`slot5`, `inventory` replace `rifle`/`axe`. Debug keys: U (was I), G.
+- `WindowSystem.js` rewritten: no glass, `WC.boards` planks outside (`BOARD_Z`), per-plank health, `stage` = planks
+  gone (4 = breached), `gapAt()` for later grab-through. `windowDamaged` carries `before`.
+- `SpiderCollision.js`: plank boxes per window (surface 'glass', solid while `blocked(id)`), attic/overhang solid
+  (`underRoof`). `SpiderRig.js`: `_clips()` checks joints 1–4; fold tried in the same frame; `air` pose for leaps.
+- `SpiderAI.js`: `startLeap/updateLeap` (state 'leap'), leap choice in `updateInside`, quick first attack, strike
+  carries the body; `SpiderManager.updateLinger/windowJump` (`Config.linger`). `Behaviour.js`: `startAttack({inside})`,
+  `crouchHold`, shorter stops near the player.
+- `Weapon.js`: a plank in the ray blocks the shot when the spider is outside. `Melee.js`: no glass hits.
+- `SpiderModel.js`: fill light per spider (`visual.fillK`, set each draw); `Config.render.spiderFillOutside`.
+- `css/style.css`: `#hint` at the top.
 
 ## Known weak spots
-- Shotgun and flare are code-made, not from Blender yet (CLAUDE.md wants a generator; still to do).
-- Sounds reused: shotgun = slowed gunshot + stomp thump; flare strike = wood scrape; flare hiss = sped-up rain loop.
-- Flare light has no shadows, so a little red shows on the inside of the wall around that window.
-- Spiders driven off by a flare fade out (the stalker's vanish) instead of walking away.
-
-## 2026-11-15 (fists and menu glitch, signed off and merged)
-- Fists remade: `hands.json` pose `fist` + `arm_fist_r` in `hands.glb`; `ViewModel.poseFist` aims the knuckles along
-  `fistShoulder` -> fist (straight wrist); `FIST_IDLE` / `PUNCH_KEYS` give position + palm direction only.
-- Menu: `Menu.crtGlitch(el)` + `.crt-glitch` in `style.css` replace the CRT bounce (which knocked the panel off the
-  monitor). Plays on power-on and on menu <-> settings.
-- Tests: every headless script has a time limit (`tools/watchdog.mjs`); the smoke test steps the game clock itself
-  (79 s, and machine load no longer breaks it).
+- Spider legs reach through the gaps into the room, and some leg segments pass through planks (not checked by a test).
+- The flashlight makes a hard bright disc on planks at arm's length.
+- Waves run long (wave 1 took 243 s in the bot) because spiders sit at windows longer; boarding up (C) and the
+  player punching through gaps should change this. Check after C.
+- Shotgun and flare are still code-made.

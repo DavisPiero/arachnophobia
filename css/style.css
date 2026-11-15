@@ -83,7 +83,8 @@ button { font: inherit; color: var(--ink); cursor: pointer; }
 #notice.show { opacity: 1; }
 #notice small { display: block; font-size: 17px; letter-spacing: 0.08em; color: var(--ink); }
 #hint {
-  position: absolute; left: 50%; bottom: calc(18% + var(--safe-b)); transform: translateX(-50%); max-width: 80vw; text-align: center;
+  /* at the top, over the ceiling: at the bottom it covered spiders on the floor (phones, 2026-11-15) */
+  position: absolute; left: 50%; top: calc(13% + var(--safe-t)); transform: translateX(-50%); max-width: 70vw; text-align: center;
   font-size: 15px; color: var(--ink); background: rgba(0, 0, 0, 0.55); border-left: 2px solid #7fbf7f; padding: 7px 14px;
   opacity: 0; transition: opacity 0.4s; pointer-events: none;
 }

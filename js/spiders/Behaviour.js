@@ -68,19 +68,23 @@ export class Behaviour {
     this.lastKind = '';
     this.strike = false;
     this.lurchT = 0;
+    this.crouchHold = 0;
   }
 
   /** Is an attack under way (wind-up to recovery)? */
   get attacking() { return !!this.attack; }
 
   /** Start an attack. Returns the kind. */
-  startAttack() {
+  startAttack({ inside = false } = {}) {
     const P = this.P;
-    let kinds = Object.entries(P.attacks).filter(([k]) => k !== this.lastKind || Object.keys(P.attacks).length === 1);
+    // inside, next to you, it means it: feints are rare and the wind-up is short (user: they ran up, stopped, then attacked)
+    let kinds = Object.entries(P.attacks).filter(([k]) => k !== this.lastKind || Object.keys(P.attacks).length === 1)
+      .map(([k, w]) => [k, inside && k === 'feint' ? w * 0.2 : w]);
     let total = kinds.reduce((a, [, w]) => a + w, 0), r = Math.random() * total, kind = kinds[0][0];
     for (const [k, w] of kinds) { if ((r -= w) <= 0) { kind = k; break; } }
     this.lastKind = kind;
-    const windup = rnd(P.windup[0], P.windup[1]) * (Math.random() < 0.2 ? 1.8 : 1);   // sometimes it holds the wind-up far too long
+    // sometimes it holds the wind-up far too long (only at a window: inside it never dawdles)
+    const windup = inside ? rnd(P.windup[0], P.windup[1]) * 0.5 : rnd(P.windup[0], P.windup[1]) * (Math.random() < 0.2 ? 1.8 : 1);
     const strike = kind === 'flurry' ? 0.75 : kind === 'slam' ? 0.32 : 0.16;
     this.attack = { kind, t: 0, windup, strike, recover: rnd(P.recover[0], P.recover[1]), struck: 0 };
     return kind;
@@ -108,7 +112,8 @@ export class Behaviour {
         this.phase = this.phase === 'go' ? 'stop' : 'go';
         const r = P.burst[this.phase];
         // far from the player the stops are short (it is travelling); close by they stretch out (it is stalking)
-        this.phaseT = rnd(r[0], r[1]) * (this.phase === 'stop' && sense.near > 12 ? 0.35 : 1);
+        // and right next to you they are short again: it never just sits there (user, 2026-11-15)
+        this.phaseT = rnd(r[0], r[1]) * (this.phase !== 'stop' ? 1 : sense.near > 12 ? 0.35 : sense.near < 4 ? 0.3 : 0.8);
       }
       speedK = this.phase === 'go' ? P.burst.fast : 0;
       if (this.phase === 'stop') { freeze = 1; if (P.splayStill) spread = 1; }
@@ -199,6 +204,12 @@ export class Behaviour {
         lunge = 0.4 * (1 - smooth(0, 0.4, k)); crouch = 0.5 * (1 - k); mouth = 0.6 * (1 - k); shiver = 0.2;
         if (a.kind === 'feint') freeze = 1 - k;   // after a feint it just watches you
       } else this.attack = null;
+    }
+
+    // gathering itself for a leap (the AI sets crouchHold 0..1): low, wide, shaking, mouth open
+    if (this.crouchHold > 0) {
+      speedK = 0; crouch = Math.max(crouch, this.crouchHold); spread = Math.max(spread, 0.6 * this.crouchHold);
+      shiver = Math.max(shiver, 0.7); mouth = Math.max(mouth, 1);
     }
 
     this.speedK = speedK;

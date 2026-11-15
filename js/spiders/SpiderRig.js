@@ -24,7 +24,7 @@ export const FACE_BONES = 2;   // mouth (jaw), lids
 const UP = new THREE.Vector3(0, 1, 0);
 const _v = new THREE.Vector3(), _v2 = new THREE.Vector3(), _v3 = new THREE.Vector3(), _w = new THREE.Vector3();
 const _q = new THREE.Quaternion(), _m = new THREE.Matrix4(), _e = new THREE.Euler();
-const _X = new THREE.Vector3(), _Y = new THREE.Vector3(), _Z = new THREE.Vector3();
+const _X = new THREE.Vector3(), _D0 = new THREE.Vector3(), _Y = new THREE.Vector3(), _Z = new THREE.Vector3();
 const _acc = { x: 0, z: 0 }, _tg = { y: 0, x: 0, z: 0, pitch: 0, roll: 0, yaw: 0 };
 const _probe = {}, _pick = [];
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -123,8 +123,9 @@ export class SpiderRig {
    *   the opening on the wall's inner face, normal = out of the cabin).
    * pose (all optional, 0..1 unless said): crouch, rear, lunge, freeze, shiver, spread, headYaw/headPitch (rad),
    *   mouth, lids, reach (world point the front legs claw at), reachK.
+   * air: 0..1 in a leap (feet leave the ground and fold in; call snapFeet() on landing).
    */
-  update(dt, { turnRate = 0, mode = 'walk', attack = 0, thrash = 0, ground = null, squeeze = null, pose = NO_POSE } = {}) {
+  update(dt, { turnRate = 0, mode = 'walk', attack = 0, thrash = 0, ground = null, squeeze = null, pose = NO_POSE, air = 0 } = {}) {
     if (!(dt > 0)) return;
     dt = Math.min(dt, 0.05);
     this.joltK *= Math.exp(-dt * 6);
@@ -403,8 +404,20 @@ export class SpiderRig {
         F.y += R * 0.45 * thrash * Math.max(0, Math.sin(T * 17 + ph * 1.6));
         F.z += R * 0.2 * thrash * Math.sin(T * 14 + ph * 0.7);
       }
+      if (air > 0) {
+        // in the air (a leap): legs thrown forward and drawn in under the body, front pair reaching for you
+        const front = l.pair <= 1 ? 1 : 0;
+        _X.set(l.rest.x * (0.55 + 0.25 * front), H * (0.35 - 0.3 * front), lay.bodyZ0 + (l.rest.z - lay.bodyZ0) * 0.6 + R * (0.2 + 0.35 * front));
+        F.lerp(_X, air);
+      }
       this._solve(l, A, F, dead, sq, dt, coll, space);
     }
+  }
+
+  /** Is any joint of this leg (knee to ankle) inside solid geometry? */
+  _clips(l, space, coll) {
+    for (let k = 1; k <= 4; k++) if (coll.pointInside(_X.copy(l.pos[k]).applyMatrix4(space.matrixWorld), -0.01)) return true;
+    return false;
   }
 
   /** IK for one leg, folding the knee the other way if it would go through a wall (window frame). */
@@ -413,7 +426,7 @@ export class SpiderRig {
     const base = (def.splay ?? 0.25) * (l.pair <= 1 ? 1 : -1) * (1 + sq * 1.2);
     // knee fold: eased in and out over a few frames (never a jump), held while the knee is near a wall
     l.foldT = Math.max(0, (l.foldT || 0) - dt);
-    l.splayK = lerp(l.splayK, l.foldT > 0 ? -base * 2.6 : 0, 1 - Math.exp(-dt * 7));
+    l.splayK = lerp(l.splayK, l.foldT > 0 ? -base * 2.6 : 0, 1 - Math.exp(-dt * (l.foldT > 0 ? 12 : 5)));
     const opts = {
       alpha: def.alpha, coxaElev: def.coxaElev, dt, splay: base + l.splayK,
       override: dead > 0 ? (ang, d) => {
@@ -422,13 +435,22 @@ export class SpiderRig {
         d.lerp(l.dir, dead).normalize();
       } : null,
     };
+    const d0 = _D0.copy(l.d);
     solveLeg(l, A, F, opts);
-    if (coll && dead === 0) {
-      const knee = _X.copy(l.pos[2]).applyMatrix4(space.matrixWorld);
-      if (coll.pointInside(knee, -0.005)) {
-        // fold the knee sideways the other way (gradually, see above) and hold it so it does not flicker back
-        l.foldT = 0.6;
+    if (coll && dead === 0 && this._clips(l, space, coll)) {
+      // a joint went into a wall, the roof or the window frame: fold the knee the other way and hold it there so
+      // it does not flicker back. Try it now (the other bend, then a wider one) rather than easing over a few frames,
+      // which left the leg through the wall in the meantime (user: legs stick through walls and the roof).
+      l.foldT = 0.6;
+      // only jump when the jump clears it; otherwise the fold eases in as before (a jump that still clips is a pop for nothing)
+      let cleared = false;
+      for (const k of [0.5, 1]) {
+        const sk = lerp(l.splayK, -base * 2.6, k);
+        l.d.copy(d0); opts.splay = base + sk;
+        solveLeg(l, A, F, opts);
+        if (!this._clips(l, space, coll)) { l.splayK = sk; cleared = true; break; }
       }
+      if (!cleared) { l.d.copy(d0); opts.splay = base + l.splayK; solveLeg(l, A, F, opts); }
     }
     const b0 = BONE.LEG + l.index * 6;
     for (let k = 0; k < 6; k++) {

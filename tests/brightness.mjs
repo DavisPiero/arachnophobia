@@ -19,6 +19,8 @@ dog.browser = browser;
 // set 2026-11-10 just under the fixed values (gun 15, spider 22.5, room 16); before the fix: gun 4.7, spider 19, room 14
 const FLOOR = { gun: 12, spider: 21, room: 14 };   // gun: mean over the pixels the hands and gun cover
 const LOW_VS_HIGH = 0.85;   // the phone tier keeps at least this share of desktop's brightness
+// set 2026-11-15 from the first run (dark 4.2 / 6.8, beam 30 / 39 on desktop / phone)
+const OUT = { darkMax: 10, litMin: 22, litVsDark: 3 };   // a spider 7 m out: dark without the beam, clear in it
 
 async function measure(tier) {
   const ctx = await browser.newContext({ viewport: { width: 800, height: 450 } });
@@ -77,6 +79,52 @@ async function measure(tier) {
       png: cv.toDataURL('image/png'),
     };
   });
+  // outside: at the east window looking out, a spider on the ground 7 m out. Dark, it should be close to the
+  // yard around it (you see its eyes, little else); in the flashlight beam it should stand out clearly.
+  const outside = await page.evaluate(async () => {
+    const g = window.game;
+    const { WINDOWS } = await import('./js/world/Layout.js');
+    const { Config } = await import('./js/core/Config.js');
+    for (const sp of g.spiders.spiders) sp.root.visible = false;
+    const w = WINDOWS.find((x) => x.id === 'east');
+    g.windows.byId.east.group.visible = false;   // measure the night, not the planks in front of it
+    g.player.position.set(w.center.x - w.normal.x * 0.7, g.player.position.y, w.center.z - w.normal.z * 0.7);
+    g.player.yaw = -Math.PI / 2; g.player.pitch = -0.08;
+    const s = g.spiders.spawn('stalker', 'east', 'medium');
+    s.state = 'wait'; s.waitT = 1e9; s.path = null; s.surface = 'ground';   // stands still, but its rig still runs
+    const { terrainHeight } = await import('./js/world/Layout.js');
+    const px = w.center.x + w.normal.x * 7, pz = w.center.z + 0.3;
+    s.root.position.set(px, terrainHeight(px, pz), pz);
+    s.visual.fillK = Config.render.spiderFillOutside;
+    s.visual.setEyeGlow(0);   // measure the body, not the eyes
+    s.visual.rig?.snapFeet?.();
+    const shot = async (light) => {
+      g.flashlight.on = light;
+      for (let i = 0; i < 20; i++) g.update(1 / 30);
+      s.root.position.set(px, terrainHeight(px, pz), pz);
+      g.postfx.render(1 / 30, {});
+      const c = g.renderer.domElement;
+      const cv = document.createElement('canvas'); cv.width = c.width; cv.height = c.height;
+      const x = cv.getContext('2d'); x.drawImage(c, 0, 0);
+      const W = cv.width, H = cv.height;
+      const region = (x0, y0, x1, y1) => {
+        const d = x.getImageData(Math.round(x0 * W), Math.round(y0 * H), Math.max(1, Math.round((x1 - x0) * W)), Math.max(1, Math.round((y1 - y0) * H))).data;
+        let t = 0; for (let i = 0; i < d.length; i += 4) t += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+        return t / (d.length / 4);
+      };
+      const p = s.root.position.clone(); p.y += 0.35; p.project(g.camera);
+      const sx = (p.x + 1) / 2, sy = (1 - p.y) / 2;
+      return { spider: region(sx - 0.04, sy - 0.05, sx + 0.04, sy + 0.05), yard: region(0.3, 0.3, 0.7, 0.6), png: cv.toDataURL('image/png') };
+    };
+    const dark = await shot(false), lit = await shot(true);
+    return { yardDark: dark.yard, spiderDark: dark.spider, spiderLit: lit.spider, pngDark: dark.png, pngLit: lit.png };
+  });
+  Object.assign(out, outside);
+  if (process.argv.includes('--shots')) {
+    fs.writeFileSync(`shots/outside-${tier}-dark.png`, Buffer.from(outside.pngDark.split(',')[1], 'base64'));
+    fs.writeFileSync(`shots/outside-${tier}-lit.png`, Buffer.from(outside.pngLit.split(',')[1], 'base64'));
+  }
+  delete out.pngDark; delete out.pngLit;
   if (process.argv.includes('--shots')) {
     fs.mkdirSync('shots', { recursive: true });
     fs.writeFileSync(`shots/brightness-${tier}.png`, Buffer.from(out.png.split(',')[1], 'base64'));
@@ -97,6 +145,17 @@ const row = (k) => {
 };
 console.log('brightness (mean 0..255):');
 for (const k of Object.keys(FLOOR)) row(k);
+// outside (user, 2026-11-15: darker outside, the flashlight the way to see). Targets set from the first run.
+console.log('outside, east window, a spider 7 m out:');
+for (const t of [high, low]) {
+  const tier = t === high ? 'high' : 'low ';
+  const okDark = t.spiderDark <= OUT.darkMax, okLit = t.spiderLit >= OUT.litMin && t.spiderLit >= t.spiderDark * OUT.litVsDark;
+  if (!okDark || !okLit) failures++;
+  console.log(`  ${okDark && okLit ? 'ok  ' : 'FAIL'} ${tier} yard ${t.yardDark.toFixed(1).padStart(5)}  spider dark ${t.spiderDark.toFixed(1).padStart(5)} (≤ ${OUT.darkMax})  in the beam ${t.spiderLit.toFixed(1).padStart(5)} (≥ ${OUT.litMin}, ≥ ${OUT.litVsDark}× dark)`);
+}
+const okTier = low.spiderLit >= high.spiderLit * LOW_VS_HIGH;
+if (!okTier) failures++;
+console.log(`  ${okTier ? 'ok  ' : 'FAIL'} phone beam ≥ ${LOW_VS_HIGH}× desktop beam`);
 await browser.close();
 server.close?.();
 console.log(failures ? `brightness: ${failures} failed` : 'brightness: ok');

@@ -55,6 +55,8 @@ export class Spider {
     this.flinch = 0;
     this.stagger = 0;         // seconds a heavy hit stops the spider (brutes)
     this.attackT = 1 + Math.random();
+    this.leap = null;         // a leap under way: { from, to, t, crouch, fly, apex, air, onLand, hit }
+    this.leapCD = 2 + Math.random() * 3;
     this.window = null; this.slot = -1;
     this.watchT = 0; this.vanishes = 0; this.fade = 1;
     this.deadT = 0; this.fallV = null;
@@ -171,6 +173,8 @@ export class Spider {
     const onRoof = rp.y > CABIN.wallHeight - 0.2 && Math.abs(rp.x) < CABIN.halfX + M && Math.abs(rp.z) < CABIN.halfZ + M;
     const inside = Math.abs(pp.x) < CABIN.halfX && Math.abs(pp.z) < CABIN.halfZ;
     this.root.visible = !(onRoof && inside);
+    const inCabin = Math.abs(rp.x) < CABIN.halfX + 0.05 && Math.abs(rp.z) < CABIN.halfZ + 0.05;
+    this.visual.fillK = inCabin ? 1 : Config.render.spiderFillOutside;
     this.flinch = Math.max(0, this.flinch - dt);
     if (this.stagger > 0) {
       // reeling from a heavy hit: no moving, no attacking
@@ -206,6 +210,10 @@ export class Spider {
         this.updateAttackWindow(dt);
         mode = 'idle';
         break;
+      case 'leap':
+        this.updateLeap(dt, player);
+        mode = 'idle';
+        break;
       case 'inside':
         moveSpeed = this.updateInside(dt, player);
         mode = moveSpeed > 0.05 ? 'walk' : 'idle';
@@ -229,10 +237,10 @@ export class Spider {
       const body = _f.copy(this.root.position).addScaledVector(this.up, this.visual.radius * 0.6);
       sq.narrow = Math.max(0, 1 - Math.abs(body.sub(mid).dot(sq.normal)) / (this.visual.radius * 1.6));
     }
-    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, pose: this.beh.pose });
+    this.visual.rig.update(dt, { speed: this.speed, mode, ground: onGround && !sq ? groundAt : null, squeeze: sq, pose: this.beh.pose, air: this.leap?.air || 0 });
     if (this.voice) {
       const vs = this.state === 'dying' ? 'dead'
-        : this.state === 'attackWindow' ? 'attackWindow'
+        : this.state === 'attackWindow' || this.state === 'leap' ? 'attackWindow'
         : this.state === 'inside' || this.state === 'enter' && this.surface === 'floor' ? 'inside'
         : this.state === 'watch' ? 'watch'
         : this.state === 'wait' || this.state === 'vanish' ? 'idle'
@@ -375,7 +383,7 @@ export class Spider {
       this.visual.rig.kick?.({ y: -0.05, z: -0.4 });
     }
     // runners dart sideways across the wall and back
-    if (this.type === 'runner' && !this.beh.attacking && Math.random() < dt * 0.25) {
+    if (this.type === 'runner' && this.slot >= 0 && !this.beh.attacking && Math.random() < dt * 0.25) {
       const s = SLOTS[this.slot];
       const side = (Math.random() < 0.5 ? -1 : 1) * (0.9 + Math.random() * 0.8);
       const here = this.root.position.clone();
@@ -415,24 +423,87 @@ export class Spider {
     const arc = Math.sin(this.beh.t * 0.6 + this.id * 2.3) * 0.9 * THREE.MathUtils.smoothstep(dist, 1.5, 5);
     const move = _f.copy(this.fwd).applyAxisAngle(UP, arc);
     let v = 0;
+    this.leapCD -= dt;
+    // leapers spring at you from a few metres away (user: some jump at you and it hurts)
+    const L = this.cfg.leap;
+    if (L && !this.beh.attacking && this.leapCD <= 0 && dist > 2 && dist < L.range && this.flinch <= 0 && !player.dead
+        && Math.random() < dt * L.chance) {
+      const to = _f.copy(player.position).addScaledVector(this.fwd, -reach * 0.4).setY(0);
+      this.startLeap(p.clone(), to.clone(), { crouch: L.crouch, apex: 0.45 + dist * 0.08, damage: this.cfg.playerDamage * L.damage, onLand: () => { this.state = 'inside'; } });
+      return 0;
+    }
     if (dist > reach && !this.beh.attacking) {
-      v = this.cfg.speed * (this.type === 'runner' ? 0.8 : 1) * (this.flinch > 0 ? 0.2 : 1) * (this.pause > 0 ? 0 : 1) * this.beh.speedK;
+      v = this.cfg.speed * (this.flinch > 0 ? 0.2 : 1) * (this.pause > 0 ? 0 : 1) * this.beh.speedK;
       if (this.pause > 0) this.pause -= dt;
       p.addScaledVector(move, Math.min(v * dt, dist - reach));
       this.collide();
+      this.closeIn = false;
     } else {
+      // just reached you: no standing about, it goes for you at once
+      if (!this.closeIn) { this.closeIn = true; this.attackT = Math.min(this.attackT, 0.05 + Math.random() * 0.2); }
       this.attackT -= dt;
       if (this.attackT <= 0 && !player.dead && !this.beh.attacking) {
-        this.attackT = this.cfg.attackInterval * (0.6 + Math.random() * 0.8);
-        this.beh.startAttack();
+        this.attackT = this.cfg.attackInterval * (0.35 + Math.random() * 0.4);
+        this.beh.startAttack({ inside: true });
         this.voice?.attack();
       }
     }
-    if (this.beh.strike && !player.dead && dist < reach + 0.5) {
+    // the strike carries the body at you, so what you see land is what hurts (user: sync attacks to the animation)
+    if (this.beh.attacking && this.beh.pose.lunge > 0.25 && dist > reach * 0.55) {
+      p.addScaledVector(this.fwd, Math.min(dt * 4 * this.beh.pose.lunge, dist - reach * 0.55));
+      this.collide();
+    }
+    if (this.beh.strike && !player.dead && dist < reach + 0.35) {
       player.damage(this.cfg.playerDamage * this.beh.strike, this.root.position);
     }
     p.y = 0;
     return v;
+  }
+
+  /**
+   * Leap: a short crouch (it gathers itself, shaking), then a flight on an arc from `from` to `to`. Anything within
+   * reach of the player during the flight is hit once (damage, view knocked, shoved). onLand runs on landing.
+   */
+  startLeap(from, to, { crouch = 0.35, apex = 0.6, damage = 10, fly = 0.42, onLand = null, surface = 'floor', up = UP } = {}) {
+    this.leap = { from, to, t: 0, crouch, fly, apex, damage, onLand, hit: false, air: 0, surface, up: up.clone() };
+    this.state = 'leap';
+    this.beh.attack = null;
+    this.fwd.set(to.x - from.x, 0, to.z - from.z).normalize();
+  }
+
+  updateLeap(dt, player) {
+    const L = this.leap;
+    L.t += dt;
+    if (L.t < L.crouch) {
+      this.beh.crouchHold = Math.min(1, L.t / (L.crouch * 0.6));
+      if (L.t - dt <= 0) this.voice?.attack();
+      return;
+    }
+    this.beh.crouchHold = 0;
+    const k = Math.min(1, (L.t - L.crouch) / L.fly);
+    L.air = k < 0.85 ? Math.min(1, k * 6) : (1 - k) / 0.15;
+    const p = this.root.position;
+    p.lerpVectors(L.from, L.to, k).addScaledVector(UP, L.apex * 4 * k * (1 - k));
+    this.up.copy(L.up).lerp(UP, Math.min(1, k * 2)).normalize();
+    this.surface = 'air';
+    if (!L.hit && !player.dead) {
+      const pp = player.position;
+      const body = this.visual.radius + 0.5;
+      if (Math.hypot(p.x - pp.x, p.z - pp.z) < body && Math.abs(p.y + this.visual.radius * 0.5 - (pp.y + 1.0)) < 1.4) {
+        L.hit = true;
+        player.damage(L.damage, p);
+        this.visual.rig.kick?.({ y: -0.08, z: -0.6 });
+      }
+    }
+    if (k >= 1) {
+      this.leap = null;
+      this.surface = L.surface;
+      this.up.copy(UP);
+      this.visual.rig.snapFeet();
+      this.leapCD = this.cfg.leap ? 3.5 + Math.random() * 4 : 5;
+      this.attackT = 0.3 + Math.random() * 0.4;
+      if (L.onLand) L.onLand();
+    }
   }
 
   collide() {
@@ -530,7 +601,7 @@ export class SpiderManager {
     this.quality = quality;
     this.windows = windows;
     this.colliders = colliders || [];
-    this.collision = new SpiderCollision(this.colliders);   // what feet stand on and bodies bump into
+    this.collision = new SpiderCollision(this.colliders, (id) => windows.byId[id].stage < 4);   // what feet stand on and bodies bump into
     this.spiders = [];
     this.slots = Object.fromEntries(WINDOWS.map((w) => [w.id, [null, null, null]]));
     this.timers = [];
@@ -594,7 +665,66 @@ export class SpiderManager {
     });
   }
 
+  /**
+   * Standing at one window too long while spiders are out there: one springs at you. Through the boards it slams
+   * into the planks right in front of your face and rakes through the gaps; through a breached window it leaps in.
+   * (Spec: window jump scares, a real spider. User: "still doesn't happen", 2026-11-15; it had not been built.)
+   */
+  updateLinger(dt, player) {
+    const C = Config.linger;
+    this.lingerCD = (this.lingerCD ?? rnd(C.cooldown[0] * 0.3, C.cooldown[0] * 0.6)) - dt;
+    this.lingerNeed ??= rnd(C.time[0], C.time[1]);
+    const eye = player.camera.getWorldPosition(_h);
+    const { window: w } = this.windows.nearestWindow(eye);
+    const at = w && w.closeness > C.closeness && !player.dead;
+    if (at && this.lingerWin === w) this.lingerT += dt;
+    else { this.lingerT = Math.max(0, (this.lingerT || 0) - dt * 2); if (at) this.lingerWin = w; }
+    if (!at || this.lingerT < this.lingerNeed || this.lingerCD > 0 || !this.spiders.some((s) => s.alive)) return;
+    this.lingerT = 0; this.lingerNeed = rnd(C.time[0], C.time[1]); this.lingerCD = rnd(C.cooldown[0], C.cooldown[1]);
+    this.windowJump(w, player);
+  }
+
+  windowJump(w, player) {
+    const C = Config.linger;
+    const eye = player.camera.getWorldPosition(_h).clone();
+    // one already at this window (not a brute: too heavy to spring), else a new one from under the sill
+    let s = this.spiders.find((x) => x.alive && x.window === w && x.type !== 'brute' && (x.state === 'attackWindow' || x.state === 'wait'));
+    const tangent = _t.crossVectors(UP, w.normal).normalize();
+    const u = THREE.MathUtils.clamp(_d.subVectors(eye, w.center).dot(tangent), -w.width * 0.3, w.width * 0.3);
+    if (!s) {
+      s = this.spawn(C.types[Math.floor(Math.random() * C.types.length)], w.id, Math.random() < 0.5 ? 'medium' : 'small');
+      s.path = null;
+      s.root.position.copy(WINDOW_POINT(w, u + (Math.random() - 0.5) * 0.5, w.center.y - w.height / 2 - 0.55));
+      s.up.copy(w.normal); s.surface = 'wall'; s.fwd.set(0, 1, 0);
+      s.root.updateMatrixWorld(true); s.visual.rig.snapFeet();
+    } else s.releaseSlot();
+    const from = s.root.position.clone();
+    if (w.stage >= 4) {
+      // the hole is open: it comes straight through at you
+      const to = _f.set(player.position.x, 0, player.position.z).addScaledVector(w.normal, 0.5).clone();
+      s.startLeap(from, to, { crouch: 0.2, apex: 0.5, fly: 0.45, damage: C.damage, up: w.normal,
+        onLand: () => { s.state = 'inside'; s.surface = 'floor'; this.events.emit('spiderInside', { spider: s }); } });
+    } else {
+      // at the boards, at your face
+      const to = WINDOW_POINT(w, u, Math.min(eye.y - 0.15, w.center.y + w.height / 2 - 0.25));
+      s.startLeap(from, to, { crouch: 0.15, apex: 0.12, fly: 0.2, damage: C.damage, up: w.normal, surface: 'glass', onLand: () => {
+        this.audio?.play('boardBreak', { position: w.outside, volume: 1, reverb: 0.3 });
+        this.windows.damage(w.id, C.boardDamage, to);
+        for (const b of w.boards) b.wobble = 1.5;
+        if (!player.dead && player.position.distanceTo(_d.copy(w.center).setY(player.position.y)) < C.reach) player.damage(C.damage, to);
+        s.up.copy(w.normal); s.fwd.set(0, 1, 0);
+        s.beginAttack();
+        s.attackT = 0.2;
+        s.beh.startAttack({ inside: true });
+      } });
+      s.leap.hit = true;   // the damage comes on landing, through the gaps
+    }
+    s.voice?.attack();
+    this.events.emit('windowJump', { window: w.id, spider: s });
+  }
+
   update(dt, player) {
+    this.updateLinger(dt, player);
     for (let i = this.timers.length - 1; i >= 0; i--) {
       const t = this.timers[i];
       t.t -= dt;
@@ -615,7 +745,7 @@ export class SpiderManager {
     let d = 0;
     for (const s of this.spiders) {
       if (!s.alive) continue;
-      if (s.state === 'inside' || s.state === 'enter') d += 0.6;
+      if (s.state === 'inside' || s.state === 'enter' || s.state === 'leap') d += 0.6;
       else if (s.state === 'attackWindow') d += 0.22;
       else if (s.distToPlayer < 15) d += 0.08;
       else d += 0.02;
@@ -638,4 +768,5 @@ const _m = new THREE.Matrix4(), _q = new THREE.Quaternion();
 const _hitScale = new THREE.Vector3(1.7, 2.4, 1.4);
 const _h = new THREE.Vector3();
 
+function rnd(a, b) { return a + Math.random() * (b - a); }
 function diff() { return Config.difficulty[Settings.difficulty] || Config.difficulty.normal; }
